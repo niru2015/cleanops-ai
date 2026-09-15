@@ -3,19 +3,34 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** documentation and GitHub roadmap only. No application, database, live
-WhatsApp connection, OpenAI calls, deployment or customer onboarding exists yet.
+**Status:** CLEAN-001 application shell implemented. No database, live WhatsApp
+connection, OpenAI calls, deployment or customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
-First ready-to-use issue: [CLEAN-001](docs/plans/active/CLEAN-001.md).
+Completed scaffold plan: [CLEAN-001](docs/plans/completed/CLEAN-001.md).
 
-## Start development
+## Local development
 
-1. Open this repository as a Codex project.
-2. Begin with GitHub issue CLEAN-001. Prompt: “Implement CLEAN-001 using AGENTS.md
-   and its Read list. Stop after the issue's acceptance criteria; report verification.”
-3. Complete the foundation before the evidence slice. Keep each PR limited to one issue.
+Requirements: Node.js 24.14.0 (see `.nvmrc`) and npm 11.9.0.
+
+```bash
+npm ci
+cp .env.example .env.local
+npm run dev
+```
+
+Verification:
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
+
+CLEAN-001 creates only the responsive application shell. CLEAN-002 adds the local
+Supabase tenant, access and work foundation. Keep each PR limited to one issue.
 
 Repository: https://github.com/niru2015/cleanops-ai (private).
 The local parent Vancouver project is a synced mirror, so this CleanOps folder remains
