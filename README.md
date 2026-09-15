@@ -8,7 +8,7 @@ connection, OpenAI calls, deployment or customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
-Current implementation plan: [CLEAN-001](docs/plans/active/CLEAN-001.md).
+Completed scaffold plan: [CLEAN-001](docs/plans/completed/CLEAN-001.md).
 
 ## Local development
 
