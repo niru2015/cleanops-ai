@@ -1,7 +1,7 @@
 # Roadmap and gates
 
-Phase 0 is this context pack. IDs below are local backlog IDs, not existing GitHub issues.
-Create one issue at a time from the template; copy its Read list rather than the whole pack.
+Phase 0 is this context pack. CLEAN-001 through CLEAN-009 map to GitHub issues #1–#9.
+Work one issue at a time; use its focused Read list rather than loading the whole pack.
 
 | Phase | Work / dependency | Exit gate |
 |---|---|---|
