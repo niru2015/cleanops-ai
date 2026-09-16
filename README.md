@@ -3,12 +3,13 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** CLEAN-001 shell implemented. CLEAN-002 adds a local-only Supabase foundation.
+**Status:** CLEAN-001 shell and CLEAN-002 local-only Supabase foundation implemented.
 No live WhatsApp connection, OpenAI calls, deployment or customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
-Completed scaffold plan: [CLEAN-001](docs/plans/completed/CLEAN-001.md).
+Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md) and
+[CLEAN-002](docs/plans/completed/CLEAN-002.md).
 
 ## Local development
 
