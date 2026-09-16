@@ -3,12 +3,13 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** CLEAN-001 application shell implemented. No database, live WhatsApp
-connection, OpenAI calls, deployment or customer onboarding exists yet.
+**Status:** CLEAN-001 shell and CLEAN-002 local-only Supabase foundation implemented.
+No live WhatsApp connection, OpenAI calls, deployment or customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
-Completed scaffold plan: [CLEAN-001](docs/plans/completed/CLEAN-001.md).
+Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md) and
+[CLEAN-002](docs/plans/completed/CLEAN-002.md).
 
 ## Local development
 
@@ -18,6 +19,26 @@ Requirements: Node.js 24.14.0 (see `.nvmrc`) and npm 11.9.0.
 npm ci
 cp .env.example .env.local
 npm run dev
+```
+
+## Local database
+
+The canonical database workflow requires a Docker-compatible runtime. The pinned Supabase
+CLI, migrations and deterministic synthetic seed are included in this repository.
+
+```bash
+npm run db:start
+npm run db:reset
+npm run test:db
+npm run db:stop
+```
+
+After `db:start`, copy the local publishable key from `npm run db:status` into `.env.local`.
+The compatibility check below executes the same migration and RLS boundary cases against a
+temporary PostgreSQL 17+ cluster when Docker is unavailable:
+
+```bash
+npm run test:db:postgres
 ```
 
 Verification:
@@ -30,7 +51,9 @@ npm run build
 ```
 
 CLEAN-001 creates only the responsive application shell. CLEAN-002 adds the local
-Supabase tenant, access and work foundation. Keep each PR limited to one issue.
+Supabase tenant, access and work foundation. Database reset and test commands are local-only;
+no command in this repository links or pushes to a remote Supabase project. Keep each PR
+limited to one issue.
 
 Repository: https://github.com/niru2015/cleanops-ai (private).
 The local parent Vancouver project is a synced mirror, so this CleanOps folder remains

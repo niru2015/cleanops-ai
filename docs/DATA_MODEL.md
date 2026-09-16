@@ -1,6 +1,8 @@
 # Logical data model
 
-Design contract only; migrations will own exact columns, indexes and SQL.
+The design contract below sets intent. CLEAN-002 migration
+`supabase/migrations/20260915160856_cleanops_foundation.sql` owns exact Phase-1 columns,
+indexes, constraints, grants and policies.
 Every tenant-owned table has UUID id, organization_id, created_at; mutable records add
 updated_at and revision where concurrency matters. Auth users are identities, not tenants.
 

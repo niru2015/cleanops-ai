@@ -15,8 +15,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 ## Bounded issue contracts
 
 - CLEAN-001: [application shell implemented](completed/CLEAN-001.md); no DB schema or provider integrations.
-- CLEAN-002: Read DATA_MODEL, SECURITY, SUPABASE. Tenant/membership/site/worker foundation
-  and task/shift seed only. Denied cross-tenant/cross-site writes required. Split if too large.
+- CLEAN-002: [tenant, auth, site and work foundation implemented](completed/CLEAN-002.md),
+  including deterministic seed and denied cross-tenant/cross-site operations.
 - CLEAN-003: Read WHATSAPP, ARCHITECTURE. Raw events, jobs, normalized message persistence;
   duplicate/concurrency/restart checks; no media/AI. Depends on 002.
 - CLEAN-004: Read WHATSAPP, DATA_MODEL. Private media, verified identities, context/pairing,
