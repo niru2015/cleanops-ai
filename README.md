@@ -13,7 +13,8 @@ Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md),
 [CLEAN-002](docs/plans/completed/CLEAN-002.md),
 [CLEAN-003](docs/plans/completed/CLEAN-003.md),
 [CLEAN-004](docs/plans/completed/CLEAN-004.md) and
-[CLEAN-005](docs/plans/completed/CLEAN-005.md).
+[CLEAN-005](docs/plans/completed/CLEAN-005.md), and
+[CLEAN-006](docs/plans/completed/CLEAN-006.md).
 
 ## Local development
 
