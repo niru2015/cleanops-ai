@@ -22,6 +22,8 @@
     "test:e2e": "node scripts/run-e2e.mjs",
     "test:storage": "node scripts/test-evidence-storage.mjs",
     "worker:messages": "node --env-file=.env.local scripts/run-ingress-worker.mjs",
+    "worker:whatsapp": "node --env-file=.env.local scripts/run-whatsapp-worker.mjs",
+    "whatsapp:readiness": "node --env-file=.env.local scripts/check-whatsapp-readiness.mjs",
     "demo:replay-evidence": "node --env-file=.env.local scripts/replay-golden-evidence.mjs"
   },
   "dependencies": {

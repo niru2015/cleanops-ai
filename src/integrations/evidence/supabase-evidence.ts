@@ -97,10 +97,13 @@ function resolutionFromRow(row: Row | null): EvidenceResolution {
 }
 
 export class SupabaseEvidenceRepository implements EvidenceRepository {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(
+    private readonly client: SupabaseClient,
+    private readonly beginFunction = "begin_evidence_ingestion",
+  ) {}
 
   async begin(input: BeginEvidenceInput) {
-    const { data, error } = await this.client.rpc("begin_evidence_ingestion", {
+    const { data, error } = await this.client.rpc(this.beginFunction, {
       p_external_account_id: input.externalAccountId,
       p_external_message_id: input.externalMessageId,
       p_media_external_id: input.mediaExternalId,
@@ -173,6 +176,25 @@ export class SupabaseEvidenceRepository implements EvidenceRepository {
       } satisfies PendingEvidence;
     });
   }
+
+  async retryWhatsAppEvidence(evidenceId: string) {
+    const { data, error } = await this.client.rpc("retry_whatsapp_evidence_ingestion", {
+      p_evidence_id: evidenceId,
+    });
+    if (error) throw repositoryError(error);
+    const row = firstRow(data);
+    if (
+      !row || typeof row.external_account_id !== "string" ||
+      typeof row.external_message_id !== "string" || typeof row.media_external_id !== "string" ||
+      !(row.declared_content_type === null || typeof row.declared_content_type === "string")
+    ) throw new EvidenceRepositoryError("invalid_database_response");
+    return {
+      accountExternalId: row.external_account_id,
+      externalMessageId: row.external_message_id,
+      mediaExternalId: row.media_external_id,
+      declaredContentType: row.declared_content_type,
+    };
+  }
 }
 
 export class SupabaseEvidenceObjectStorage implements EvidenceObjectStorage {
@@ -213,6 +235,14 @@ export function createSupabaseEvidenceDependencies() {
   const client = createPrivilegedSupabaseClient();
   return {
     repository: new SupabaseEvidenceRepository(client),
+    storage: new SupabaseEvidenceObjectStorage(client),
+  };
+}
+
+export function createSupabaseWhatsAppEvidenceDependencies() {
+  const client = createPrivilegedSupabaseClient();
+  return {
+    repository: new SupabaseEvidenceRepository(client, "begin_whatsapp_evidence_ingestion"),
     storage: new SupabaseEvidenceObjectStorage(client),
   };
 }

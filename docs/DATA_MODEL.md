@@ -13,6 +13,8 @@ The CLEAN-006 migration owns shift coverage requirements, worker-to-task assignm
 audited human replacement selections. The CLEAN-007 migration owns incident statements,
 evidence links, actions and timeline events; equipment reports; versioned SLA results; redacted
 client report snapshots, releases and reporting audit events.
+The CLEAN-009 migration owns official receiving-account events, the WhatsApp outbox, transport
+delivery events, queue-health RPC and official-media entry into the existing evidence tables.
 Every tenant-owned table has UUID id, organization_id, created_at; mutable records add
 updated_at and revision where concurrency matters. Auth users are identities, not tenants.
 
@@ -34,12 +36,13 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | AI quality | quality_ai_budgets(tenant live ceiling); quality_ai_runs(tenant cache, attempt, provider metadata, usage, conservative charge); quality_ai_evaluations(fixture mismatch, abstention, override, provenance) |
 | AI | ai_decisions(task_run, submission_revision, input hash, prompt/schema/model version, output, review status); ai_usage(decision, attempt, returned usage, status) |
 | Reliability | processing_jobs(kind, dedupe_key, lease, attempts, next_attempt_at, status); audit_events(actor, action, entity, reason, timestamp) |
+| WhatsApp outbound | whatsapp_outbox(account, recipient, logical_key, consent reference, conversation expiry, payload, lease, provider ID, transport state); whatsapp_delivery_events |
 
 CLEAN-003 implements integration_accounts, integration_webhook_events, processing_jobs and
 external_messages. CLEAN-004 implements external_worker_identities, conversation_contexts,
 task_evidence, evidence_pairs and evidence_audit_events. CLEAN-005 implements the review group;
 the CLEAN-006 staffing and task-allocation records support the connected PWA and command view;
-live provider usage records remain a later issue. Acceptance and evidence RPCs derive organization_id from the enabled registered
+official WhatsApp records are implemented in CLEAN-009. Acceptance and evidence RPCs derive organization_id from the enabled registered
 account; callers cannot supply tenant identity.
 
 Tenant links must agree: use organization-scoped composite foreign keys or equivalent
@@ -52,6 +55,8 @@ Membership and worker/site permission serve different purposes: app access vs wo
 - membership: (organization_id, user_id); site grant: (membership_id, site_id).
 - message: (integration_account_id, external_message_id); identity: (account_id, sender).
 - envelope: (account_id, dedupe_key); job: (organization_id, kind, dedupe_key).
+- outbound reply: (organization_id, logical_key); provider delivery event is unique by account,
+  provider message ID, status and provider occurrence time.
 - evidence: (integration_account_id, external_message_id, media_external_id); one linked role per
   task revision; paired AFTER is unique;
   PWA uploads use a client request UUID scoped to authorized worker.

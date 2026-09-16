@@ -30,7 +30,7 @@ function databaseError(error: { message?: string } | null) {
 }
 
 export class SupabaseIngressRepository implements IngressRepository {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(protected readonly client: SupabaseClient) {}
 
   async acceptEnvelope(input: AcceptEnvelopeInput): Promise<AcceptedEnvelope> {
     const { data, error } = await this.client.rpc("accept_mock_ingress_event", {

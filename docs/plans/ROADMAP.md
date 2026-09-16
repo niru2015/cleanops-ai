@@ -28,15 +28,17 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 - CLEAN-007: [incident, equipment and client reporting implemented](completed/CLEAN-007.md),
   including versioned SLA computation, explicit audited release and site-authorized redacted view.
 - CLEAN-008: [capped OpenAI quality analysis implemented](completed/CLEAN-008.md), including strict output validation, tenant caps, retries, cache and synthetic evaluation records.
-- CLEAN-009: Read WHATSAPP, SECURITY. Verified official webhook/media + outbox separately.
-  Depends on 003–005 and account readiness; no legacy scraping.
+- CLEAN-009: [official WhatsApp Business adapter implemented](completed/CLEAN-009.md), including
+  raw signature checks, account-scoped ingestion/media, consent-aware outbox, delivery events,
+  retries and readiness checks. Live sandbox evidence still depends on customer account readiness;
+  no legacy scraping.
 
 ## Open decisions / owners
 
 Product owner before P3: actual contract SLA/exclusions, roles/site permissions and pilot scope.
 Pilot owner before P4: customer authorization, capture zones/privacy, retention/region,
 WhatsApp account capabilities and outbound rules, AI model/budget/evaluation threshold.
-Engineering before P4: production durable runner, retry monitoring, deployment environment,
+Engineering before pilot: production worker schedule, alert delivery, deployment environment,
 backup/restore verification and secrets management. Record resolved choices in ADRs.
 None blocks synthetic P1–P2. Do not invent legal eligibility requirements or emergency protocols.
 
