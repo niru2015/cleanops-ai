@@ -27,7 +27,7 @@ Work one issue at a time; use its focused Read list rather than loading the whol
   PWA evidence capture, site-zone states, computed coverage and human replacement assignment.
 - CLEAN-007: [incident, equipment and client reporting implemented](completed/CLEAN-007.md),
   including versioned SLA computation, explicit audited release and site-authorized redacted view.
-- CLEAN-008: Read AI, OPENAI, SECURITY. Capped live provider adapter/evaluation. Depends on 005.
+- CLEAN-008: [capped OpenAI quality analysis implemented](completed/CLEAN-008.md), including strict output validation, tenant caps, retries, cache and synthetic evaluation records.
 - CLEAN-009: Read WHATSAPP, SECURITY. Verified official webhook/media + outbox separately.
   Depends on 003–005 and account readiness; no legacy scraping.
 

@@ -31,6 +31,7 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | Resolution | external_worker_identities(account, sender, worker, verified_at); conversation_contexts(account, thread, sender, task, expiry) |
 | Media | task_evidence(task_run nullable, message, role, storage_path, hash, captured_at nullable, received_at, submission_revision) |
 | Review | quality_decisions(task_run, submission_revision, pair, structured output); quality_findings(decision, confirmed observation); corrective_actions(finding, source/target revision, state); inspections(task_run, revision, reviewer, outcome); review_audit_events |
+| AI quality | quality_ai_budgets(tenant live ceiling); quality_ai_runs(tenant cache, attempt, provider metadata, usage, conservative charge); quality_ai_evaluations(fixture mismatch, abstention, override, provenance) |
 | AI | ai_decisions(task_run, submission_revision, input hash, prompt/schema/model version, output, review status); ai_usage(decision, attempt, returned usage, status) |
 | Reliability | processing_jobs(kind, dedupe_key, lease, attempts, next_attempt_at, status); audit_events(actor, action, entity, reason, timestamp) |
 

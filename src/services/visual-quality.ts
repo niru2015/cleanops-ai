@@ -6,6 +6,12 @@ export type VisualQualityInput = {
   beforeEvidenceId: string;
   afterEvidenceId: string;
   criterionIds: string[];
+  /** Present only after the server has created approved redacted derivatives. */
+  redactedDerivatives?: {
+    role: "before" | "after";
+    dataUrl: string;
+    byteSize: number;
+  }[];
 };
 
 export interface VisualQualityService {
