@@ -176,6 +176,7 @@ create temporary table pgtap_unknown_result as
 select * from public.finalize_evidence_ingestion(
   (select evidence_id from pgtap_unknown_stage), repeat('c', 64), 'image/png', 11
 );
+grant select on pgtap_unknown_result to authenticated;
 select is(
   (select linkage_status::text from pgtap_unknown_result),
   'unresolved',
