@@ -50,6 +50,12 @@ Mutations use narrowly granted RPCs that resolve the actor server-side, check ac
 site access and lock the task row before comparing revisions. Cleaners and client viewers cannot
 approve; AI output is service-written and an approved revision is final.
 
+CLEAN-006 coverage, task-assignment and replacement records use organization and site-scoped
+foreign keys plus RLS. Supervisors can see and select replacements only at managed sites; cleaners
+can read only their assigned mobile task. The coverage function checks shift access and counts only
+distinct assigned workers with active site permission and a latest check-in at the requested time.
+Creating QR context does not create an attendance event.
+
 ## Evidence privacy and pilot decisions
 
 Use synthetic people/sites/media in demos. Casino images may contain patrons, staff,

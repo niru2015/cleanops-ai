@@ -23,8 +23,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
   verified identities, deterministic context/pairing, unresolved review, recovery and isolation.
 - CLEAN-005: [supervisor review implemented](completed/CLEAN-005.md), including mock quality,
   revision-safe human approval/correction, audit history and the browser slice.
-- CLEAN-006: Read PRODUCT, DEMO. PWA capture, site zones, coverage from records; no automated
-  replacement dispatch. Depends on 005; split screens into separate follow-up issues.
+- CLEAN-006: [mobile and operations implemented](completed/CLEAN-006.md), including shared
+  PWA evidence capture, site-zone states, computed coverage and human replacement assignment.
 - CLEAN-007: Read DOMAIN, SECURITY, DEMO. Incident/equipment intake, computed SLA and restricted
   report release; no safety-monitor claim. Depends on 005; split intake from reporting.
 - CLEAN-008: Read AI, OPENAI, SECURITY. Capped live provider adapter/evaluation. Depends on 005.

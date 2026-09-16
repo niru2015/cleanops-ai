@@ -9,6 +9,8 @@ raw envelope, processing job and normalized message structures and RPCs. CLEAN-0
 conversation contexts, evidence, pairing, audit and private Storage policies.
 The CLEAN-005 migrations own quality decisions, confirmed findings, corrective actions,
 revision inspections, review audit events and guarded supervisor RPCs.
+The CLEAN-006 migration owns shift coverage requirements, worker-to-task assignments and
+audited human replacement selections.
 Every tenant-owned table has UUID id, organization_id, created_at; mutable records add
 updated_at and revision where concurrency matters. Auth users are identities, not tenants.
 
@@ -20,7 +22,8 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | Places | clients → sites(client, timezone) → site_zones |
 | People | workers(user_id optional); worker_site_permissions(worker, site, validity) |
 | Work | service_tasks; task_schedules(task, zone); task_runs(schedule, zone, due_at, requirements snapshot, state, submission_revision) |
-| Staffing | shifts(site, starts_at, ends_at); shift_assignments(shift, worker); attendance_events(assignment, type, occurred_at) |
+| Staffing | shifts(site, starts_at, ends_at); shift_coverage_requirements(shift, positions); shift_assignments(shift, worker); attendance_events(assignment, type, occurred_at); replacement_selections(shift, worker, selector) |
+| Task allocation | task_run_assignments(task_run, worker, assigner, assigned_at) |
 | Inbound | integration_accounts(provider, external account, secret reference); integration_webhook_events(account, dedupe_key, payload, status) |
 | Normalized | external_messages(account, provider message ID, sender, worker nullable, received_at, occurred_at, status) |
 | Resolution | external_worker_identities(account, sender, worker, verified_at); conversation_contexts(account, thread, sender, task, expiry) |
@@ -32,6 +35,7 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 CLEAN-003 implements integration_accounts, integration_webhook_events, processing_jobs and
 external_messages. CLEAN-004 implements external_worker_identities, conversation_contexts,
 task_evidence, evidence_pairs and evidence_audit_events. CLEAN-005 implements the review group;
+the CLEAN-006 staffing and task-allocation records support the connected PWA and command view;
 live provider usage records remain a later issue. Acceptance and evidence RPCs derive organization_id from the enabled registered
 account; callers cannot supply tenant identity.
 

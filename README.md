@@ -3,9 +3,9 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** CLEAN-001 through CLEAN-004 merged. CLEAN-005 supervisor quality review and
-correction is implemented in PR #14. No live WhatsApp connection, OpenAI calls, deployment or
-customer onboarding exists yet.
+**Status:** CLEAN-001 through CLEAN-005 merged. CLEAN-006 cleaner mobile and operations command
+experiences are implemented on their issue branch. No live WhatsApp connection, OpenAI calls,
+deployment or customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
@@ -13,7 +13,8 @@ Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md),
 [CLEAN-002](docs/plans/completed/CLEAN-002.md),
 [CLEAN-003](docs/plans/completed/CLEAN-003.md),
 [CLEAN-004](docs/plans/completed/CLEAN-004.md) and
-[CLEAN-005](docs/plans/completed/CLEAN-005.md).
+[CLEAN-005](docs/plans/completed/CLEAN-005.md), and
+[CLEAN-006](docs/plans/completed/CLEAN-006.md).
 
 ## Local development
 
@@ -85,14 +86,17 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+npm run test:e2e
 ```
 
 CLEAN-001 creates the responsive application shell. CLEAN-002 adds the local Supabase tenant,
 access and work foundation. CLEAN-003 adds server-only, demo-gated durable ingress and a leased
 local worker. CLEAN-004 adds private synthetic media, deterministic resolution and audited
 evidence decisions. CLEAN-005 adds Mock AI suggestions, supervisor findings, corrective revisions
-and explicit approval at `/review`. Database reset and test commands are local-only; no command in this
-repository links or pushes to a remote Supabase project. Keep each PR limited to one issue.
+and explicit approval at `/review`. CLEAN-006 adds computed staffing coverage, human replacement
+assignment, canonical site-zone status and mobile capture at `/operations` and `/mobile`. Database
+reset and test commands are local-only; no command in this repository links or pushes to a remote
+Supabase project. Keep each PR limited to one issue.
 
 Repository: https://github.com/niru2015/cleanops-ai (private).
 The local parent Vancouver project is a synced mirror, so this CleanOps folder remains

@@ -56,6 +56,11 @@ mock writes the same `quality.v1` shape expected from a future live adapter. Dat
 the current submission revision inside the transaction before confirming a finding or approving;
 the browser cannot convert a score into approval.
 
+CLEAN-006 adds `/operations` and `/mobile` over one operations repository. Coverage is calculated
+from required positions and distinct eligible assigned check-ins. QR selection writes expiring task
+context only; mobile photos then use the existing ingress, evidence and pairing services. Replacement
+candidates require separate supervisor selection and attendance records, with no automatic dispatch.
+
 ## Configuration
 
 Default demo mode uses synthetic fixtures and mock AI; database persistence is real local
