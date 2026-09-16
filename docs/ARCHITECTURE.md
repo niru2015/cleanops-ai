@@ -46,6 +46,11 @@ Idempotency exists at envelope, message, evidence and AI-job boundaries. Updates
 business record, audit event and next job are transactional; media uses staged upload
 plus reconciliation since Storage and Postgres are not one transaction.
 
+CLEAN-004 stages the database row before uploading to private Storage. Finalization verifies
+the stored SHA-256, detected content type and byte size, then resolves identity/context/task in
+one database transaction. `/api/demo/evidence/reconcile` repairs upload-before-finalize crashes.
+Authenticated reads pass RLS before the server issues a 60-second signed URL.
+
 ## Configuration
 
 Default demo mode uses synthetic fixtures and mock AI; database persistence is real local

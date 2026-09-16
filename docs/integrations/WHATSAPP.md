@@ -59,7 +59,10 @@ Mock replay includes duplicate, concurrent, out-of-order, unknown sender, mixed 
 context, bad signature, unavailable media and crash-after-upload cases.
 
 CLEAN-003 implements the envelope, message and job boundaries plus local one-job processing.
-It does not fetch media, resolve senders/tasks or expose a live webhook.
+CLEAN-004 implements synthetic media staging, verified identities, expiring contexts,
+deterministic task/pair resolution and the unresolved queue. It uses explicit `#before` and
+`#after` labels, never timestamp proximity. Missing, rejected and orphaned objects remain visible
+with retry or supervisor actions. Live provider retrieval and webhooks remain unimplemented.
 
 ## Outbound and go-live
 

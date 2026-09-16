@@ -19,7 +19,9 @@
     "test": "vitest run",
     "test:db": "supabase test db",
     "test:db:postgres": "scripts/test-database-postgres.sh",
-    "worker:messages": "node --env-file=.env.local scripts/run-ingress-worker.mjs"
+    "test:storage": "node scripts/test-evidence-storage.mjs",
+    "worker:messages": "node --env-file=.env.local scripts/run-ingress-worker.mjs",
+    "demo:replay-evidence": "node --env-file=.env.local scripts/replay-golden-evidence.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

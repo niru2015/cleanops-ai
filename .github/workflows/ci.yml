@@ -42,6 +42,7 @@ jobs:
       - run: npm ci
       - run: npx supabase start
       - run: npm run db:reset
+      - run: npm run test:storage
       - run: npm run test:db
       - name: Stop local Supabase
         if: always()

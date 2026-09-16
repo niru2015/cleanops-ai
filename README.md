@@ -3,9 +3,9 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** CLEAN-001 shell, CLEAN-002 local Supabase foundation and CLEAN-003 durable
-simulated message ingress implemented. No live WhatsApp connection, OpenAI calls,
-deployment or customer onboarding exists yet.
+**Status:** CLEAN-001 through CLEAN-003 merged. CLEAN-004 private operational evidence,
+deterministic resolution and recovery are implemented locally. No live WhatsApp connection,
+OpenAI calls, deployment or customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
@@ -59,6 +59,23 @@ Retry a terminal failed job with `npm run worker:messages -- --retry <job-id>`. 
 return `404` in production and do not connect to WhatsApp. See
 [the ingress contract](docs/integrations/WHATSAPP.md) for the payload and reliability rules.
 
+## Simulated operational evidence
+
+After a local database reset and with the app running, replay the synthetic 23:15 BEFORE and
+23:29 AFTER records into the private `operational-evidence` bucket:
+
+```bash
+npm run demo:replay-evidence
+```
+
+The replay uses a tiny synthetic image, verified Worker 182 mapping and 30-minute Restroom B
+context. It produces one linked revision/pair and is safe to replay. Reconcile a staged object
+left by a simulated crash with `npm run worker:messages -- --reconcile-evidence`.
+
+Authenticated evidence reads request a 60-second URL from
+`/api/evidence/:evidenceId/signed-url`; the server checks row-level access before signing.
+Supervisors resolve or ignore queue records through `/api/evidence/:evidenceId/resolution`.
+
 Verification:
 
 ```bash
@@ -70,8 +87,9 @@ npm run build
 
 CLEAN-001 creates the responsive application shell. CLEAN-002 adds the local Supabase tenant,
 access and work foundation. CLEAN-003 adds server-only, demo-gated durable ingress and a leased
-local worker. Database reset and test commands are local-only; no command in this repository
-links or pushes to a remote Supabase project. Keep each PR limited to one issue.
+local worker. CLEAN-004 adds private synthetic media, deterministic resolution and audited
+supervisor decisions. Database reset and test commands are local-only; no command in this
+repository links or pushes to a remote Supabase project. Keep each PR limited to one issue.
 
 Repository: https://github.com/niru2015/cleanops-ai (private).
 The local parent Vancouver project is a synced mirror, so this CleanOps folder remains
