@@ -375,7 +375,8 @@ begin
     organization_id, site_id, incident_id, event_key, event_type, description, occurred_at, actor_user_id
   ) values (
     v_incident.organization_id, v_incident.site_id, v_incident.id, 'wording-corrected',
-    'incident.corrected', 'Supervisor clarified the report wording; cause remains undetermined.', now(), v_actor
+    'incident.corrected', 'Supervisor clarified the report wording; cause remains undetermined.',
+    v_incident.reported_at + interval '1 minute', v_actor
   ) on conflict (incident_id, event_key) do nothing;
   insert into public.reporting_audit_events (
     organization_id, site_id, entity_type, entity_id, actor_user_id, action, reason, changes
