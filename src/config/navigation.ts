@@ -1,9 +1,9 @@
 export const navigationItems = [
-  { label: "Overview", icon: "home", href: "/", current: true },
-  { label: "Sites & zones", icon: "pin", status: "Not implemented", current: false },
-  { label: "Evidence review", icon: "document", status: "Not implemented", current: false },
-  { label: "Incidents", icon: "alert", status: "Not implemented", current: false },
-  { label: "Client reports", icon: "chart", status: "Not implemented", current: false },
+  { label: "Overview", icon: "home", href: "/", implemented: true },
+  { label: "Sites & zones", icon: "pin", href: "#", status: "Not implemented", implemented: false },
+  { label: "Evidence review", icon: "document", href: "/review", implemented: true },
+  { label: "Incidents", icon: "alert", href: "#", status: "Not implemented", implemented: false },
+  { label: "Client reports", icon: "chart", href: "#", status: "Not implemented", implemented: false },
 ] as const;
 
 export type NavigationIcon = (typeof navigationItems)[number]["icon"];

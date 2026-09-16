@@ -23,8 +23,24 @@ as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
 $$;
 
+create function auth.jwt()
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb,
+    jsonb_build_object(
+      'sub', nullif(current_setting('request.jwt.claim.sub', true), ''),
+      'role', current_user
+    )
+  );
+$$;
+
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
+grant execute on function auth.jwt() to anon, authenticated, service_role;
 
 create table storage.buckets (
   id text primary key,

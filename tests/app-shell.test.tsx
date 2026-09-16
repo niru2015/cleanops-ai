@@ -10,16 +10,16 @@ describe("CLEAN-001 application shell", () => {
     expect(html).toContain("Prototype");
     expect(html).toContain("synthetic data");
     expect(html).toContain("Operations workspace");
-    expect(html).toContain("Operational data will appear after CLEAN-002");
+    expect(html).toContain("Open Evidence review");
     expect(html).not.toContain("AI verified");
   });
 
-  it("keeps only Overview active and labels every planned destination", () => {
-    const activeItems = navigationItems.filter((item) => item.current);
-    const plannedItems = navigationItems.filter((item) => !item.current);
+  it("exposes Overview and Evidence review while labeling planned destinations", () => {
+    const implementedItems = navigationItems.filter((item) => item.implemented);
+    const plannedItems = navigationItems.filter((item) => !item.implemented);
 
-    expect(activeItems.map((item) => item.label)).toEqual(["Overview"]);
-    expect(plannedItems).toHaveLength(4);
-    expect(plannedItems.every((item) => item.status === "Not implemented")).toBe(true);
+    expect(implementedItems.map((item) => item.label)).toEqual(["Overview", "Evidence review"]);
+    expect(plannedItems).toHaveLength(3);
+    expect(plannedItems.every((item) => "status" in item && item.status === "Not implemented")).toBe(true);
   });
 });

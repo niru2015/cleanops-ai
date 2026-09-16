@@ -3,9 +3,9 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** CLEAN-001 through CLEAN-003 merged. CLEAN-004 private operational evidence,
-deterministic resolution and recovery are implemented in draft PR #13. No live WhatsApp
-connection, OpenAI calls, deployment or customer onboarding exists yet.
+**Status:** CLEAN-001 through CLEAN-004 merged. CLEAN-005 supervisor quality review and
+correction is under implementation. No live WhatsApp connection, OpenAI calls, deployment or
+customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
@@ -89,7 +89,8 @@ npm run build
 CLEAN-001 creates the responsive application shell. CLEAN-002 adds the local Supabase tenant,
 access and work foundation. CLEAN-003 adds server-only, demo-gated durable ingress and a leased
 local worker. CLEAN-004 adds private synthetic media, deterministic resolution and audited
-supervisor decisions. Database reset and test commands are local-only; no command in this
+evidence decisions. CLEAN-005 adds Mock AI suggestions, supervisor findings, corrective revisions
+and explicit approval at `/review`. Database reset and test commands are local-only; no command in this
 repository links or pushes to a remote Supabase project. Keep each PR limited to one issue.
 
 Repository: https://github.com/niru2015/cleanops-ai (private).

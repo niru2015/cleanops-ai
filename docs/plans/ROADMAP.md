@@ -21,8 +21,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
   leased jobs, normalized messages and duplicate/concurrency/restart checks; no media/AI.
 - CLEAN-004: [operational evidence implemented](completed/CLEAN-004.md), including private media,
   verified identities, deterministic context/pairing, unresolved review, recovery and isolation.
-- CLEAN-005: Read DOMAIN, AI, DEMO. Mock quality, revision-safe human approval/correction,
-  audit history and browser slice. Depends on 004.
+- CLEAN-005: [active implementation](active/CLEAN-005.md). Mock quality, revision-safe human
+  approval/correction, audit history and browser slice. Depends on 004.
 - CLEAN-006: Read PRODUCT, DEMO. PWA capture, site zones, coverage from records; no automated
   replacement dispatch. Depends on 005; split screens into separate follow-up issues.
 - CLEAN-007: Read DOMAIN, SECURITY, DEMO. Incident/equipment intake, computed SLA and restricted

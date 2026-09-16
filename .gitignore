@@ -9,3 +9,5 @@ coverage/
 *.log
 *.tsbuildinfo
 supabase/.temp/
+playwright-report/
+test-results/

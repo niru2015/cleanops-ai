@@ -27,6 +27,11 @@ Use stable fixture IDs and a reset action scoped to the demo tenant; no destruct
 P2 implements only the 23:15–23:34 evidence/review slice, plus unresolved/duplicate/error cases.
 CLEAN-004 supplies the durable 23:15 BEFORE, 23:29 AFTER and revision/pair foundation; quality
 scoring, findings, correction decisions and approval remain CLEAN-005.
+
+CLEAN-005 implements the 23:30–23:34 review slice at `/review`: Mock AI score 86 remains a
+suggestion until confirmation, correction creates revision 2, score 96 remains advisory and a
+supervisor explicitly approves. The history survives reload; a simulated mock failure remains
+manually reviewable.
 P3 adds surrounding UI and records. Deferred capabilities are clearly labeled previews,
 not working buttons or fake completed outcomes. PWA and simulator invoke shared services.
 

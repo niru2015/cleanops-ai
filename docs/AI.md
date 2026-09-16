@@ -24,7 +24,12 @@ Version `quality.v1`: decision_id; task_run_id; submission_revision; status enum
 evidence_ids[]}; limitations[]. Unknown IDs, extra keys and invalid ranges are rejected.
 Server attaches trusted IDs/version; model cannot choose a different tenant or task.
 Score is advisory. An insufficient result has null score and enters review.
-Implement the exact Zod/JSON schema in code during the AI issue, then link it here.
+The implementation must preserve this exact contract when the mock adapter is replaced.
+
+CLEAN-005 implements `quality.v1` in `src/schemas/quality.ts` and the deterministic
+`MockVisualQualityService`. Revision 1 returns score 86 with a possible mirror-streak observation;
+revision 2 returns score 96 with no observation. Both are visibly labeled Mock AI and require a
+supervisor decision. Mock failure persists a manual-review state rather than blocking review.
 
 ## Execution policy (initial design defaults)
 

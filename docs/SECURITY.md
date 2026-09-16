@@ -45,6 +45,11 @@ Authenticated callers can see Storage metadata only when the linked evidence row
 the signed-URL route repeats that RLS check and uses a 60-second expiry. Cleaners see their own
 linked evidence, supervisors see granted sites, and unresolved records never reach clients.
 
+CLEAN-005 review tables are read-only through RLS for authorized supervisors and managers.
+Mutations use narrowly granted RPCs that resolve the actor server-side, check active role plus
+site access and lock the task row before comparing revisions. Cleaners and client viewers cannot
+approve; AI output is service-written and an approved revision is final.
+
 ## Evidence privacy and pilot decisions
 
 Use synthetic people/sites/media in demos. Casino images may contain patrons, staff,

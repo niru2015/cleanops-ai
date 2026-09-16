@@ -51,6 +51,11 @@ the stored SHA-256, detected content type and byte size, then resolves identity/
 one database transaction. `/api/demo/evidence/reconcile` repairs upload-before-finalize crashes.
 Authenticated reads pass RLS before the server issues a 60-second signed URL.
 
+CLEAN-005 adds `/review`, server actions and a `VisualQualityService` boundary. The deterministic
+mock writes the same `quality.v1` shape expected from a future live adapter. Database RPCs compare
+the current submission revision inside the transaction before confirming a finding or approving;
+the browser cannot convert a score into approval.
+
 ## Configuration
 
 Default demo mode uses synthetic fixtures and mock AI; database persistence is real local
