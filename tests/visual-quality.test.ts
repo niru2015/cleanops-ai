@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { qualityAssessmentSchema } from "@/schemas/quality";
+import { qualityAssessmentSchema, qualityProviderOutputSchema } from "@/schemas/quality";
 import { MockVisualQualityService } from "@/services/visual-quality";
 
 const input = {
@@ -38,6 +38,13 @@ describe("CLEAN-005 Mock VisualQualityService", () => {
       findings: [],
       limitations: [],
       unexpected: true,
+    })).toThrow();
+  });
+
+  it("does not permit a provider to select arbitrary evidence IDs", () => {
+    expect(() => qualityProviderOutputSchema.parse({
+      status: "assessed", score: 80, confidence: 0.7, limitations: [],
+      findings: [{ criterion_id: "mirror.streak_free", observation: "Possible streak.", severity: "low", evidence_role: "after", evidence_ids: [input.afterEvidenceId] }],
     })).toThrow();
   });
 });

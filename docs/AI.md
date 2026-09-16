@@ -47,6 +47,14 @@ full message histories or original sensitive media by default.
 Record model identifier, versions, latency, attempt count, provider-reported token categories
 when available and cost estimate provenance. Missing token counts are null, never invented.
 
+CLEAN-008 keeps `OpenAIVisualQualityService` server-only. It accepts only two verified redacted
+derivatives under 1 MiB and sends criterion IDs plus before/after roles, never original storage
+paths, tenant IDs, message text or evidence UUIDs. The provider returns roles; the server validates
+the strict `quality.v1`-compatible shape and attaches trusted IDs. A private tenant ledger reserves
+the configured per-attempt ceiling before a call, caps a cache key at two attempts, and holds the
+ceiling as spent when final provider billing is unknown. Missing configuration, an exhausted budget,
+refusal, incomplete result, invalid output or stale submission all preserve manual review.
+
 ## Human review and evaluation
 
 Store proposed output, reviewer, accepted/dismissed findings and override reason separately.

@@ -31,6 +31,61 @@ export const qualityAssessmentSchema = z
 
 export type QualityAssessment = z.infer<typeof qualityAssessmentSchema>;
 
+/**
+ * The provider receives roles, never tenant IDs or evidence UUIDs. The server maps
+ * the roles back to the trusted evidence IDs after strict validation.
+ */
+export const qualityProviderOutputSchema = z
+  .object({
+    status: z.enum(["assessed", "insufficient_evidence"]),
+    score: z.number().min(0).max(100).nullable(),
+    confidence: z.number().min(0).max(1).nullable(),
+    findings: z.array(z.object({
+      criterion_id: z.string().regex(/^[a-z0-9_.-]{1,80}$/),
+      observation: z.string().trim().min(1).max(1000),
+      severity: z.enum(["low", "medium", "high"]),
+      evidence_role: z.enum(["before", "after"]),
+    }).strict()).max(20),
+    limitations: z.array(z.string().trim().min(1).max(500)).max(20),
+  })
+  .strict()
+  .superRefine((result, context) => {
+    if (result.status === "assessed" && result.score === null) {
+      context.addIssue({ code: "custom", message: "Assessed results require a score.", path: ["score"] });
+    }
+    if (result.status === "insufficient_evidence" && result.score !== null) {
+      context.addIssue({ code: "custom", message: "Insufficient results cannot have a score.", path: ["score"] });
+    }
+  });
+
+export type QualityProviderOutput = z.infer<typeof qualityProviderOutputSchema>;
+
+/** Exact JSON Schema supplied to the Responses API. Keep this in lockstep with the Zod validator. */
+export const qualityProviderJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["status", "score", "confidence", "findings", "limitations"],
+  properties: {
+    status: { type: "string", enum: ["assessed", "insufficient_evidence"] },
+    score: { type: ["number", "null"], minimum: 0, maximum: 100 },
+    confidence: { type: ["number", "null"], minimum: 0, maximum: 1 },
+    findings: {
+      type: "array", maxItems: 20,
+      items: {
+        type: "object", additionalProperties: false,
+        required: ["criterion_id", "observation", "severity", "evidence_role"],
+        properties: {
+          criterion_id: { type: "string", pattern: "^[a-z0-9_.-]{1,80}$" },
+          observation: { type: "string", minLength: 1, maxLength: 1000 },
+          severity: { type: "string", enum: ["low", "medium", "high"] },
+          evidence_role: { type: "string", enum: ["before", "after"] },
+        },
+      },
+    },
+    limitations: { type: "array", maxItems: 20, items: { type: "string", minLength: 1, maxLength: 500 } },
+  },
+} as const;
+
 export const reviewActionInputSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("prepare_initial"), taskRunId: z.string().uuid() }).strict(),
   z.object({ action: z.literal("submit_correction"), taskRunId: z.string().uuid() }).strict(),

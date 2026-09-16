@@ -20,3 +20,16 @@ before live integration, then run a small capped fixture evaluation and record r
 
 Source checked 2026-09-14: [Structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 Use current official API documentation to verify model support and request fields at P4.
+
+## CLEAN-008 implementation
+
+`OPENAI_QUALITY_LIVE_ENABLED=true` is necessary but insufficient: a server-only API key and a
+positive `OPENAI_QUALITY_ATTEMPT_CENTS` are also required. Tenant `quality_ai_budgets` must have
+an enabled finite ceiling. The Responses request uses `store: false`, a strict JSON Schema and a
+1,000-token output ceiling. The adapter applies a 30-second abort signal and never retries inside
+the SDK; the database reservation is the only retry counter.
+
+Provider output, response correlation, latency, returned usage and the conservative cap charge
+are stored in private `quality_ai_runs`. `quality_ai_evaluations` records the synthetic fixture,
+mismatch, abstention, reviewer override and cost provenance. The mock is still the default demo
+service. Real media remains blocked until an approved derivative/redaction pipeline exists.
