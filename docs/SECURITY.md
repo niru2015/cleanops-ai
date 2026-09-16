@@ -18,6 +18,11 @@ profile field or a client-supplied organization ID. Privileged workers resolve a
 tenant from trusted configuration and validate all references because they can bypass RLS.
 Cleaner self-approval is prohibited. Client release is a deliberate supervisor/manager action.
 
+Membership revocation is database-backed in CLEAN-002: every policy helper checks the active
+membership row on each statement. Revocation therefore applies on the next database statement,
+even when the caller still holds an otherwise valid access token. Auth session revocation remains
+a separate control for ending all non-database access and must be added before a real pilot.
+
 ## Required controls
 
 - Enable RLS and minimal grants together on exposed tables; default deny anonymous access.
