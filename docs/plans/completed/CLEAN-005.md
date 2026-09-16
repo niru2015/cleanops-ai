@@ -1,7 +1,7 @@
 # CLEAN-005 — Supervisor quality review and correction
 
-Status: implementation complete locally; canonical Supabase and browser CI pending. Dependency:
-CLEAN-004 merged in PR #13.
+Status: complete on `codex/clean-005-supervisor-review`; draft PR #14. Dependency: CLEAN-004
+merged in PR #13. Implementation commit: `f57535d`.
 
 ## Objective
 
@@ -28,5 +28,11 @@ finding decisions, corrective evidence revision and revision-safe supervisor app
 
 - Passed locally: typecheck, lint, 20 Vitest cases and production build.
 - Passed locally: stock PostgreSQL migrations and CLEAN-002 through CLEAN-005 acceptance suite.
-- Pending GitHub CI: canonical Supabase reset, 35 CLEAN-005 pgTAP assertions and Playwright
-  browser flow. Local canonical/browser run is blocked because Docker or Podman is unavailable.
+- Passed in GitHub CI: canonical Supabase reset, all 35 CLEAN-005 pgTAP assertions and the
+  prepare → review → correct → approve → reload Playwright flow.
+- Desktop and 390 px mobile screenshots were visually checked; content is readable with no
+  horizontal overflow, framework overlay or reported console error.
+- Both push and pull-request workflows passed: application jobs in 1m12s/1m07s and database,
+  Storage and browser jobs in 5m45s/5m06s.
+- Local canonical Supabase/browser execution remains unavailable because this machine has no
+  Docker or Podman; GitHub ran those checks against the final implementation commit.
