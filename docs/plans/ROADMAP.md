@@ -19,8 +19,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
   including deterministic seed and denied cross-tenant/cross-site operations.
 - CLEAN-003: [durable mock ingress implemented](completed/CLEAN-003.md), including raw events,
   leased jobs, normalized messages and duplicate/concurrency/restart checks; no media/AI.
-- CLEAN-004: Read WHATSAPP, DATA_MODEL. Private media, verified identities, context/pairing,
-  unresolved queue; after-first and bad-media tests. Depends on 003.
+- CLEAN-004: [operational evidence implemented](completed/CLEAN-004.md), including private media,
+  verified identities, deterministic context/pairing, unresolved review, recovery and isolation.
 - CLEAN-005: Read DOMAIN, AI, DEMO. Mock quality, revision-safe human approval/correction,
   audit history and browser slice. Depends on 004.
 - CLEAN-006: Read PRODUCT, DEMO. PWA capture, site zones, coverage from records; no automated

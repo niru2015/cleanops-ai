@@ -25,6 +25,8 @@ Use stable fixture IDs and a reset action scoped to the demo tenant; no destruct
 ## Phased demo
 
 P2 implements only the 23:15–23:34 evidence/review slice, plus unresolved/duplicate/error cases.
+CLEAN-004 supplies the durable 23:15 BEFORE, 23:29 AFTER and revision/pair foundation; quality
+scoring, findings, correction decisions and approval remain CLEAN-005.
 P3 adds surrounding UI and records. Deferred capabilities are clearly labeled previews,
 not working buttons or fake completed outcomes. PWA and simulator invoke shared services.
 

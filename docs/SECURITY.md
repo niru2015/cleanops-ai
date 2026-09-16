@@ -39,6 +39,12 @@ enable flag and body limits. Both simulator routes return `404` when disabled an
 off under `NODE_ENV=production`. The privileged Supabase secret is loaded only after this gate;
 integration tables and RPCs grant access only to `service_role`.
 
+CLEAN-004 configures a private `operational-evidence` bucket with a 10 MiB limit and JPEG, PNG
+and WebP allowlist. The service checks the file signature, size and SHA-256 before finalization.
+Authenticated callers can see Storage metadata only when the linked evidence row is visible;
+the signed-URL route repeats that RLS check and uses a 60-second expiry. Cleaners see their own
+linked evidence, supervisors see granted sites, and unresolved records never reach clients.
+
 ## Evidence privacy and pilot decisions
 
 Use synthetic people/sites/media in demos. Casino images may contain patrons, staff,

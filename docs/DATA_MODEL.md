@@ -4,7 +4,9 @@ The design contract below sets intent. CLEAN-002 migration
 `supabase/migrations/20260915160856_cleanops_foundation.sql` owns exact Phase-1 columns,
 indexes, constraints, grants and policies. CLEAN-003 migration
 `supabase/migrations/20260916053638_durable_mock_ingestion.sql` owns exact integration account,
-raw envelope, processing job and normalized message structures and RPCs.
+raw envelope, processing job and normalized message structures and RPCs. CLEAN-004 migration
+`supabase/migrations/20260916061705_operational_evidence.sql` owns verified identities,
+conversation contexts, evidence, pairing, audit and private Storage policies.
 Every tenant-owned table has UUID id, organization_id, created_at; mutable records add
 updated_at and revision where concurrency matters. Auth users are identities, not tenants.
 
@@ -26,9 +28,10 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | Reliability | processing_jobs(kind, dedupe_key, lease, attempts, next_attempt_at, status); audit_events(actor, action, entity, reason, timestamp) |
 
 CLEAN-003 implements integration_accounts, integration_webhook_events, processing_jobs and
-external_messages. Sender resolution, media/evidence, audit events and AI records remain later
-issues. The acceptance RPC derives organization_id from the enabled registered account; callers
-cannot supply tenant identity.
+external_messages. CLEAN-004 implements external_worker_identities, conversation_contexts,
+task_evidence, evidence_pairs and evidence_audit_events. AI and quality-review records remain
+later issues. Acceptance and evidence RPCs derive organization_id from the enabled registered
+account; callers cannot supply tenant identity.
 
 Tenant links must agree: use organization-scoped composite foreign keys or equivalent
 constraints, not just UUID references. Check site consistency through task/zone/shift
@@ -40,7 +43,8 @@ Membership and worker/site permission serve different purposes: app access vs wo
 - membership: (organization_id, user_id); site grant: (membership_id, site_id).
 - message: (integration_account_id, external_message_id); identity: (account_id, sender).
 - envelope: (account_id, dedupe_key); job: (organization_id, kind, dedupe_key).
-- evidence: (external_message_id, media_external_id, role) within account/tenant context;
+- evidence: (integration_account_id, external_message_id, media_external_id); one linked role per
+  task revision; paired AFTER is unique;
   PWA uploads use a client request UUID scoped to authorized worker.
 - task occurrence: (task_schedule_id, scheduled_at); assignment: (shift_id, worker_id).
 - AI request: (service, task_run_id, submission_revision, input_hash, prompt_version).

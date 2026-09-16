@@ -50,3 +50,20 @@ compatibility on PostgreSQL 18 and runs application checks on Node.js 24.
 - `supabase/tests/durable_ingestion_test.sql` is the canonical pgTAP suite; the stock PostgreSQL
   compatibility suite also executes two simultaneous acceptance transactions.
 - CLEAN-003 remains local-only and does not link or deploy a remote Supabase project.
+
+## CLEAN-004 implementation
+
+- `supabase/config.toml` declares a private `operational-evidence` bucket with a 10 MiB limit and
+  JPEG, PNG and WebP allowlist.
+- Migration `20260916061705_operational_evidence.sql` defines tenant/site constraints, RLS,
+  service-only staging/finalization and authenticated audited resolution.
+- Storage object reads require a visible ready evidence row. The application issues a short-lived
+  URL only after a cookie-bound client passes that policy.
+- Database tests cover the golden pair, corrected revision, duplicate media, unresolved reasons,
+  supervisor remapping, worker ownership and cross-tenant Storage denial.
+- Files are uploaded and downloaded through the Storage API; SQL manages authorization metadata
+  and policies rather than object contents.
+
+Storage guidance rechecked 2026-09-15: [access control](https://supabase.com/docs/guides/storage/security/access-control),
+[private asset serving](https://supabase.com/docs/guides/storage/serving/downloads) and
+[schema boundary](https://supabase.com/docs/guides/storage/schema/design).

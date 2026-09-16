@@ -47,5 +47,7 @@ wait "$second_accept_pid"
 
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/tests/database/durable-ingestion.sql" >/dev/null
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/operational-evidence.sql" >/dev/null
 
-echo "CLEAN-002 and CLEAN-003 migrations, isolation, concurrency and recovery checks passed on PostgreSQL."
+echo "CLEAN-002 through CLEAN-004 migrations, isolation, concurrency and recovery checks passed on PostgreSQL."
