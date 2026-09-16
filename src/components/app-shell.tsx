@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { navigationItems } from "@/config/navigation";
 import { BrandMark, CloseIcon, EmptyDocumentIcon, MenuIcon, NavigationGlyph } from "@/components/icons";
 
@@ -13,14 +13,14 @@ function Brand() {
   );
 }
 
-function Navigation() {
+function Navigation({ currentPath }: { currentPath: string }) {
   return (
     <nav aria-label="Primary navigation" className="navigation">
       <ul>
         {navigationItems.map((item) => (
           <li key={item.label}>
-            {item.current ? (
-              <a className="navItem navItemActive" href={item.href} aria-current="page">
+            {item.implemented ? (
+              <a className={`navItem ${item.href === currentPath ? "navItemActive" : ""}`} href={item.href} aria-current={item.href === currentPath ? "page" : undefined}>
                 <NavigationGlyph className="navIcon" name={item.icon} />
                 <span>{item.label}</span>
               </a>
@@ -43,9 +43,11 @@ function Navigation() {
 function NavigationPanel({
   closeButtonRef,
   onClose,
+  currentPath,
 }: {
   closeButtonRef?: RefObject<HTMLButtonElement | null>;
   onClose?: () => void;
+  currentPath: string;
 }) {
   return (
     <div className="navigationPanel">
@@ -63,13 +65,13 @@ function NavigationPanel({
           </button>
         ) : null}
       </div>
-      <Navigation />
-      <p className="shellRevision">CLEAN-001 <span aria-hidden="true">•</span> Application shell</p>
+      <Navigation currentPath={currentPath} />
+      <p className="shellRevision">Phase P2 <span aria-hidden="true">•</span> Supervisor review</p>
     </div>
   );
 }
 
-export function AppShell() {
+export function AppShell({ children, currentPath = "/" }: { children?: ReactNode; currentPath?: string }) {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -103,7 +105,7 @@ export function AppShell() {
   return (
     <div className="appShell">
       <aside className="desktopSidebar">
-        <NavigationPanel />
+        <NavigationPanel currentPath={currentPath} />
       </aside>
 
       <div className="workspaceColumn">
@@ -125,13 +127,17 @@ export function AppShell() {
         <div className="prototypeBanner" role="status">Prototype <span aria-hidden="true">•</span> synthetic data</div>
 
         <main className="workspace" id="main-content">
-          <h1>Operations workspace</h1>
-          <section className="emptyState" aria-labelledby="empty-state-title">
-            <EmptyDocumentIcon className="emptyIllustration" />
-            <h2 id="empty-state-title" className="visuallyHidden">Application shell ready</h2>
-            <p>The CleanOps foundation is ready. Operational data will appear after CLEAN-002 adds the local Supabase domain model.</p>
-          </section>
-          <p className="mobileRevision">CLEAN-001 <span aria-hidden="true">•</span> Application shell</p>
+          {children ?? (
+            <>
+              <h1>Operations workspace</h1>
+              <section className="emptyState" aria-labelledby="empty-state-title">
+                <EmptyDocumentIcon className="emptyIllustration" />
+                <h2 id="empty-state-title" className="visuallyHidden">Application foundation ready</h2>
+                <p>Open Evidence review to run the synthetic supervisor workflow for Restroom B.</p>
+              </section>
+            </>
+          )}
+          <p className="mobileRevision">Phase P2 <span aria-hidden="true">•</span> Supervisor review</p>
         </main>
       </div>
 
@@ -139,7 +145,7 @@ export function AppShell() {
         <div className="mobileNavigationLayer" id="mobile-navigation">
           <div className="drawerBackdrop" role="presentation" onClick={closeMobileNavigation} />
           <aside className="mobileDrawer" aria-label="Navigation drawer">
-            <NavigationPanel closeButtonRef={closeButtonRef} onClose={closeMobileNavigation} />
+            <NavigationPanel closeButtonRef={closeButtonRef} onClose={closeMobileNavigation} currentPath={currentPath} />
           </aside>
         </div>
       ) : null}

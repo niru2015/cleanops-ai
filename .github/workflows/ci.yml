@@ -44,6 +44,15 @@ jobs:
       - run: npm run db:reset
       - run: npm run test:storage
       - run: npm run test:db
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:review
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: clean-005-browser-evidence-${{ github.run_id }}-${{ github.job }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Stop local Supabase
         if: always()
         run: npx supabase stop --no-backup

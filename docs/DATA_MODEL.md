@@ -7,6 +7,8 @@ indexes, constraints, grants and policies. CLEAN-003 migration
 raw envelope, processing job and normalized message structures and RPCs. CLEAN-004 migration
 `supabase/migrations/20260916061705_operational_evidence.sql` owns verified identities,
 conversation contexts, evidence, pairing, audit and private Storage policies.
+The CLEAN-005 migrations own quality decisions, confirmed findings, corrective actions,
+revision inspections, review audit events and guarded supervisor RPCs.
 Every tenant-owned table has UUID id, organization_id, created_at; mutable records add
 updated_at and revision where concurrency matters. Auth users are identities, not tenants.
 
@@ -23,14 +25,14 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | Normalized | external_messages(account, provider message ID, sender, worker nullable, received_at, occurred_at, status) |
 | Resolution | external_worker_identities(account, sender, worker, verified_at); conversation_contexts(account, thread, sender, task, expiry) |
 | Media | task_evidence(task_run nullable, message, role, storage_path, hash, captured_at nullable, received_at, submission_revision) |
-| Review | inspections(task_run, submission_revision, reviewer, outcome); quality_findings(inspection or ai_decision, status); corrective_actions(finding, task_run, state) |
+| Review | quality_decisions(task_run, submission_revision, pair, structured output); quality_findings(decision, confirmed observation); corrective_actions(finding, source/target revision, state); inspections(task_run, revision, reviewer, outcome); review_audit_events |
 | AI | ai_decisions(task_run, submission_revision, input hash, prompt/schema/model version, output, review status); ai_usage(decision, attempt, returned usage, status) |
 | Reliability | processing_jobs(kind, dedupe_key, lease, attempts, next_attempt_at, status); audit_events(actor, action, entity, reason, timestamp) |
 
 CLEAN-003 implements integration_accounts, integration_webhook_events, processing_jobs and
 external_messages. CLEAN-004 implements external_worker_identities, conversation_contexts,
-task_evidence, evidence_pairs and evidence_audit_events. AI and quality-review records remain
-later issues. Acceptance and evidence RPCs derive organization_id from the enabled registered
+task_evidence, evidence_pairs and evidence_audit_events. CLEAN-005 implements the review group;
+live provider usage records remain a later issue. Acceptance and evidence RPCs derive organization_id from the enabled registered
 account; callers cannot supply tenant identity.
 
 Tenant links must agree: use organization-scoped composite foreign keys or equivalent
@@ -48,6 +50,8 @@ Membership and worker/site permission serve different purposes: app access vs wo
   PWA uploads use a client request UUID scoped to authorized worker.
 - task occurrence: (task_schedule_id, scheduled_at); assignment: (shift_id, worker_id).
 - AI request: (service, task_run_id, submission_revision, input_hash, prompt_version).
+- Human approval locks the current task revision; stale decisions and later evidence cannot
+  change an approved revision.
 - Store original object hash and source reference; corrections append records, not overwrite.
 - captured_at is nullable and source-reported; received_at is server-owned. Neither proves presence.
 - Audit events are append-only through restricted server operations, with redacted changes.
