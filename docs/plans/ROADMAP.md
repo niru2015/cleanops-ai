@@ -25,8 +25,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
   revision-safe human approval/correction, audit history and the browser slice.
 - CLEAN-006: [mobile and operations implemented](completed/CLEAN-006.md), including shared
   PWA evidence capture, site-zone states, computed coverage and human replacement assignment.
-- CLEAN-007: Read DOMAIN, SECURITY, DEMO. Incident/equipment intake, computed SLA and restricted
-  report release; no safety-monitor claim. Depends on 005; split intake from reporting.
+- CLEAN-007: [incident, equipment and client reporting implemented](completed/CLEAN-007.md),
+  including versioned SLA computation, explicit audited release and site-authorized redacted view.
 - CLEAN-008: Read AI, OPENAI, SECURITY. Capped live provider adapter/evaluation. Depends on 005.
 - CLEAN-009: Read WHATSAPP, SECURITY. Verified official webhook/media + outbox separately.
   Depends on 003–005 and account readiness; no legacy scraping.
