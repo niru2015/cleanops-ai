@@ -56,6 +56,12 @@ can read only their assigned mobile task. The coverage function checks shift acc
 distinct assigned workers with active site permission and a latest check-in at the requested time.
 Creating QR context does not create an attendance event.
 
+CLEAN-007 keeps incident statements, evidence links, equipment records and reporting audit events
+inside operational roles with managed-site access. A client sees no draft. Explicit release creates
+an immutable audience record, and the client export function checks active `client_viewer`
+membership plus an active grant to that site before returning a redacted snapshot. Tests cover
+guessed IDs, another site in the same tenant, another tenant and private-original denial.
+
 ## Evidence privacy and pilot decisions
 
 Use synthetic people/sites/media in demos. Casino images may contain patrons, staff,

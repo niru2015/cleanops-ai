@@ -61,6 +61,12 @@ from required positions and distinct eligible assigned check-ins. QR selection w
 context only; mobile photos then use the existing ingress, evidence and pairing services. Replacement
 candidates require separate supervisor selection and attendance records, with no automatic dispatch.
 
+CLEAN-007 adds `/incidents`, `/reports` and `/reports/client` over a reporting repository.
+Supervisor RPCs atomically record attributed incident context, corrections and release audit.
+The SLA draft is a stored snapshot calculated from one versioned definition and 150 persisted
+task-run results. The client export RPC resolves an active client viewer plus site grant and
+returns only released redacted fields; it never reads private statements or evidence into the view.
+
 ## Configuration
 
 Default demo mode uses synthetic fixtures and mock AI; database persistence is real local

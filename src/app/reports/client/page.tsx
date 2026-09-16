@@ -1,0 +1,17 @@
+import { AppShell } from "@/components/app-shell";
+import { ClientReport } from "@/components/client-report";
+import { getClientReportWorkspace } from "@/integrations/reporting/supabase-reporting";
+import { getReportingRuntime } from "@/services/reporting-runtime";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export default async function ClientReportPage() {
+  let report: Awaited<ReturnType<typeof getClientReportWorkspace>> | undefined;
+  try {
+    const runtime = await getReportingRuntime("client");
+    report = await getClientReportWorkspace(runtime.accessClient, runtime.actorUserId);
+  } catch {}
+  if (report !== undefined) return <AppShell currentPath="/reports"><ClientReport report={report} /></AppShell>;
+  return <AppShell currentPath="/reports"><section className="accessState"><p className="eyebrow">Client report</p><h1>Client site access required</h1><p>Only an active client viewer for this site can open a released report.</p></section></AppShell>;
+}

@@ -40,6 +40,11 @@ retryable and successful photos run through the shared evidence pipeline.
 P3 adds surrounding UI and records. Deferred capabilities are clearly labeled previews,
 not working buttons or fake completed outcomes. PWA and simulator invoke shared services.
 
+CLEAN-007 implements the 00:17 and 02:05 records at `/incidents`, including attributed wording,
+an audited correction and an equipment state that remains `reported`. `/reports` computes the
+versioned 149/150 fixture, keeps it private as a draft and requires supervisor release.
+`/reports/client` returns only the released redacted snapshot to the site-authorized demo viewer.
+
 ## Metric fixtures
 
 For the final P3 report seed 150 due required task runs, 149 approved on time and 1 missed:

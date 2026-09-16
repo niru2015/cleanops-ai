@@ -14,12 +14,11 @@ describe("CLEAN-001 application shell", () => {
     expect(html).not.toContain("AI verified");
   });
 
-  it("exposes connected P3 journeys while labeling deferred destinations", () => {
+  it("exposes all six connected P3 journeys", () => {
     const implementedItems = navigationItems.filter((item) => item.implemented);
     const plannedItems = navigationItems.filter((item) => !item.implemented);
 
-    expect(implementedItems.map((item) => item.label)).toEqual(["Operations", "Sites & zones", "Cleaner mobile", "Evidence review"]);
-    expect(plannedItems).toHaveLength(2);
-    expect(plannedItems.every((item) => "status" in item && item.status === "Not implemented")).toBe(true);
+    expect(implementedItems.map((item) => item.label)).toEqual(["Operations", "Sites & zones", "Cleaner mobile", "Evidence review", "Incidents", "Client reports"]);
+    expect(plannedItems).toHaveLength(0);
   });
 });

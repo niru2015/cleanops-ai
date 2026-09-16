@@ -1196,3 +1196,181 @@ a:focus-visible {
   .zoneList .zoneState { grid-column: 2; justify-self: start; }
   .mobileTaskCard { padding: 18px; }
 }
+
+/* CLEAN-007 incident and reporting journeys */
+.reportingWorkspace,
+.clientReport {
+  display: grid;
+  gap: 24px;
+}
+
+.reportingHeader,
+.clientReport > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.reportingHeader p:last-child,
+.clientReport > header p:last-child {
+  max-width: 720px;
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.recordLabel,
+.neutralBadge,
+.releaseBadge {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid #c9d8e2;
+  border-radius: 999px;
+  background: #f5f8fa;
+  color: #3e5263;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+}
+
+.neutralBadge { background: #fff8e6; border-color: #f1dca3; color: #755410; }
+.releaseBadgeReleased { background: #e6f8ef; border-color: #abd9bf; color: #1d6b43; }
+
+.reportingGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.reportingPanel,
+.metricDefinition,
+.reportingEmpty.reportPrepare,
+.releasePanel,
+.auditStrip,
+.clientDefinition,
+.clientSafety {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgb(8 38 62 / 7%);
+}
+
+.reportingPanel { padding: 24px; }
+.reportingPanel h2 { margin: 5px 0 0; font-size: 1.25rem; }
+.reportingPanel h3 { margin: 24px 0 8px; font-size: 1.05rem; }
+.reportingPanel > p { color: #415165; line-height: 1.55; }
+
+.recordFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 22px 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--border);
+}
+
+.recordFacts div { min-width: 0; padding: 12px; background: #f9fbfc; }
+.recordFacts dt { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.recordFacts dd { margin: 5px 0 0; font-weight: 680; text-transform: capitalize; overflow-wrap: anywhere; }
+
+.recordSummary,
+.statementCard,
+.equipmentState {
+  display: grid;
+  gap: 7px;
+  margin: 18px 0;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f4f8fa;
+}
+.recordSummary span,
+.statementCard span,
+.equipmentState span { color: var(--muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.statementCard { margin-inline: 0; border-left: 4px solid var(--cyan-500); }
+.statementCard p { margin: 0; color: #283b4c; font-style: normal; line-height: 1.5; }
+.actionRecord { margin: 18px 0; color: #34485b; line-height: 1.5; }
+.completeLine { color: #187347; font-weight: 700; }
+
+.incidentTimeline { margin: 24px 0 0; padding: 0; list-style: none; }
+.incidentTimeline li { display: grid; grid-template-columns: 48px 12px 1fr; gap: 10px; align-items: start; min-height: 46px; }
+.incidentTimeline time { color: var(--muted); font-size: 0.8rem; }
+.incidentTimeline li > span { width: 10px; height: 10px; margin-top: 3px; border-radius: 50%; background: var(--cyan-500); box-shadow: 0 0 0 4px var(--cyan-100); }
+.incidentTimeline p { margin: 0; color: #3f5265; font-size: 0.88rem; line-height: 1.4; }
+
+.equipmentIssue { margin: 0 0 18px; font-size: 1rem; }
+.boundaryCallout { margin-top: 18px; padding: 15px; border-radius: 10px; background: #fff8e7; color: #604910; }
+.boundaryCallout p { margin: 6px 0 0; color: inherit; line-height: 1.45; }
+.reportingEmpty { display: grid; justify-items: start; gap: 14px; padding: 28px 0 4px; color: var(--muted); }
+.reportingEmpty p { margin: 0; line-height: 1.5; }
+.nextJourneyLink { display: flex; justify-content: space-between; gap: 20px; padding: 18px 22px; border-radius: 12px; background: var(--navy-900); color: white; text-decoration: none; }
+.nextJourneyLink span { color: #a9c4d7; }
+
+.metricDefinition { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 2fr); gap: 28px; padding: 24px; }
+.metricDefinition h2 { margin: 4px 0 0; font-size: 1.25rem; }
+.metricDefinition dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 0; }
+.metricDefinition dt { color: var(--muted); font-size: .75rem; font-weight: 700; text-transform: uppercase; }
+.metricDefinition dd { margin: 6px 0 0; color: #34475a; font-size: .85rem; line-height: 1.45; }
+
+.reportMetrics { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); overflow: hidden; border: 1px solid var(--border); border-radius: 14px; }
+.reportMetrics article { padding: 20px; border-right: 1px solid var(--border); background: #fbfcfd; }
+.reportMetrics article:last-child { border-right: 0; }
+.reportMetrics span, .reportMetrics p { color: var(--muted); font-size: .77rem; }
+.reportMetrics strong { display: block; margin: 8px 0 5px; font-size: 1.7rem; }
+.reportMetrics p { margin: 0; line-height: 1.4; }
+.reportMetrics .primaryMetric { background: var(--navy-900); color: white; }
+.reportMetrics .primaryMetric span, .reportMetrics .primaryMetric p { color: #b7cfdf; }
+.reportMetrics .primaryMetric strong { font-size: 2.2rem; }
+
+.releasePanel { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px; }
+.releasePanel p { margin: 5px 0 0; color: var(--muted); }
+.releasePanel .reviewButton { text-decoration: none; }
+.reportPrepare { justify-items: center; padding: 40px; text-align: center; }
+.reportPrepare h2 { margin: 0; color: var(--text); }
+.reportPrepare p { max-width: 620px; }
+.auditStrip { padding: 20px; }
+.auditStrip h2 { margin: 0 0 12px; font-size: 1rem; }
+.auditStrip p { display: flex; gap: 16px; margin: 8px 0 0; color: var(--muted); font-size: .85rem; }
+.auditStrip strong { color: #1f6d47; }
+
+.clientReport { width: min(1040px, 100%); margin: 0 auto; }
+.clientMetric { padding: 32px; border-radius: 18px; background: var(--navy-900); color: white; }
+.clientMetric span { color: #b9d0df; font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.clientMetric strong { display: block; margin: 9px 0 4px; font-size: clamp(2.6rem, 7vw, 4.5rem); letter-spacing: -.06em; }
+.clientMetric p { margin: 0; color: #c7dae7; }
+.clientDefinition { padding: 20px; }
+.clientDefinition p { margin: 7px 0; color: #405266; line-height: 1.5; }
+.clientSafety { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 16px; padding: 20px; }
+.clientSafety span { font-weight: 700; }
+.clientSafety strong { padding: 5px 9px; border-radius: 7px; background: #eef2f5; }
+.clientSafety p { margin: 0; color: var(--muted); }
+.clientPrivacyNote { margin: 0; padding: 0 4px; color: var(--muted); font-size: .82rem; line-height: 1.5; }
+.clientReportEmpty { margin: auto; max-width: 560px; text-align: center; }
+.clientReportEmpty p { color: var(--muted); line-height: 1.55; }
+.clientReportEmpty a { color: #087a88; font-weight: 700; }
+
+@media (max-width: 900px) {
+  .reportingGrid { grid-template-columns: 1fr; }
+  .metricDefinition { grid-template-columns: 1fr; }
+  .reportMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .reportMetrics article:nth-child(2) { border-right: 0; }
+  .reportMetrics article:nth-child(-n + 2) { border-bottom: 1px solid var(--border); }
+}
+
+@media (max-width: 600px) {
+  .reportingHeader, .clientReport > header, .releasePanel { flex-direction: column; align-items: stretch; }
+  .recordLabel, .neutralBadge, .releaseBadge { align-self: flex-start; }
+  .recordFacts { grid-template-columns: 1fr; }
+  .metricDefinition dl { grid-template-columns: 1fr; }
+  .reportMetrics { grid-template-columns: 1fr 1fr; }
+  .reportMetrics article { padding: 15px; }
+  .reportMetrics strong { font-size: 1.4rem; }
+  .reportMetrics .primaryMetric strong { font-size: 1.8rem; }
+  .reportingPanel { padding: 18px; }
+  .releasePanel .reviewButton { width: 100%; text-align: center; }
+  .clientSafety { grid-template-columns: auto auto; }
+  .clientSafety p { grid-column: 1 / -1; }
+}

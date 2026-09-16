@@ -66,7 +66,7 @@ function NavigationPanel({
         ) : null}
       </div>
       <Navigation currentPath={currentPath} />
-      <p className="shellRevision">Phase P3 <span aria-hidden="true">•</span> Connected operations</p>
+      <p className="shellRevision">Phase P3 <span aria-hidden="true">•</span> Client reporting</p>
     </div>
   );
 }
@@ -137,7 +137,7 @@ export function AppShell({ children, currentPath = "/" }: { children?: ReactNode
               </section>
             </>
           )}
-          <p className="mobileRevision">Phase P3 <span aria-hidden="true">•</span> Connected operations</p>
+          <p className="mobileRevision">Phase P3 <span aria-hidden="true">•</span> Client reporting</p>
         </main>
       </div>
 
