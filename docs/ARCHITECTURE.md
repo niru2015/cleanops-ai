@@ -37,6 +37,11 @@ Do not start fire-and-forget work inside a serverless request. Worker runner use
 persisted lease, bounded attempts and reclaimable expired leases; local runner first,
 production scheduler selected at P4. No in-memory-only queue.
 
+CLEAN-003 implements the first slice at `/api/demo/messages` and
+`/api/demo/messages/worker`. The route delegates to `src/services`; the Supabase adapter owns
+RPC calls; `processing_jobs` owns durable state. `npm run worker:messages` invokes one leased
+job locally. A production scheduler remains a P4 decision.
+
 Idempotency exists at envelope, message, evidence and AI-job boundaries. Updates to a
 business record, audit event and next job are transactional; media uses staged upload
 plus reconciliation since Storage and Postgres are not one transaction.

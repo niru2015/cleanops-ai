@@ -2,7 +2,9 @@
 
 The design contract below sets intent. CLEAN-002 migration
 `supabase/migrations/20260915160856_cleanops_foundation.sql` owns exact Phase-1 columns,
-indexes, constraints, grants and policies.
+indexes, constraints, grants and policies. CLEAN-003 migration
+`supabase/migrations/20260916053638_durable_mock_ingestion.sql` owns exact integration account,
+raw envelope, processing job and normalized message structures and RPCs.
 Every tenant-owned table has UUID id, organization_id, created_at; mutable records add
 updated_at and revision where concurrency matters. Auth users are identities, not tenants.
 
@@ -22,6 +24,11 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | Review | inspections(task_run, submission_revision, reviewer, outcome); quality_findings(inspection or ai_decision, status); corrective_actions(finding, task_run, state) |
 | AI | ai_decisions(task_run, submission_revision, input hash, prompt/schema/model version, output, review status); ai_usage(decision, attempt, returned usage, status) |
 | Reliability | processing_jobs(kind, dedupe_key, lease, attempts, next_attempt_at, status); audit_events(actor, action, entity, reason, timestamp) |
+
+CLEAN-003 implements integration_accounts, integration_webhook_events, processing_jobs and
+external_messages. Sender resolution, media/evidence, audit events and AI records remain later
+issues. The acceptance RPC derives organization_id from the enabled registered account; callers
+cannot supply tenant identity.
 
 Tenant links must agree: use organization-scoped composite foreign keys or equivalent
 constraints, not just UUID references. Check site consistency through task/zone/shift

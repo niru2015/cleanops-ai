@@ -27,11 +27,25 @@ createdb -h 127.0.0.1 -p "$test_port" -U postgres cleanops_test
 
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/tests/database/supabase-compat.sql" >/dev/null
-psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
-  -f "$repository_root/supabase/migrations/20260915160856_cleanops_foundation.sql" >/dev/null
+for migration in "$repository_root"/supabase/migrations/*.sql; do
+  psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+    -f "$migration" >/dev/null
+done
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/supabase/seed.sql" >/dev/null
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/tests/database/rls-boundaries.sql" >/dev/null
 
-echo "CLEAN-002 migration, seed and RLS boundary checks passed on PostgreSQL."
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/concurrent-accept.sql" >/dev/null &
+first_accept_pid=$!
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/concurrent-accept.sql" >/dev/null &
+second_accept_pid=$!
+wait "$first_accept_pid"
+wait "$second_accept_pid"
+
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/durable-ingestion.sql" >/dev/null
+
+echo "CLEAN-002 and CLEAN-003 migrations, isolation, concurrency and recovery checks passed on PostgreSQL."

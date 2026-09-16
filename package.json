@@ -18,7 +18,8 @@
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "test:db": "supabase test db",
-    "test:db:postgres": "scripts/test-database-postgres.sh"
+    "test:db:postgres": "scripts/test-database-postgres.sh",
+    "worker:messages": "node --env-file=.env.local scripts/run-ingress-worker.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

@@ -17,6 +17,17 @@ Normalized fields: source, integration_account_id, external_message_id, external
 sender_id, occurred_at, received_at, text?, media_refs[], schema_version. Server derives
 tenant from the registered receiving account. Provider delivery status events are not messages.
 
+Implemented simulator payload, schema version 1:
+
+```json
+{"schemaVersion":1,"eventId":"synthetic-event-1","entries":[{"accountExternalId":"demo-nightshift-group","messages":[{"externalMessageId":"synthetic-message-1","externalThreadId":"synthetic-thread-1","senderId":"synthetic-sender-1","occurredAt":"2026-09-16T09:00:00Z","text":"Synthetic cleaning update","mediaRefs":[],"schemaVersion":1}]}]}
+```
+
+One request may contain at most 20 unique accounts and 100 messages per account. The service
+splits it into account-scoped envelopes before persistence. The database resolves each external
+account to its tenant and atomically creates its envelope plus pending job. A partial database
+failure returns `503`; retrying the same event is safe.
+
 1. Verify signature on exact raw bytes using current Meta requirements; validate body limits.
 2. Resolve receiving account; split batched entries/messages without cross-account mixing.
 3. Transactionally persist accepted envelope and pending processing job, then acknowledge.
@@ -46,6 +57,9 @@ AI attempts obey AI.md separately. Worker leases recover from crashes. Stage-lev
 prevents manual retry from repeating finalized effects. Database approval uses revision checks.
 Mock replay includes duplicate, concurrent, out-of-order, unknown sender, mixed batch, stale
 context, bad signature, unavailable media and crash-after-upload cases.
+
+CLEAN-003 implements the envelope, message and job boundaries plus local one-job processing.
+It does not fetch media, resolve senders/tasks or expose a live webhook.
 
 ## Outbound and go-live
 
