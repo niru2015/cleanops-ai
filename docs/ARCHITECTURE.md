@@ -42,6 +42,12 @@ CLEAN-003 implements the first slice at `/api/demo/messages` and
 RPC calls; `processing_jobs` owns durable state. `npm run worker:messages` invokes one leased
 job locally. A production scheduler remains a P4 decision.
 
+CLEAN-009 adds the official `/api/webhooks/whatsapp` trust boundary and a protected
+`/api/internal/whatsapp/worker` scheduling target. The webhook persists before acknowledgement;
+the worker reuses message normalization and evidence services, downloads media with the provider
+token, and advances a separate leased outbound queue. Hosting still needs to schedule repeated
+worker calls and alert on the service-only queue-health RPC.
+
 Idempotency exists at envelope, message, evidence and AI-job boundaries. Updates to a
 business record, audit event and next job are transactional; media uses staged upload
 plus reconciliation since Storage and Postgres are not one transaction.

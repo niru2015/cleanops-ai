@@ -10,7 +10,7 @@ Live group support requires a separate capability review and ADR; no scraping de
 
 ## Ingress and normalized contract
 
-Planned live route `/api/webhooks/whatsapp`: GET subscription verification, POST signed events.
+Implemented live route `/api/webhooks/whatsapp`: GET subscription verification, POST signed events.
 Separate `/api/demo/messages` route: authorized demo access, unavailable in production.
 Both reach the same normalization/services after their respective trust checks.
 Normalized fields: source, integration_account_id, external_message_id, external_thread_id,
@@ -62,15 +62,28 @@ CLEAN-003 implements the envelope, message and job boundaries plus local one-job
 CLEAN-004 implements synthetic media staging, verified identities, expiring contexts,
 deterministic task/pair resolution and the unresolved queue. It uses explicit `#before` and
 `#after` labels, never timestamp proximity. Missing, rejected and orphaned objects remain visible
-with retry or supervisor actions. Live provider retrieval and webhooks remain unimplemented.
+with retry or supervisor actions. CLEAN-009 adds the official adapter without changing the mock contract.
 
 ## Outbound and go-live
 
-P2 replies are simulated in-app. Live sends require an outbox with recipient/tenant validation,
-dedupe and delivery status; verify current Meta consent/template/session rules at P4. A send
-receipt is not worker acknowledgement. No safety-critical dependency on WhatsApp delivery.
-Before enabling: verify account eligibility, API version, permissions, phone ownership,
-webhook subscription/signature/media behavior and real sandbox delivery. Record evidence.
+CLEAN-009 adds an official-account outbox with one logical reply per tenant key, verified-recipient
+checks, leased retries and separate sent/delivered/read/failed transport events. Free-form text
+requires a current conversation-window expiry; every reply records its consent reference; template
+sends require a validated name and language. Transport delivery never updates worker acknowledgement
+or task completion. No safety-critical workflow depends on WhatsApp delivery.
+
+The server-only worker target `/api/internal/whatsapp/worker` processes one durable inbound job and
+one outbound item per call. `npm run worker:whatsapp` invokes it; the deployment scheduler must call
+it repeatedly. Failed media remains visible as missing/quarantined evidence and can be retried with
+`npm run worker:whatsapp -- --retry-evidence <evidence-id>`. Five failed sends
+enter the monitored failed queue. Provider and database retries preserve the same logical record.
+
+Before enabling, register the dedicated receiving phone number as an enabled
+`whatsapp_cloud_api` integration account and verified worker identities. Set only server-side
+`WHATSAPP_*` values, then run `npm run whatsapp:readiness`. The read-only check validates the pinned
+Graph version, phone access, WABA app subscription, required permissions and approved templates.
+Then verify webhook, media and outbound delivery with the customer's Meta sandbox and record the
+evidence. Local mocks and database tests do not prove live delivery.
 
 Reference checked 2026-09-14: [Meta-maintained Cloud API collection](https://www.postman.com/meta/whatsapp-business-platform/documentation/wlk6lh4/whatsapp-cloud-api).
 It documents webhook-driven integration; customer account and group capabilities were not verified.

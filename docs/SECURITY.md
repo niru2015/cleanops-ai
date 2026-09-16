@@ -39,6 +39,14 @@ enable flag and body limits. Both simulator routes return `404` when disabled an
 off under `NODE_ENV=production`. The privileged Supabase secret is loaded only after this gate;
 integration tables and RPCs grant access only to `service_role`.
 
+CLEAN-009 keeps the Meta app secret, access token, verify token and internal worker token in
+server-only environment variables. POST verifies `X-Hub-Signature-256` over the exact raw bytes;
+GET compares the subscription token without ordinary string equality. Receiving phone number maps
+to the tenant in the database. Media uses bearer-authenticated Graph requests, an HTTPS host
+allowlist, a 10 MiB ceiling and the existing content-signature checks. Official ingress, outbox,
+delivery and queue-health RPCs are service-role only. Free-form sends require a current conversation
+window and all sends require a consent reference plus a verified account-scoped recipient.
+
 CLEAN-004 configures a private `operational-evidence` bucket with a 10 MiB limit and JPEG, PNG
 and WebP allowlist. The service checks the file signature, size and SHA-256 before finalization.
 Authenticated callers can see Storage metadata only when the linked evidence row is visible;

@@ -9,6 +9,13 @@ import type {
 
 const MAX_MEDIA_BYTES = 10 * 1024 * 1024;
 
+export type EvidenceMediaSource = {
+  accountExternalId: string;
+  externalMessageId: string;
+  mediaExternalId: string;
+  declaredContentType: string | null;
+};
+
 function digest(bytes: Uint8Array) {
   return createHash("sha256").update(bytes).digest("hex");
 }
@@ -62,7 +69,7 @@ export function detectImageContentType(bytes: Uint8Array) {
 
 async function visibleProblem(
   repository: EvidenceRepository,
-  request: MockEvidenceRequest,
+  request: EvidenceMediaSource,
   bytes: Uint8Array | null,
   status: "quarantined" | "missing",
   errorCode: string,
@@ -89,19 +96,21 @@ async function visibleProblem(
   };
 }
 
-export async function ingestMockEvidence(
+export async function recordEvidenceMediaProblem(
+  repository: EvidenceRepository,
+  request: EvidenceMediaSource,
+  status: "quarantined" | "missing",
+  errorCode: string,
+) {
+  return visibleProblem(repository, request, null, status, errorCode);
+}
+
+export async function ingestEvidenceBytes(
   repository: EvidenceRepository,
   storage: EvidenceObjectStorage,
-  request: MockEvidenceRequest,
+  request: EvidenceMediaSource,
+  bytes: Uint8Array,
 ) {
-  if (request.contentBase64 === null) {
-    return visibleProblem(repository, request, null, "missing", "media_missing");
-  }
-
-  const bytes = decodeBase64(request.contentBase64);
-  if (!bytes) {
-    return visibleProblem(repository, request, null, "quarantined", "media_unsafe");
-  }
   if (bytes.byteLength > MAX_MEDIA_BYTES) {
     return visibleProblem(repository, request, bytes, "quarantined", "media_too_large");
   }
@@ -151,6 +160,22 @@ export async function ingestMockEvidence(
     bytes.byteLength,
   );
   return { ...resolved, duplicate: staged.duplicate };
+}
+
+export async function ingestMockEvidence(
+  repository: EvidenceRepository,
+  storage: EvidenceObjectStorage,
+  request: MockEvidenceRequest,
+) {
+  if (request.contentBase64 === null) {
+    return visibleProblem(repository, request, null, "missing", "media_missing");
+  }
+
+  const bytes = decodeBase64(request.contentBase64);
+  if (!bytes) {
+    return visibleProblem(repository, request, null, "quarantined", "media_unsafe");
+  }
+  return ingestEvidenceBytes(repository, storage, request, bytes);
 }
 
 async function reconcileOne(

@@ -1,6 +1,6 @@
 # 002 — Official WhatsApp behind a channel adapter
 
-Status: accepted design baseline, implementation pending. Date: 2026-09-14.
+Status: accepted and implemented by CLEAN-009. Date: 2026-09-14.
 
 ## Decision
 
