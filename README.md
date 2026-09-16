@@ -94,7 +94,9 @@ access and work foundation. CLEAN-003 adds server-only, demo-gated durable ingre
 local worker. CLEAN-004 adds private synthetic media, deterministic resolution and audited
 evidence decisions. CLEAN-005 adds Mock AI suggestions, supervisor findings, corrective revisions
 and explicit approval at `/review`. CLEAN-006 adds computed staffing coverage, human replacement
-assignment, canonical site-zone status and mobile capture at `/operations` and `/mobile`. Database
+assignment, canonical site-zone status and mobile capture at `/operations` and `/mobile`.
+CLEAN-007 adds neutral incident/equipment intake, a versioned 149/150 SLA fixture, explicit
+supervisor release and a redacted site-authorized client view at `/incidents` and `/reports`. Database
 reset and test commands are local-only; no command in this repository links or pushes to a remote
 Supabase project. Keep each PR limited to one issue.
 

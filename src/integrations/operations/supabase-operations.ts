@@ -44,7 +44,7 @@ export async function getOperationsWorkspace(client: SupabaseClient): Promise<Op
     coverageAt(client, "2026-09-14T06:05:00Z"),
     coverageAt(client, "2026-09-14T06:10:00Z"),
     row(client.from("site_zones").select("id,name").eq("site_id", DEMO_SITE_ID), z.array(z.object({ id: uuid, name: z.string() }))),
-    row(client.from("service_tasks").select("id,name").eq("site_id", DEMO_SITE_ID), z.array(z.object({ id: uuid, name: z.string() }))),
+    row(client.from("service_tasks").select("id,name").eq("site_id", DEMO_SITE_ID).eq("active", true), z.array(z.object({ id: uuid, name: z.string() }))),
     row(client.from("task_runs").select("id,task_id,zone_id,state,due_at").eq("site_id", DEMO_SITE_ID), z.array(z.object({ id: uuid, task_id: uuid, zone_id: uuid, state: z.string(), due_at: z.string() }))),
     row(client.from("workers").select("id,display_name").eq("organization_id", DEMO_ORGANIZATION_ID).ilike("display_name", "Replacement candidate%"), z.array(candidateSchema)),
     row(client.from("replacement_selections").select("worker_id,assignment_id").eq("shift_id", DEMO_SHIFT_ID), z.array(z.object({ worker_id: uuid, assignment_id: uuid.nullable() }))),
@@ -55,7 +55,8 @@ export async function getOperationsWorkspace(client: SupabaseClient): Promise<Op
   ]);
 
   const taskById = new Map(tasks.map((item) => [item.id, item.name]));
-  const runByZone = new Map(runs.map((item) => [item.zone_id, item]));
+  const activeTaskIds = new Set(tasks.map((item) => item.id));
+  const runByZone = new Map(runs.filter((item) => activeTaskIds.has(item.task_id)).map((item) => [item.zone_id, item]));
   const selectionByWorker = new Map(selections.map((item) => [item.worker_id, item]));
   const assignmentByWorker = new Map(assignments.map((item) => [item.worker_id, item]));
   const checkedIn = new Set(attendance.filter((item) => item.event_type === "check_in").map((item) => item.assignment_id));

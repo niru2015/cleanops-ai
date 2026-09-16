@@ -10,7 +10,9 @@ conversation contexts, evidence, pairing, audit and private Storage policies.
 The CLEAN-005 migrations own quality decisions, confirmed findings, corrective actions,
 revision inspections, review audit events and guarded supervisor RPCs.
 The CLEAN-006 migration owns shift coverage requirements, worker-to-task assignments and
-audited human replacement selections.
+audited human replacement selections. The CLEAN-007 migration owns incident statements,
+evidence links, actions and timeline events; equipment reports; versioned SLA results; redacted
+client report snapshots, releases and reporting audit events.
 Every tenant-owned table has UUID id, organization_id, created_at; mutable records add
 updated_at and revision where concurrency matters. Auth users are identities, not tenants.
 
@@ -62,9 +64,11 @@ Membership and worker/site permission serve different purposes: app access vs wo
 
 ## Phase 3 and later
 
-P3: incidents, incident_evidence, incident_actions; equipment_reports; supply_requests;
-sla_definitions; client_report_releases and authorized client/site mappings.
-Later: contracts/requirements; certifications/training; safety schedules/checks/escalations;
+P3 implements incidents, incident_statements, incident_evidence, incident_actions,
+incident_timeline_events, equipment_reports, sla_definitions, sla_task_results,
+client_service_reports, client_report_releases and reporting_audit_events. Released reports are
+redacted snapshots; client access reuses active membership and site grants.
+Later: supply requests; contracts/requirements; certifications/training; safety schedules/checks/escalations;
 equipment/maintenance; inventory/transactions; knowledge documents/chunks/embeddings;
 costing. Define each schema when its issue starts, not as speculative migrations.
 

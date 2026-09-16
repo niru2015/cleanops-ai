@@ -67,3 +67,14 @@ compatibility on PostgreSQL 18 and runs application checks on Node.js 24.
 Storage guidance rechecked 2026-09-15: [access control](https://supabase.com/docs/guides/storage/security/access-control),
 [private asset serving](https://supabase.com/docs/guides/storage/serving/downloads) and
 [schema boundary](https://supabase.com/docs/guides/storage/schema/design).
+
+## CLEAN-007 implementation
+
+- Migration `20260916161009_incident_equipment_reporting.sql` defines eleven RLS-enabled tables,
+  six explicitly granted RPCs and no anonymous table/function access.
+- Supervisor mutations resolve membership and site authority inside security-definer functions;
+  service-role demo calls must supply an authorized synthetic actor.
+- The client export resolves an active `client_viewer` plus site grant and returns released safe
+  fields only. Drafts, statements, evidence links, equipment originals and audit rows remain denied.
+- Changelog rechecked 2026-09-16. The current explicit Data API grant requirement is preserved;
+  unrelated Management API, Realtime and self-hosting breaking changes do not affect this slice.

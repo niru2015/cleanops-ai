@@ -205,3 +205,74 @@ values (
   '2026-09-14T06:10:00Z',
   '2026-09-14T06:40:00Z'
 );
+
+-- CLEAN-007 reporting fixture: an inactive schedule keeps the 150 historical
+-- SLA task occurrences out of the live operations board while preserving the
+-- exact denominator used by the client report.
+insert into public.service_tasks (id, organization_id, site_id, name, evidence_required, active)
+values (
+  '70000000-0000-4000-8000-000000000007',
+  '10000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001',
+  'Night shift SLA reporting fixture', false, false
+);
+
+insert into public.task_schedules (
+  id, organization_id, site_id, task_id, zone_id, recurrence, active
+)
+values (
+  '80000000-0000-4000-8000-000000000007',
+  '10000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001',
+  '70000000-0000-4000-8000-000000000007',
+  '50000000-0000-4000-8000-000000000005',
+  '{"kind":"synthetic_report_fixture","window":"2026-09-13-night"}', false
+);
+
+insert into public.task_runs (
+  id, organization_id, site_id, task_id, zone_id, task_schedule_id,
+  scheduled_at, due_at, requirements_snapshot, state
+)
+select
+  ('d1000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid,
+  '10000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001',
+  '70000000-0000-4000-8000-000000000007',
+  '50000000-0000-4000-8000-000000000005',
+  '80000000-0000-4000-8000-000000000007',
+  '2026-09-14T05:00:00Z'::timestamptz + ((sequence - 1) * interval '3 minutes'),
+  '2026-09-14T05:02:00Z'::timestamptz + ((sequence - 1) * interval '3 minutes'),
+  jsonb_build_object('evidence_required', false, 'sla_fixture', true),
+  case when sequence <= 149 then 'approved'::public.task_run_state else 'planned'::public.task_run_state end
+from generate_series(1, 150) as sequence;
+
+insert into public.sla_definitions (
+  id, organization_id, site_id, name, version, window_start, window_end,
+  numerator_rule, denominator_rule, exclusion_rule
+)
+values (
+  'd2000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001',
+  'Approved-on-time required task completion', 1,
+  '2026-09-14T05:00:00Z', '2026-09-14T13:00:00Z',
+  'Required task runs approved at or before their frozen due time',
+  'Required task runs due inside the reporting window without a contractual exclusion',
+  'Only a recorded contractual exclusion removes a required run from the denominator'
+);
+
+insert into public.sla_task_results (
+  id, organization_id, site_id, sla_definition_id, task_run_id, required, approved_at
+)
+select
+  ('d3000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid,
+  '10000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001',
+  'd2000000-0000-4000-8000-000000000001',
+  ('d1000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid,
+  true,
+  case when sequence <= 149
+    then '2026-09-14T05:01:00Z'::timestamptz + ((sequence - 1) * interval '3 minutes')
+    else null
+  end
+from generate_series(1, 150) as sequence;
