@@ -95,7 +95,7 @@ as $$
    and permission.worker_id = assignment.worker_id
   where requirement.shift_id = p_shift_id
     and (
-      current_setting('request.jwt.claim.role', true) = 'service_role'
+      (select auth.jwt() ->> 'role') = 'service_role'
       or private.can_read_shift(shift.organization_id, shift.site_id, shift.id)
     )
   group by requirement.required_positions;

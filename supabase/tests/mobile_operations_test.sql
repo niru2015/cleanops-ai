@@ -1,6 +1,6 @@
 begin;
 set local search_path = public, extensions;
-select plan(13);
+select plan(14);
 
 select results_eq(
   $$ select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -25,6 +25,12 @@ select results_eq(
 );
 
 set local role service_role;
+select results_eq(
+  $$ select present_workers::integer, required_positions from public.get_shift_coverage_at(
+       '90000000-0000-4000-8000-000000000001', '2026-09-14T05:45:00Z') $$,
+  $$ values (40, 42) $$,
+  'service role can read computed coverage for the server-rendered demo'
+);
 insert into public.shift_assignments (id, organization_id, site_id, shift_id, worker_id)
 select 'b3000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
   '40000000-0000-4000-8000-000000000001', '90000000-0000-4000-8000-000000000001', id
