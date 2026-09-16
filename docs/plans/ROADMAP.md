@@ -34,8 +34,9 @@ Work one issue at a time; use its focused Read list rather than loading the whol
   raw signature checks, account-scoped ingestion/media, consent-aware outbox, delivery events,
   retries and readiness checks. Live sandbox evidence still depends on customer account readiness;
   no legacy scraping.
-- CLEAN-010: [hosted demo access in progress](active/CLEAN-010.md), including Supabase Auth,
-  role-scoped synthetic actions and a shareable login flow; live providers remain disabled.
+- CLEAN-010: [hosted demo access implemented](completed/CLEAN-010.md), including Supabase Auth,
+  role-scoped synthetic actions, a site-scoped reset and a shareable login flow; live providers
+  remain disabled.
 
 ## Open decisions / owners
 

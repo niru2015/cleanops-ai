@@ -3,9 +3,9 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** CLEAN-001 through CLEAN-009 are merged and deployed. CLEAN-010 adds temporary,
-role-scoped hosted demo access for the synthetic tenant. Live WhatsApp and OpenAI providers remain
-disabled until separate provider readiness and business approval gates pass.
+**Status:** CLEAN-001 through CLEAN-010 are complete. The hosted deployment includes temporary,
+role-scoped demo access for the synthetic tenant. Live WhatsApp and OpenAI providers remain disabled
+until separate provider readiness and business approval gates pass.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
@@ -16,8 +16,9 @@ Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md),
 [CLEAN-005](docs/plans/completed/CLEAN-005.md),
 [CLEAN-006](docs/plans/completed/CLEAN-006.md),
 [CLEAN-007](docs/plans/completed/CLEAN-007.md),
-[CLEAN-008](docs/plans/completed/CLEAN-008.md) and
-[CLEAN-009](docs/plans/completed/CLEAN-009.md).
+[CLEAN-008](docs/plans/completed/CLEAN-008.md),
+[CLEAN-009](docs/plans/completed/CLEAN-009.md) and
+[CLEAN-010](docs/plans/completed/CLEAN-010.md).
 
 ## Local development
 
