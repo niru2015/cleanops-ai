@@ -109,7 +109,7 @@ values
 -- CLEAN-006 staffing fixtures: 40 teammates are present; two eligible
 -- candidates remain unassigned until a supervisor explicitly selects them.
 insert into public.workers (id, organization_id, display_name)
-select md5('cleanops-night-worker-' || sequence)::uuid,
+select ('62000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid,
   '10000000-0000-4000-8000-000000000001',
   case when sequence > 40 then 'Replacement candidate ' || (sequence - 40) || ' Demo'
        else 'Night team ' || lpad(sequence::text, 2, '0') || ' Demo' end
@@ -118,28 +118,28 @@ from generate_series(1, 42) as sequence;
 insert into public.worker_site_permissions (
   id, organization_id, worker_id, site_id, state, valid_from
 )
-select md5('cleanops-night-permission-' || sequence)::uuid,
+select ('63000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid,
   '10000000-0000-4000-8000-000000000001',
-  md5('cleanops-night-worker-' || sequence)::uuid,
+  ('62000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid,
   '40000000-0000-4000-8000-000000000001',
   'active', '2026-01-01T00:00:00Z'
 from generate_series(1, 42) as sequence;
 
 insert into public.shift_assignments (id, organization_id, site_id, shift_id, worker_id)
-select md5('cleanops-night-assignment-' || sequence)::uuid,
+select ('a2000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid,
   '10000000-0000-4000-8000-000000000001',
   '40000000-0000-4000-8000-000000000001',
   '90000000-0000-4000-8000-000000000001',
-  md5('cleanops-night-worker-' || sequence)::uuid
+  ('62000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid
 from generate_series(1, 40) as sequence;
 
 insert into public.attendance_events (
   id, organization_id, site_id, assignment_id, event_type, occurred_at, recorded_by
 )
-select md5('cleanops-night-attendance-' || sequence)::uuid,
+select ('a3000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid,
   '10000000-0000-4000-8000-000000000001',
   '40000000-0000-4000-8000-000000000001',
-  md5('cleanops-night-assignment-' || sequence)::uuid,
+  ('a2000000-0000-4000-8000-' || lpad(sequence::text, 12, '0'))::uuid,
   'check_in', '2026-09-14T05:45:00Z', '00000000-0000-4000-8000-000000000002'
 from generate_series(1, 40) as sequence;
 
