@@ -66,7 +66,7 @@ function NavigationPanel({
         ) : null}
       </div>
       <Navigation currentPath={currentPath} />
-      <p className="shellRevision">Phase P2 <span aria-hidden="true">•</span> Supervisor review</p>
+      <p className="shellRevision">Phase P3 <span aria-hidden="true">•</span> Connected operations</p>
     </div>
   );
 }
@@ -133,11 +133,11 @@ export function AppShell({ children, currentPath = "/" }: { children?: ReactNode
               <section className="emptyState" aria-labelledby="empty-state-title">
                 <EmptyDocumentIcon className="emptyIllustration" />
                 <h2 id="empty-state-title" className="visuallyHidden">Application foundation ready</h2>
-                <p>Open Evidence review to run the synthetic supervisor workflow for Restroom B.</p>
+                <p>Open Operations to run the connected synthetic night-shift workflow.</p>
               </section>
             </>
           )}
-          <p className="mobileRevision">Phase P2 <span aria-hidden="true">•</span> Supervisor review</p>
+          <p className="mobileRevision">Phase P3 <span aria-hidden="true">•</span> Connected operations</p>
         </main>
       </div>
 

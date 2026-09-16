@@ -32,6 +32,11 @@ CLEAN-005 implements the 23:30–23:34 review slice at `/review`: Mock AI score 
 suggestion until confirmation, correction creates revision 2, score 96 remains advisory and a
 supervisor explicitly approves. The history survives reload; a simulated mock failure remains
 manually reviewable.
+CLEAN-006 implements the 22:45–23:10 staffing sequence at `/operations` and the connected
+Slot Bank 14 mobile capture at `/mobile`. Coverage begins at 40/42 and changes only after the
+supervisor selects each eligible replacement and a distinct attendance check-in is recorded.
+The mobile QR chooses the zone/task context without changing attendance; failed uploads remain
+retryable and successful photos run through the shared evidence pipeline.
 P3 adds surrounding UI and records. Deferred capabilities are clearly labeled previews,
 not working buttons or fake completed outcomes. PWA and simulator invoke shared services.
 

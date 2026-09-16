@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:db": "supabase test db",
     "test:db:postgres": "scripts/test-database-postgres.sh",
-    "test:e2e:review": "node scripts/run-review-e2e.mjs",
+    "test:e2e": "node scripts/run-e2e.mjs",
     "test:storage": "node scripts/test-evidence-storage.mjs",
     "worker:messages": "node --env-file=.env.local scripts/run-ingress-worker.mjs",
     "demo:replay-evidence": "node --env-file=.env.local scripts/replay-golden-evidence.mjs"

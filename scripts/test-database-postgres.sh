@@ -51,5 +51,7 @@ psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_
   -f "$repository_root/tests/database/operational-evidence.sql" >/dev/null
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/tests/database/supervisor-quality-review.sql" >/dev/null
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/mobile-operations.sql" >/dev/null
 
-echo "CLEAN-002 through CLEAN-005 migrations, isolation, concurrency and recovery checks passed on PostgreSQL."
+echo "CLEAN-002 through CLEAN-006 migrations, isolation, concurrency and recovery checks passed on PostgreSQL."

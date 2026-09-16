@@ -10,16 +10,16 @@ describe("CLEAN-001 application shell", () => {
     expect(html).toContain("Prototype");
     expect(html).toContain("synthetic data");
     expect(html).toContain("Operations workspace");
-    expect(html).toContain("Open Evidence review");
+    expect(html).toContain("Open Operations");
     expect(html).not.toContain("AI verified");
   });
 
-  it("exposes Overview and Evidence review while labeling planned destinations", () => {
+  it("exposes connected P3 journeys while labeling deferred destinations", () => {
     const implementedItems = navigationItems.filter((item) => item.implemented);
     const plannedItems = navigationItems.filter((item) => !item.implemented);
 
-    expect(implementedItems.map((item) => item.label)).toEqual(["Overview", "Evidence review"]);
-    expect(plannedItems).toHaveLength(3);
+    expect(implementedItems.map((item) => item.label)).toEqual(["Operations", "Sites & zones", "Cleaner mobile", "Evidence review"]);
+    expect(plannedItems).toHaveLength(2);
     expect(plannedItems.every((item) => "status" in item && item.status === "Not implemented")).toBe(true);
   });
 });

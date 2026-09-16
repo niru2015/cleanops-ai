@@ -14,7 +14,7 @@ if (![apiUrl, publishableKey, secretKey].every((value) => typeof value === "stri
 }
 
 const command = process.platform === "win32" ? "npx.cmd" : "npx";
-const run = spawnSync(command, ["playwright", "test", "tests/e2e/review.spec.ts", "--project=chromium"], {
+const run = spawnSync(command, ["playwright", "test", "--project=chromium"], {
   stdio: "inherit",
   env: {
     ...process.env,
@@ -23,8 +23,8 @@ const run = spawnSync(command, ["playwright", "test", "tests/e2e/review.spec.ts"
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
     CLEANOPS_DEMO_INGRESS_ENABLED: "true",
-    CLEANOPS_DEMO_INGRESS_TOKEN: "cleanops-review-e2e-token-2026",
-    CLEANOPS_DEMO_WORKER_ID: "cleanops-review-e2e-worker",
+    CLEANOPS_DEMO_INGRESS_TOKEN: "cleanops-browser-e2e-token-2026",
+    CLEANOPS_DEMO_WORKER_ID: "cleanops-browser-e2e-worker",
   },
 });
 process.exit(run.status ?? 1);
