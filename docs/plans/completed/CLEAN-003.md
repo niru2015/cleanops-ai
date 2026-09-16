@@ -1,6 +1,7 @@
 # CLEAN-003 — Durable mock message ingestion
 
-Status: implementation complete; GitHub CI pending. Dependency: CLEAN-002 merged in PR #11.
+Status: complete on branch `codex/clean-003-durable-ingestion`, draft PR #12.
+Implementation commit: `15b3ff1`. Dependency: CLEAN-002 merged in PR #11.
 
 ## Objective
 
@@ -40,5 +41,5 @@ typecheck, lint, tests and build. Record exact outcomes before moving this plan 
 - Passed locally: typecheck, lint, 10 Vitest cases, production build.
 - Passed locally: stock PostgreSQL migrations, tenant/access checks, two-client concurrent
   acceptance, duplicate effects, expired-lease recovery and manual retry.
-- Pending GitHub CI: canonical Supabase reset and 23-case CLEAN-003 pgTAP suite because this
-  machine has no Docker-compatible runtime.
+- Passed in GitHub CI: canonical Supabase reset and 23-case CLEAN-003 pgTAP suite. Both
+  application and database jobs passed on the push and draft pull-request runs.

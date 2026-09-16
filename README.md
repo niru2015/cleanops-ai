@@ -9,8 +9,9 @@ deployment or customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
-Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md) and
-[CLEAN-002](docs/plans/completed/CLEAN-002.md).
+Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md),
+[CLEAN-002](docs/plans/completed/CLEAN-002.md) and
+[CLEAN-003](docs/plans/completed/CLEAN-003.md).
 
 ## Local development
 
