@@ -17,8 +17,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 - CLEAN-001: [application shell implemented](completed/CLEAN-001.md); no DB schema or provider integrations.
 - CLEAN-002: [tenant, auth, site and work foundation implemented](completed/CLEAN-002.md),
   including deterministic seed and denied cross-tenant/cross-site operations.
-- CLEAN-003: Read WHATSAPP, ARCHITECTURE. Raw events, jobs, normalized message persistence;
-  duplicate/concurrency/restart checks; no media/AI. Depends on 002.
+- CLEAN-003: [durable mock ingress implemented](completed/CLEAN-003.md), including raw events,
+  leased jobs, normalized messages and duplicate/concurrency/restart checks; no media/AI.
 - CLEAN-004: Read WHATSAPP, DATA_MODEL. Private media, verified identities, context/pairing,
   unresolved queue; after-first and bad-media tests. Depends on 003.
 - CLEAN-005: Read DOMAIN, AI, DEMO. Mock quality, revision-safe human approval/correction,

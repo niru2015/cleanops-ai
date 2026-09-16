@@ -3,13 +3,15 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** CLEAN-001 shell and CLEAN-002 local-only Supabase foundation implemented.
-No live WhatsApp connection, OpenAI calls, deployment or customer onboarding exists yet.
+**Status:** CLEAN-001 shell, CLEAN-002 local Supabase foundation and CLEAN-003 durable
+simulated message ingress implemented. No live WhatsApp connection, OpenAI calls,
+deployment or customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
-Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md) and
-[CLEAN-002](docs/plans/completed/CLEAN-002.md).
+Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md),
+[CLEAN-002](docs/plans/completed/CLEAN-002.md) and
+[CLEAN-003](docs/plans/completed/CLEAN-003.md).
 
 ## Local development
 
@@ -34,12 +36,28 @@ npm run db:stop
 ```
 
 After `db:start`, copy the local publishable key from `npm run db:status` into `.env.local`.
+For CLEAN-003, also copy the local secret key and set a private demo token of at least 24
+characters. Keep `CLEANOPS_DEMO_INGRESS_ENABLED=false` except while exercising the simulator.
 The compatibility check below executes the same migration and RLS boundary cases against a
 temporary PostgreSQL 17+ cluster when Docker is unavailable:
 
 ```bash
 npm run test:db:postgres
 ```
+
+## Simulated message ingress
+
+With local Supabase and the app running, enable the simulator in `.env.local`. POST a strict
+synthetic batch to `/api/demo/messages` with `Authorization: Bearer <demo token>`. A `202`
+means each account-scoped envelope and pending job is durable. Process one pending job with:
+
+```bash
+npm run worker:messages
+```
+
+Retry a terminal failed job with `npm run worker:messages -- --retry <job-id>`. These routes
+return `404` in production and do not connect to WhatsApp. See
+[the ingress contract](docs/integrations/WHATSAPP.md) for the payload and reliability rules.
 
 Verification:
 
@@ -50,10 +68,10 @@ npm test
 npm run build
 ```
 
-CLEAN-001 creates only the responsive application shell. CLEAN-002 adds the local
-Supabase tenant, access and work foundation. Database reset and test commands are local-only;
-no command in this repository links or pushes to a remote Supabase project. Keep each PR
-limited to one issue.
+CLEAN-001 creates the responsive application shell. CLEAN-002 adds the local Supabase tenant,
+access and work foundation. CLEAN-003 adds server-only, demo-gated durable ingress and a leased
+local worker. Database reset and test commands are local-only; no command in this repository
+links or pushes to a remote Supabase project. Keep each PR limited to one issue.
 
 Repository: https://github.com/niru2015/cleanops-ai (private).
 The local parent Vancouver project is a synced mirror, so this CleanOps folder remains

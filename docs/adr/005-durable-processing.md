@@ -1,6 +1,6 @@
 # 005 — Persisted jobs and idempotent effects
 
-Status: accepted design baseline, implementation pending. Date: 2026-09-14.
+Status: accepted and implemented by CLEAN-003. Date: 2026-09-14.
 
 ## Decision
 

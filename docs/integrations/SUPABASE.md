@@ -39,3 +39,14 @@ Changelog rechecked 2026-09-15. Relevant current changes: public tables are movi
 explicit Data API opt-in, Postgres 14 support has ended, and Node.js 20 client support is
 ending. CLEAN-002 uses explicit grants, targets Supabase Postgres 17, verifies policy
 compatibility on PostgreSQL 18 and runs application checks on Node.js 24.
+
+## CLEAN-003 implementation
+
+- Migration `20260916053638_durable_mock_ingestion.sql` defines four RLS-enabled tables and
+  service-role-only functions for atomic acceptance, leased claim, completion, failure and retry.
+- `accept_mock_ingress_event` derives the tenant from the registered account and stores the raw
+  envelope and pending job in one transaction. Unique constraints make retries idempotent.
+- `claim_processing_job` uses row locking with skip-locked selection and reclaims expired leases.
+- `supabase/tests/durable_ingestion_test.sql` is the canonical pgTAP suite; the stock PostgreSQL
+  compatibility suite also executes two simultaneous acceptance transactions.
+- CLEAN-003 remains local-only and does not link or deploy a remote Supabase project.

@@ -34,6 +34,11 @@ a separate control for ending all non-database access and must be added before a
 - Messages, OCR and retrieved documents cannot alter system instructions or trigger tools.
 - Do not cache private responses across users/tenants; scope realtime subscriptions and exports.
 
+CLEAN-003 simulator access uses a server-only bearer token with a minimum length, explicit
+enable flag and body limits. Both simulator routes return `404` when disabled and are forced
+off under `NODE_ENV=production`. The privileged Supabase secret is loaded only after this gate;
+integration tables and RPCs grant access only to `service_role`.
+
 ## Evidence privacy and pilot decisions
 
 Use synthetic people/sites/media in demos. Casino images may contain patrons, staff,
