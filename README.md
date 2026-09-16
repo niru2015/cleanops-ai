@@ -4,14 +4,15 @@ A repo-ready specification for commercial cleaning operations in casinos and oth
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
 **Status:** CLEAN-001 through CLEAN-003 merged. CLEAN-004 private operational evidence,
-deterministic resolution and recovery are implemented locally. No live WhatsApp connection,
-OpenAI calls, deployment or customer onboarding exists yet.
+deterministic resolution and recovery are implemented in draft PR #13. No live WhatsApp
+connection, OpenAI calls, deployment or customer onboarding exists yet.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
 Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md),
-[CLEAN-002](docs/plans/completed/CLEAN-002.md) and
-[CLEAN-003](docs/plans/completed/CLEAN-003.md).
+[CLEAN-002](docs/plans/completed/CLEAN-002.md),
+[CLEAN-003](docs/plans/completed/CLEAN-003.md) and
+[CLEAN-004](docs/plans/completed/CLEAN-004.md).
 
 ## Local development
 

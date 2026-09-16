@@ -1,6 +1,7 @@
 # CLEAN-004 — Store and resolve operational evidence
 
-Status: implementation complete; GitHub Supabase CI pending. Dependency: CLEAN-003 merged in PR #12.
+Status: complete on `codex/clean-004-operational-evidence`; draft PR #13. Dependency:
+CLEAN-003 merged in PR #12. Implementation commits: `89e8c0f`, `09966b4`.
 
 ## Objective
 
@@ -46,7 +47,9 @@ release, face recognition or public media URL. Timestamp proximity alone never p
 - Passed locally: typecheck, lint, 17 Vitest cases and production build.
 - Passed locally: stock PostgreSQL migrations, golden pair, corrected revision, unresolved
   reasons, replay, supervisor audit, worker ownership and tenant/Storage isolation.
-- Pending GitHub CI: local Supabase private-bucket API check and 32-case CLEAN-004 pgTAP suite;
-  this machine has no Docker-compatible runtime.
+- Passed in GitHub CI: canonical Supabase reset, private-bucket Storage API authorization and
+  signed-download check, plus all 32 CLEAN-004 pgTAP assertions.
+- Both push and pull-request workflows passed: application jobs in 48s/1m00s and database jobs
+  in 3m25s/3m15s.
 - Browser journey check is not applicable: CLEAN-004 adds server routes and persistence only;
   the supervisor review interface starts in CLEAN-005.
