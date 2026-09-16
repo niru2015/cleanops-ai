@@ -3,6 +3,7 @@
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { navigationItems } from "@/config/navigation";
 import { BrandMark, CloseIcon, EmptyDocumentIcon, MenuIcon, NavigationGlyph } from "@/components/icons";
+import { signOutAction } from "@/app/login/actions";
 
 function Brand() {
   return (
@@ -44,10 +45,12 @@ function NavigationPanel({
   closeButtonRef,
   onClose,
   currentPath,
+  authenticated,
 }: {
   closeButtonRef?: RefObject<HTMLButtonElement | null>;
   onClose?: () => void;
   currentPath: string;
+  authenticated: boolean;
 }) {
   return (
     <div className="navigationPanel">
@@ -66,12 +69,15 @@ function NavigationPanel({
         ) : null}
       </div>
       <Navigation currentPath={currentPath} />
-      <p className="shellRevision">Phase P3 <span aria-hidden="true">•</span> Client reporting</p>
+      <div className="shellFooter">
+        {authenticated ? <form action={signOutAction}><button className="signOutButton" type="submit">Sign out</button></form> : <a className="signInLink" href="/login">Demo sign in</a>}
+        <p className="shellRevision">Phase P3 <span aria-hidden="true">•</span> Client reporting</p>
+      </div>
     </div>
   );
 }
 
-export function AppShell({ children, currentPath = "/" }: { children?: ReactNode; currentPath?: string }) {
+export function AppShell({ children, currentPath = "/", authenticated = false }: { children?: ReactNode; currentPath?: string; authenticated?: boolean }) {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -105,7 +111,7 @@ export function AppShell({ children, currentPath = "/" }: { children?: ReactNode
   return (
     <div className="appShell">
       <aside className="desktopSidebar">
-        <NavigationPanel currentPath={currentPath} />
+        <NavigationPanel authenticated={authenticated} currentPath={currentPath} />
       </aside>
 
       <div className="workspaceColumn">
@@ -145,7 +151,7 @@ export function AppShell({ children, currentPath = "/" }: { children?: ReactNode
         <div className="mobileNavigationLayer" id="mobile-navigation">
           <div className="drawerBackdrop" role="presentation" onClick={closeMobileNavigation} />
           <aside className="mobileDrawer" aria-label="Navigation drawer">
-            <NavigationPanel closeButtonRef={closeButtonRef} onClose={closeMobileNavigation} currentPath={currentPath} />
+            <NavigationPanel authenticated={authenticated} closeButtonRef={closeButtonRef} onClose={closeMobileNavigation} currentPath={currentPath} />
           </aside>
         </div>
       ) : null}

@@ -16,8 +16,8 @@ const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+
 
 async function captureSyntheticEvidence(role: "before" | "after") {
   const config = getDemoIngressConfig();
-  if (!config.enabled) throw new Error("Synthetic capture is disabled.");
-  const runtime = await getOperationsRuntime();
+  const runtime = await getOperationsRuntime("cleaner");
+  if (!runtime.demo) throw new Error("Synthetic capture is disabled.");
   const ingress = new SupabaseIngressRepository(runtime.writeClient);
   const evidence = new SupabaseEvidenceRepository(runtime.writeClient);
   const storage = new SupabaseEvidenceObjectStorage(runtime.writeClient);
@@ -45,7 +45,7 @@ export async function performMobileAction(input: MobileActionInput): Promise<Mob
   const parsed = mobileActionSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: "The mobile request was invalid." };
   try {
-    const runtime = await getOperationsRuntime();
+    const runtime = await getOperationsRuntime("cleaner");
     await getMobileWorkspace(runtime.accessClient, parsed.data.taskRunId);
     if (parsed.data.action === "select_zone") {
       await selectMobileZone(runtime.demo ? runtime.writeClient : runtime.accessClient, parsed.data.taskRunId);

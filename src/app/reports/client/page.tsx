@@ -12,6 +12,6 @@ export default async function ClientReportPage() {
     const runtime = await getReportingRuntime("client");
     report = await getClientReportWorkspace(runtime.accessClient, runtime.actorUserId);
   } catch {}
-  if (report !== undefined) return <AppShell currentPath="/reports"><ClientReport report={report} /></AppShell>;
-  return <AppShell currentPath="/reports"><section className="accessState"><p className="eyebrow">Client report</p><h1>Client site access required</h1><p>Only an active client viewer for this site can open a released report.</p></section></AppShell>;
+  if (report !== undefined) return <AppShell authenticated currentPath="/reports"><ClientReport report={report} /></AppShell>;
+  return <AppShell currentPath="/reports"><section className="accessState"><p className="eyebrow">Client report</p><h1>Client site access required</h1><p>Sign in with the hosted demo client-viewer account.</p><a className="reviewButton reviewButton-primary" href="/login">Sign in</a></section></AppShell>;
 }
