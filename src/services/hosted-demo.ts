@@ -1,0 +1,79 @@
+import "server-only";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
+
+export const HOSTED_DEMO_ORGANIZATION_ID = "10000000-0000-4000-8000-000000000001";
+export const HOSTED_DEMO_SITE_ID = "40000000-0000-4000-8000-000000000001";
+
+const configSchema = z.object({
+  CLEANOPS_HOSTED_DEMO_ENABLED: z.enum(["true", "false"]).default("false"),
+});
+
+const membershipSchema = z.object({
+  id: z.uuid(),
+  role: z.enum([
+    "cleaner",
+    "site_supervisor",
+    "area_manager",
+    "operations_manager",
+    "organization_administrator",
+    "client_viewer",
+  ]),
+});
+
+const idSchema = z.object({ id: z.uuid() });
+
+export type HostedDemoCapability = "supervisor" | "cleaner" | "client";
+
+const allowedRoles: Record<HostedDemoCapability, Set<string>> = {
+  supervisor: new Set(["site_supervisor", "area_manager", "operations_manager", "organization_administrator"]),
+  cleaner: new Set(["cleaner"]),
+  client: new Set(["client_viewer"]),
+};
+
+export function isHostedDemoEnabled(environment: Record<string, string | undefined> = process.env) {
+  const parsed = configSchema.safeParse(environment);
+  return parsed.success && parsed.data.CLEANOPS_HOSTED_DEMO_ENABLED === "true";
+}
+
+export async function hasHostedDemoAccess(
+  client: SupabaseClient,
+  userId: string,
+  capability: HostedDemoCapability,
+) {
+  if (!isHostedDemoEnabled()) return false;
+
+  const membershipResult = await client
+    .from("memberships")
+    .select("id,role")
+    .eq("organization_id", HOSTED_DEMO_ORGANIZATION_ID)
+    .eq("user_id", userId)
+    .eq("state", "active")
+    .maybeSingle();
+  if (membershipResult.error || !membershipResult.data) return false;
+
+  const membership = membershipSchema.safeParse(membershipResult.data);
+  if (!membership.success || !allowedRoles[capability].has(membership.data.role)) return false;
+
+  const accessResult = await client
+    .from("member_site_access")
+    .select("id")
+    .eq("membership_id", membership.data.id)
+    .eq("site_id", HOSTED_DEMO_SITE_ID)
+    .lte("starts_at", new Date().toISOString())
+    .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`)
+    .maybeSingle();
+  if (accessResult.error || !idSchema.safeParse(accessResult.data).success) return false;
+
+  if (capability !== "cleaner") return true;
+
+  const workerResult = await client
+    .from("workers")
+    .select("id")
+    .eq("organization_id", HOSTED_DEMO_ORGANIZATION_ID)
+    .eq("auth_user_id", userId)
+    .eq("active", true)
+    .maybeSingle();
+  return !workerResult.error && idSchema.safeParse(workerResult.data).success;
+}

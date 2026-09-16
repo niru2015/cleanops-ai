@@ -150,12 +150,270 @@ a:focus-visible {
   font-size: 0.76rem;
 }
 
-.shellRevision {
+.shellFooter {
   margin: auto 6px 0;
+}
+
+.shellRevision {
+  margin: 16px 0 0;
   padding-top: 20px;
   border-top: 1px solid rgb(255 255 255 / 22%);
   color: #b6c7d5;
   font-size: 0.75rem;
+}
+
+.signInLink,
+.signOutButton {
+  color: #dff9fc;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.signInLink {
+  display: inline-block;
+  text-decoration-color: rgb(135 231 237 / 55%);
+  text-underline-offset: 4px;
+}
+
+.signOutButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgb(135 231 237 / 55%);
+  text-underline-offset: 4px;
+}
+
+.loginPage {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  background: var(--surface);
+}
+
+.loginCard {
+  width: min(600px, 100%);
+  align-self: center;
+  justify-self: center;
+  padding: clamp(36px, 7vw, 84px);
+}
+
+.loginBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 54px;
+  color: var(--navy-950);
+  font-size: 1.25rem;
+  font-weight: 720;
+  letter-spacing: -0.035em;
+}
+
+.loginBrand .brandMark {
+  color: #159eac;
+}
+
+.loginCard h1 {
+  margin: 10px 0 16px;
+  font-size: clamp(2.2rem, 4vw, 4.15rem);
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+}
+
+.loginLead {
+  margin: 0 0 30px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.loginForm {
+  display: grid;
+  gap: 18px;
+}
+
+.rolePicker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rolePicker legend {
+  margin-bottom: 10px;
+  color: #26384d;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.roleOption {
+  min-height: 92px;
+  display: flex;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbfdff;
+  cursor: pointer;
+}
+
+.roleOptionSelected {
+  border-color: #159eac;
+  background: #eafcfd;
+  box-shadow: inset 0 0 0 1px #159eac;
+}
+
+.roleOption input {
+  position: absolute;
+  opacity: 0;
+}
+
+.roleOption span,
+.roleOption small {
+  display: block;
+}
+
+.roleOption strong {
+  font-size: 0.86rem;
+}
+
+.roleOption small {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.loginField {
+  display: grid;
+  gap: 7px;
+  color: #26384d;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.loginField input {
+  min-height: 48px;
+  width: 100%;
+  padding: 0 14px;
+  border: 1px solid #c8d5de;
+  border-radius: 9px;
+  background: white;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.loginField input:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-color: var(--navy-800);
+}
+
+.loginSubmit {
+  min-height: 50px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--navy-950);
+  color: white;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.loginSubmit:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.loginError {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid #e6a8a4;
+  border-radius: 8px;
+  background: #fff4f3;
+  color: #8f221b;
+  font-size: 0.83rem;
+}
+
+.loginBoundary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.loginStory {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(42px, 7vw, 96px);
+  background: var(--navy-950);
+  color: white;
+}
+
+.prototypePill {
+  align-self: flex-start;
+  padding: 7px 11px;
+  border: 1px solid rgb(135 231 237 / 35%);
+  border-radius: 999px;
+  color: var(--cyan-300);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.loginStory h2 {
+  max-width: 500px;
+  margin: 28px 0 36px;
+  font-size: clamp(2rem, 3.6vw, 3.4rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.loginStory ol {
+  display: grid;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.loginStory li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.loginStory li > span {
+  color: var(--cyan-300);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.loginStory strong,
+.loginStory p {
+  display: block;
+}
+
+.loginStory p {
+  max-width: 430px;
+  margin: 5px 0 0;
+  color: #bcd0df;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .loginPage { grid-template-columns: 1fr; }
+  .loginStory { min-height: auto; padding: 44px 28px; }
+  .loginCard { padding: 42px 24px; }
+  .loginBrand { margin-bottom: 38px; }
+}
+
+@media (max-width: 560px) {
+  .rolePicker { grid-template-columns: 1fr; }
+  .roleOption { min-height: auto; }
 }
 
 .workspaceColumn {
@@ -1090,6 +1348,9 @@ a:focus-visible {
 .replacementList .reviewButton { flex: 0 0 auto; }
 .completeMark { width: 34px; height: 34px; display: grid !important; place-items: center; border-radius: 50%; background: #eaf8f1; color: #167052; font-weight: 800; }
 .recordNote { margin: 15px 0 0; padding: 13px; border-radius: 8px; background: #f6f8fa; color: var(--muted); font-size: .73rem; line-height: 1.5; }
+.demoReset { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 22px; padding: 20px 22px; border: 1px solid var(--border); border-radius: 12px; background: #fbfdfe; }
+.demoReset h2 { margin: 0; font-size: 1rem; }
+.demoReset p:last-child { max-width: 720px; margin: 6px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.5; }
 
 .zoneList { display: grid; gap: 2px; }
 .zoneList article { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 15px 0; border-top: 1px solid #edf1f4; }
@@ -1192,6 +1453,8 @@ a:focus-visible {
   .opsPanel { padding: 17px; }
   .replacementList article { align-items: stretch; flex-direction: column; }
   .replacementList .reviewButton { width: 100%; }
+  .demoReset { flex-direction: column; align-items: stretch; }
+  .demoReset .reviewButton { width: 100%; }
   .zoneList article { grid-template-columns: 9px minmax(0, 1fr); }
   .zoneList .zoneState { grid-column: 2; justify-self: start; }
   .mobileTaskCard { padding: 18px; }

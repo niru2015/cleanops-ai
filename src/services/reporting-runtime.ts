@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createPrivilegedSupabaseClient } from "@/lib/supabase/privileged";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getDemoIngressConfig } from "@/services/demo-ingress-auth";
+import { hasHostedDemoAccess, isHostedDemoEnabled } from "@/services/hosted-demo";
 
 export const DEMO_REPORTING_ORGANIZATION_ID = "10000000-0000-4000-8000-000000000001";
 export const DEMO_REPORTING_SITE_ID = "40000000-0000-4000-8000-000000000001";
@@ -33,5 +34,7 @@ export async function getReportingRuntime(demoRole: "supervisor" | "client" = "s
   const { data, error } = await accessClient.auth.getClaims();
   const actorUserId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
   if (error || !actorUserId) throw new Error("Authentication required.");
-  return { accessClient, actorUserId, demo: false };
+  const hostedDemo = await hasHostedDemoAccess(accessClient, actorUserId, demoRole === "client" ? "client" : "supervisor");
+  if (isHostedDemoEnabled() && !hostedDemo) throw new Error("Role access required.");
+  return { accessClient, actorUserId, demo: hostedDemo };
 }

@@ -1,7 +1,7 @@
 # CleanOps agent map
 
 CleanOps AI structures cleaning operations for casinos and other 24/7 facilities.
-Status: CLEAN-001 through CLEAN-007 merged; CLEAN-008 capped OpenAI quality analysis is in review.
+Status: CLEAN-001 through CLEAN-009 merged; CLEAN-010 hosted demo access is active.
 
 ## Load only what the task needs
 

@@ -1,6 +1,7 @@
 # Roadmap and gates
 
-Phase 0 is this context pack. CLEAN-001 through CLEAN-009 map to GitHub issues #1–#9.
+Phase 0 is this context pack. CLEAN-001 through CLEAN-009 map to GitHub issues #1–#9;
+CLEAN-010 is the hosted synthetic demo access gate in issue #20.
 Work one issue at a time; use its focused Read list rather than loading the whole pack.
 
 | Phase | Work / dependency | Exit gate |
@@ -11,6 +12,7 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 | P3 | CLEAN-006 mobile/operations; CLEAN-007 incident/reporting demo | Six connected experiences; client release/isolation; computed metrics |
 | P4 | CLEAN-008 OpenAI adapter; CLEAN-009 official WhatsApp adapter | Separate capped evaluations and sandbox end-to-end checks; pilot decisions resolved |
 | P5 | Scoped pilot hardening and adjacent modules | Agreed monitoring, restore, retention, support and operational acceptance |
+| Demo | CLEAN-010 hosted role access | Temporary Auth users, role/site isolation and browser walkthrough verified |
 
 ## Bounded issue contracts
 
@@ -32,6 +34,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
   raw signature checks, account-scoped ingestion/media, consent-aware outbox, delivery events,
   retries and readiness checks. Live sandbox evidence still depends on customer account readiness;
   no legacy scraping.
+- CLEAN-010: [hosted demo access in progress](active/CLEAN-010.md), including Supabase Auth,
+  role-scoped synthetic actions and a shareable login flow; live providers remain disabled.
 
 ## Open decisions / owners
 

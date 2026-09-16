@@ -3,9 +3,9 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** CLEAN-001 through CLEAN-005 merged. CLEAN-006 cleaner mobile and operations command
-experiences are implemented on their issue branch. No live WhatsApp connection, OpenAI calls,
-deployment or customer onboarding exists yet.
+**Status:** CLEAN-001 through CLEAN-009 are merged and deployed. CLEAN-010 adds temporary,
+role-scoped hosted demo access for the synthetic tenant. Live WhatsApp and OpenAI providers remain
+disabled until separate provider readiness and business approval gates pass.
 
 Start with [AGENTS.md](AGENTS.md) and [docs/INDEX.md](docs/INDEX.md).
 Build order and gates: [ROADMAP](docs/plans/ROADMAP.md).
@@ -13,8 +13,11 @@ Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md),
 [CLEAN-002](docs/plans/completed/CLEAN-002.md),
 [CLEAN-003](docs/plans/completed/CLEAN-003.md),
 [CLEAN-004](docs/plans/completed/CLEAN-004.md) and
-[CLEAN-005](docs/plans/completed/CLEAN-005.md), and
-[CLEAN-006](docs/plans/completed/CLEAN-006.md).
+[CLEAN-005](docs/plans/completed/CLEAN-005.md),
+[CLEAN-006](docs/plans/completed/CLEAN-006.md),
+[CLEAN-007](docs/plans/completed/CLEAN-007.md),
+[CLEAN-008](docs/plans/completed/CLEAN-008.md) and
+[CLEAN-009](docs/plans/completed/CLEAN-009.md).
 
 ## Local development
 
@@ -97,8 +100,8 @@ and explicit approval at `/review`. CLEAN-006 adds computed staffing coverage, h
 assignment, canonical site-zone status and mobile capture at `/operations` and `/mobile`.
 CLEAN-007 adds neutral incident/equipment intake, a versioned 149/150 SLA fixture, explicit
 supervisor release and a redacted site-authorized client view at `/incidents` and `/reports`. Database
-reset and test commands are local-only; no command in this repository links or pushes to a remote
-Supabase project. Keep each PR limited to one issue.
+reset and test commands are local-only. CLEAN-010 adds hosted Supabase Auth access and a supervisor
+reset limited to the shared synthetic Aurora site. Keep each PR limited to one issue.
 
 Repository: https://github.com/niru2015/cleanops-ai (private).
 The local parent Vancouver project is a synced mirror, so this CleanOps folder remains

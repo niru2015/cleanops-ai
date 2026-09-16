@@ -59,3 +59,21 @@ approve latest version → see audit history → release report → sign in as c
 restricted view. Reload preserves state; replay does not double-count evidence or SLA.
 Unknown sender can be resolved; missing media/AI failure remains reviewable; tenant B sees none
 of tenant A. Check small-screen photo/review layout and keyboard navigation.
+
+## Hosted access
+
+CLEAN-010 adds a production-safe login for temporary synthetic supervisor, cleaner and client
+accounts. `CLEANOPS_HOSTED_DEMO_ENABLED=true` permits synthetic walkthrough actions only after the
+server verifies the expected role and active Aurora Downtown site grant. The production
+`/api/demo/*` routes remain unavailable; WhatsApp and live OpenAI remain disabled.
+The supervisor can reset synthetic staffing, evidence, review, incident and report changes from
+`/operations`; the service-only database function cannot be invoked by a browser session.
+
+The presenter supplies one rotated temporary password for these reserved accounts:
+
+- `demo-supervisor@cleanops.example.com` → operations, evidence review, incidents and report release
+- `demo-cleaner@cleanops.example.com` → assigned mobile task and synthetic evidence capture
+- `demo-client@cleanops.example.com` → released redacted client report
+
+Rotate the shared password after external presentations. Do not add customer emails or real casino
+records to the synthetic tenant.

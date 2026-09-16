@@ -14,6 +14,11 @@ export function OperationsCommand({ workspace }: { workspace: OperationsWorkspac
     startTransition(async () => setNotice(await performOperationsAction(input)));
   };
   const full = workspace.coverage.gap === 0;
+  const reset = () => {
+    if (window.confirm("Reset every shared synthetic workflow to its starting state?")) {
+      act({ action: "reset_hosted_demo" });
+    }
+  };
 
   return (
     <div className="opsWorkspace">
@@ -57,6 +62,10 @@ export function OperationsCommand({ workspace }: { workspace: OperationsWorkspac
           <a className="mobileJourneyLink" href="/mobile"><span>Cleaner workflow</span><strong>Open mobile task capture →</strong></a>
         </section>
       </div>
+      <section className="demoReset" aria-labelledby="demo-reset-title">
+        <div><p className="eyebrow">Shared presentation environment</p><h2 id="demo-reset-title">Reset the walkthrough</h2><p>Clear synthetic staffing changes, evidence, reviews, incidents and released reports before the next presentation.</p></div>
+        <button className="reviewButton reviewButton-secondary" type="button" disabled={pending} onClick={reset}>Reset demo</button>
+      </section>
     </div>
   );
 }
