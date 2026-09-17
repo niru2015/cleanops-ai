@@ -1404,10 +1404,10 @@ a:focus-visible {
 .qrGraphic { width: 64px; height: 64px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 8px; border: 1px solid #b8c9d1; border-radius: 8px; }
 .qrGraphic span { border: 5px solid var(--navy-900); }
 .mobilePrimaryButton,
-.cameraButton { grid-column: 1 / -1; width: 100%; min-height: 50px; border: 0; border-radius: 9px; background: var(--navy-900); color: white; font-weight: 750; cursor: pointer; }
+.cameraButton { grid-column: 1 / -1; width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 9px; background: var(--navy-900); color: white; font-weight: 750; cursor: pointer; }
 .mobilePrimaryButton:disabled,
-.cameraButton:disabled,
-.failureLink:disabled { cursor: wait; opacity: .56; }
+.photoLibraryButton:disabled,
+.removePhotoButton:disabled { cursor: wait; opacity: .56; }
 .qrPrompt > small { grid-column: 1 / -1; color: var(--muted); font-size: .7rem; line-height: 1.45; }
 .contextConfirmed { display: flex; align-items: center; gap: 11px; padding: 12px; border-radius: 9px; background: #eaf8f1; }
 .contextConfirmed > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #2f9f78; color: white; font-weight: 800; }
@@ -1425,8 +1425,21 @@ a:focus-visible {
 .captureSteps .captureStepActive { border-color: #80ced6; color: var(--text); background: #f3fbfc; }
 .captureSteps .captureStepComplete { color: #176044; background: #f0faf5; }
 .captureSteps .captureStepComplete > span { background: #2f9f78; color: white; }
+.photoPickerActions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.photoPickerActions .cameraButton { grid-column: 1 / -1; }
 .cameraIcon { display: inline-grid; place-items: center; width: 23px; height: 23px; margin-right: 8px; border: 2px solid white; border-radius: 50%; font-size: .6rem; }
-.failureLink { width: 100%; margin-top: 10px; padding: 9px; border: 0; background: transparent; color: #76500c; font-size: .75rem; text-decoration: underline; cursor: pointer; }
+.photoLibraryButton { grid-column: 1 / -1; width: 100%; min-height: 45px; display: flex; align-items: center; justify-content: center; border: 1px solid #9ab3bf; border-radius: 9px; background: white; color: var(--navy-900); font-weight: 730; cursor: pointer; }
+.photoPickerActions[data-disabled="true"] .cameraButton,
+.photoPickerActions[data-disabled="true"] .photoLibraryButton { cursor: wait; opacity: .56; }
+.photoPickerHelp { margin: 10px 0 0; color: var(--muted); font-size: .7rem; line-height: 1.45; text-align: center; }
+.photoPreview { display: grid; grid-template-columns: 72px 1fr; gap: 12px; align-items: center; margin-top: 12px; padding: 12px; border: 1px solid #b8d9dd; border-radius: 10px; background: #f4fbfc; }
+.photoPreview img { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; background: #dfe8ec; }
+.photoPreview strong,
+.photoPreview span { display: block; min-width: 0; }
+.photoPreview strong { overflow: hidden; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
+.photoPreview span { margin-top: 4px; color: var(--muted); font-size: .68rem; }
+.photoPreview .mobilePrimaryButton { grid-column: 1 / -1; min-height: 46px; }
+.removePhotoButton { grid-column: 1 / -1; padding: 5px; border: 0; background: transparent; color: #356879; font-size: .72rem; text-decoration: underline; cursor: pointer; }
 .submissionComplete { padding: 17px; border-radius: 9px; background: var(--navy-900); color: white; }
 .submissionComplete strong,
 .submissionComplete span { display: block; }

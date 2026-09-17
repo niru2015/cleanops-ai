@@ -25,8 +25,9 @@ test("supervisor closes the staffing gap from attendance records", async ({ page
   expect(consoleErrors).toEqual([]);
 });
 
-test("cleaner selects QR context and recovers from a failed upload", async ({ page }) => {
+test("cleaner selects QR context and uploads real before and after images", async ({ page }) => {
   const consoleErrors: string[] = [];
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/mobile");
@@ -34,13 +35,17 @@ test("cleaner selects QR context and recovers from a failed upload", async ({ pa
   await expect(page.getByRole("heading", { name: "Slot Bank 14 detail clean" })).toBeVisible();
   await page.getByRole("button", { name: "Scan Slot Bank 14 code" }).click();
   await expect(page.getByText(/does not record attendance or prove identity/)).toBeVisible();
+  await expect(page.getByLabel("Take before photo")).toHaveAttribute("capture", "environment");
+  await expect(page.getByLabel("Choose before photo from library")).not.toHaveAttribute("capture");
 
-  await page.getByRole("button", { name: "Simulate upload failure" }).click();
-  await expect(page.getByText("Upload failed before recording. Your task is unchanged; retry when ready.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Capture before photo" })).toBeVisible();
-  await page.getByRole("button", { name: "Capture before photo" }).click();
+  await page.getByLabel("Choose before photo from library").setInputFiles({ name: "before.png", mimeType: "image/png", buffer: png });
+  await expect(page.getByAltText("Selected before evidence preview")).toBeVisible();
+  await page.getByRole("button", { name: "Upload before photo" }).click();
   await expect(page.getByText("Uploaded and linked").first()).toBeVisible();
-  await page.getByRole("button", { name: "Capture after photo" }).click();
+
+  await page.getByLabel("Choose after photo from library").setInputFiles({ name: "after.png", mimeType: "image/png", buffer: png });
+  await expect(page.getByAltText("Selected after evidence preview")).toBeVisible();
+  await page.getByRole("button", { name: "Upload after photo" }).click();
   await expect(page.getByText("Submission ready for review")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   await page.screenshot({ path: "test-results/mobile-submission-complete.png", fullPage: true });

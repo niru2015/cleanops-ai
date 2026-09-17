@@ -35,8 +35,10 @@ manually reviewable.
 CLEAN-006 implements the 22:45–23:10 staffing sequence at `/operations` and the connected
 Slot Bank 14 mobile capture at `/mobile`. Coverage begins at 40/42 and changes only after the
 supervisor selects each eligible replacement and a distinct attendance check-in is recorded.
-The mobile QR chooses the zone/task context without changing attendance; failed uploads remain
-retryable and successful photos run through the shared evidence pipeline.
+The mobile QR chooses the zone/task context without changing attendance. CLEAN-011 lets the
+cleaner take a phone photo or choose an existing JPEG, PNG or WebP image up to 10 MiB. The actual
+selected bytes upload privately and run through the shared evidence pipeline; interrupted uploads
+remain retryable.
 P3 adds surrounding UI and records. Deferred capabilities are clearly labeled previews,
 not working buttons or fake completed outcomes. PWA and simulator invoke shared services.
 
@@ -72,7 +74,7 @@ The supervisor can reset synthetic staffing, evidence, review, incident and repo
 The presenter supplies one rotated temporary password for these reserved accounts:
 
 - `demo-supervisor@cleanops.example.com` → operations, evidence review, incidents and report release
-- `demo-cleaner@cleanops.example.com` → assigned mobile task and synthetic evidence capture
+- `demo-cleaner@cleanops.example.com` → assigned mobile task and real camera/library upload using synthetic demo content
 - `demo-client@cleanops.example.com` → released redacted client report
 
 Rotate the shared password after external presentations. Do not add customer emails or real casino
