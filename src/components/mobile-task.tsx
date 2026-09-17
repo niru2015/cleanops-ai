@@ -1,23 +1,131 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { performMobileAction, type MobileActionState } from "@/app/mobile/actions";
+import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  finalizeMobilePhotoUpload,
+  performMobileAction,
+  prepareMobilePhotoUpload,
+  type MobileActionState,
+} from "@/app/mobile/actions";
 import type { MobileWorkspace } from "@/integrations/operations/supabase-operations";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const SUPPORTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function formatFileSize(bytes: number) {
+  return bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+async function sha256(file: File) {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
 export function MobileTask({ workspace, demo }: { workspace: MobileWorkspace; demo: boolean }) {
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<MobileActionState | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const libraryInput = useRef<HTMLInputElement>(null);
+  const captureRole = workspace.beforeReady ? "after" : "before";
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   const act = (input: Parameters<typeof performMobileAction>[0]) => {
     setNotice(null);
     startTransition(async () => setNotice(await performMobileAction(input)));
   };
-  const captureRole = workspace.beforeReady ? "after" : "before";
+
+  const chooseFile = (file: File | undefined) => {
+    setNotice(null);
+    if (!file) return;
+    if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setNotice({ ok: false, message: "Choose a JPEG, PNG, or WebP image." });
+      return;
+    }
+    if (file.size < 1 || file.size > MAX_IMAGE_BYTES) {
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setNotice({ ok: false, message: "Choose an image between 1 byte and 10 MB." });
+      return;
+    }
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (cameraInput.current) cameraInput.current.value = "";
+    if (libraryInput.current) libraryInput.current.value = "";
+  };
+
+  const uploadSelectedFile = () => {
+    if (!selectedFile) return;
+    const file = selectedFile;
+    setNotice(null);
+    setUploadStatus("Checking photo…");
+
+    startTransition(async () => {
+      try {
+        const prepared = await prepareMobilePhotoUpload({
+          taskRunId: workspace.taskId,
+          role: captureRole,
+          contentType: file.type as "image/jpeg" | "image/png" | "image/webp",
+          byteSize: file.size,
+          sha256: await sha256(file),
+        });
+        if (!prepared.ok || !prepared.upload) {
+          setNotice({ ok: false, message: prepared.message });
+          return;
+        }
+
+        setUploadStatus("Uploading photo privately…");
+        const supabase = createSupabaseBrowserClient();
+        const { error } = await supabase.storage
+          .from("operational-evidence")
+          .uploadToSignedUrl(prepared.upload.path, prepared.upload.token, file, {
+            cacheControl: "0",
+            contentType: file.type,
+            upsert: false,
+          });
+        if (error) {
+          setNotice({ ok: false, message: "The photo could not be uploaded. Keep it selected and try again." });
+          return;
+        }
+
+        setUploadStatus("Verifying and linking photo…");
+        const finalized = await finalizeMobilePhotoUpload({
+          evidenceId: prepared.upload.evidenceId,
+          expiresAt: prepared.upload.expiresAt,
+          signature: prepared.upload.signature,
+        });
+        setNotice(finalized);
+        if (finalized.ok) clearSelectedFile();
+      } catch {
+        setNotice({ ok: false, message: "The upload was interrupted. Keep the photo selected and try again." });
+      } finally {
+        setUploadStatus(null);
+      }
+    });
+  };
 
   return (
     <div className="mobileTaskWorkspace">
       <header className="mobileTaskHeader"><div><p className="eyebrow">Worker 182 · Sunday night</p><h1>My tasks</h1></div><span className="shiftPill">On shift</span></header>
       {notice ? <div className={`mobileNotice ${notice.ok ? "mobileNoticeSuccess" : "mobileNoticeError"}`} role="status">{notice.message}</div> : null}
-      {pending ? <div className="mobileUploadStatus" role="status"><span className="loadingPulse" /> Uploading securely…</div> : null}
+      {pending ? <div className="mobileUploadStatus" role="status"><span className="loadingPulse" /> {uploadStatus ?? "Saving securely…"}</div> : null}
       <section className="mobileTaskCard" aria-labelledby="mobile-task-title">
         <div className="mobileTaskTop"><span className="taskNumber">01</span><span className={`zoneState zoneState-${workspace.state}`}>{workspace.state.replaceAll("_", " ")}</span></div>
         <p>{workspace.zoneName}</p><h2 id="mobile-task-title">{workspace.taskName}</h2><span className="taskDue">Due 23:45 · Before and after required</span>
@@ -36,8 +144,39 @@ export function MobileTask({ workspace, demo }: { workspace: MobileWorkspace; de
               <div className={workspace.afterReady ? "captureStepComplete" : workspace.beforeReady ? "captureStepActive" : ""}><span>2</span><div><strong>After photo</strong><small>{workspace.afterReady ? "Uploaded and linked" : workspace.beforeReady ? "Ready to capture" : "Available after before photo"}</small></div></div>
             </div>
             {!workspace.afterReady ? <>
-              <button className="cameraButton" type="button" disabled={pending || !demo} onClick={() => act({ action: "capture", taskRunId: workspace.taskId, role: captureRole, simulateFailure: false })}><span className="cameraIcon" aria-hidden="true">●</span>Capture {captureRole} photo</button>
-              <button className="failureLink" type="button" disabled={pending || !demo} onClick={() => act({ action: "capture", taskRunId: workspace.taskId, role: captureRole, simulateFailure: true })}>Simulate upload failure</button>
+              <div className="photoPickerActions" data-disabled={pending || !demo}>
+                <input
+                  id="mobile-camera-input"
+                  ref={cameraInput}
+                  className="visuallyHidden"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  capture="environment"
+                  disabled={pending || !demo}
+                  onChange={(event) => chooseFile(event.target.files?.[0])}
+                />
+                <input
+                  id="mobile-library-input"
+                  ref={libraryInput}
+                  className="visuallyHidden"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={pending || !demo}
+                  onChange={(event) => chooseFile(event.target.files?.[0])}
+                />
+                <label className="cameraButton" htmlFor="mobile-camera-input" aria-disabled={pending || !demo}><span className="cameraIcon" aria-hidden="true">●</span>Take {captureRole} photo</label>
+                <label className="photoLibraryButton" htmlFor="mobile-library-input" aria-disabled={pending || !demo}>Choose {captureRole} photo from library</label>
+              </div>
+              {selectedFile && previewUrl ? (
+                <div className="photoPreview">
+                  {/* A local object URL can preview the selected file before it is uploaded. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={previewUrl} alt={`Selected ${captureRole} evidence preview`} />
+                  <div><strong>{selectedFile.name}</strong><span>{formatFileSize(selectedFile.size)} · {captureRole} evidence</span></div>
+                  <button className="mobilePrimaryButton" type="button" disabled={pending || !demo} onClick={uploadSelectedFile}>Upload {captureRole} photo</button>
+                  <button className="removePhotoButton" type="button" disabled={pending} onClick={clearSelectedFile}>Choose a different photo</button>
+                </div>
+              ) : <p className="photoPickerHelp">JPEG, PNG, or WebP · Maximum 10 MB · Stored privately</p>}
             </> : <div className="submissionComplete"><strong>Submission ready for review</strong><span>Both private photos are linked to the task.</span></div>}
           </div>
         )}

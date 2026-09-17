@@ -2,6 +2,7 @@
 
 Phase 0 is this context pack. CLEAN-001 through CLEAN-009 map to GitHub issues #1–#9;
 CLEAN-010 is the hosted synthetic demo access gate in issue #20.
+CLEAN-011 is real mobile camera/library upload in issue #22.
 Work one issue at a time; use its focused Read list rather than loading the whole pack.
 
 | Phase | Work / dependency | Exit gate |
@@ -13,6 +14,7 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 | P4 | CLEAN-008 OpenAI adapter; CLEAN-009 official WhatsApp adapter | Separate capped evaluations and sandbox end-to-end checks; pilot decisions resolved |
 | P5 | Scoped pilot hardening and adjacent modules | Agreed monitoring, restore, retention, support and operational acceptance |
 | Demo | CLEAN-010 hosted role access | Temporary Auth users, role/site isolation and browser walkthrough verified |
+| Demo | CLEAN-011 real mobile upload | Phone camera/library files privately uploaded, content-verified and linked |
 
 ## Bounded issue contracts
 
@@ -37,6 +39,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 - CLEAN-010: [hosted demo access implemented](completed/CLEAN-010.md), including Supabase Auth,
   role-scoped synthetic actions, a site-scoped reset and a shareable login flow; live providers
   remain disabled.
+- CLEAN-011: [real mobile photo upload](active/CLEAN-011.md), replacing the synthetic capture
+  control with camera/library selection, private direct upload and verified task linkage.
 
 ## Open decisions / owners
 

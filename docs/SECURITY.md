@@ -64,6 +64,13 @@ can read only their assigned mobile task. The coverage function checks shift acc
 distinct assigned workers with active site permission and a latest check-in at the requested time.
 Creating QR context does not create an attendance event.
 
+CLEAN-011 authorizes the cleaner and assigned task before issuing a one-object signed upload token.
+The browser uploads directly to the private bucket so phone images do not pass through the Vercel
+function body. A short-lived HMAC ticket binds finalization to the authenticated actor and staged
+evidence. Finalization reloads the private object, checks JPEG/PNG/WebP content signatures, size and
+SHA-256 against the staged metadata, and only then links evidence through the existing deterministic
+context service. The Supabase secret and signing key remain server-only.
+
 CLEAN-007 keeps incident statements, evidence links, equipment records and reporting audit events
 inside operational roles with managed-site access. A client sees no draft. Explicit release creates
 an immutable audience record, and the client export function checks active `client_viewer`
