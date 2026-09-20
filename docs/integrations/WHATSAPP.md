@@ -22,10 +22,17 @@ Make cannot supply a tenant identifier. Accepted inbound messages are persisted 
 processing job before the route returns `202`. Delivery statuses are recorded separately and
 never become operational messages. Replays use the existing account/envelope/message dedupe.
 
-Make configuration: Watch Events -> HTTP v4 Make a request. POST the trigger's entire output
-bundle as JSON to the versioned route, with `Authorization: Bearer <scoped adapter token>`.
-Stop on HTTP errors so failed persistence remains visible in Make execution history. Store only
-the scoped adapter credential in Make; never store a Supabase service/secret key there.
+Make configuration: Watch Events -> HTTP v4 Make a request. POST URL-encoded scalar fields to the
+versioned route, with `Authorization: Bearer <scoped adapter token>`. Do not pass the whole Make
+bundle through `toString`: Make renders nested collections as `{object}`, which is not JSON. Map the
+event, account, first message/media and first delivery-status fields individually; URL encoding
+preserves message quotes, newlines and ampersands. The official trigger emits one flattened event
+bundle per observed callback in the verified scenario.
+
+Stop on HTTP errors so failed persistence remains visible. Attach a bounded `Break` error handler to
+the HTTP module so transient failures enter Make's incomplete-execution queue for retry rather than
+silently dropping the event. Store only the scoped adapter credential in Make; never store a
+Supabase service/secret key there.
 
 The current official Make trigger exposes generic Cloud API events rather than a dedicated group
 trigger. Do not claim existing WhatsApp group capture until an authorized group test produces a
