@@ -8,6 +8,31 @@ Adapters: WhatsAppBusinessAdapter (P4), MockLegacyWhatsAppGroupAdapter (P2), PWA
 Legacy UI label: “Simulated legacy group ingestion — customer availability unverified”.
 Live group support requires a separate capability review and ADR; no scraping dependency.
 
+## Make transport adapter
+
+The versioned route `POST /api/integrations/make/whatsapp/v1` accepts the flattened event
+bundle emitted by Make's official `whatsapp-business-cloud:watchEvents2` module. It is an
+optional transport for supported Cloud API events; it does not replace the Meta raw-signature
+route and does not prove group-message capability.
+
+The route requires a separate server-only bearer credential, validates the Make payload,
+rebuilds the canonical provider envelope and then reuses the same service-only WhatsApp
+repository. Receiving phone number resolves the organization in `integration_accounts`;
+Make cannot supply a tenant identifier. Accepted inbound messages are persisted with a durable
+processing job before the route returns `202`. Delivery statuses are recorded separately and
+never become operational messages. Replays use the existing account/envelope/message dedupe.
+
+Make configuration: Watch Events -> HTTP v4 Make a request. POST the trigger's entire output
+bundle as JSON to the versioned route, with `Authorization: Bearer <scoped adapter token>`.
+Stop on HTTP errors so failed persistence remains visible in Make execution history. Store only
+the scoped adapter credential in Make; never store a Supabase service/secret key there.
+
+The current official Make trigger exposes generic Cloud API events rather than a dedicated group
+trigger. Do not claim existing WhatsApp group capture until an authorized group test produces a
+payload and current Meta account eligibility, participant/thread identifiers, media handling,
+terms and recovery behaviour are verified. If it does not, use the separately approved provider
+or supervisor-forward/PWA fallback recorded in the group-capability issue.
+
 ## Ingress and normalized contract
 
 Implemented live route `/api/webhooks/whatsapp`: GET subscription verification, POST signed events.
