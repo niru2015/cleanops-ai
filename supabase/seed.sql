@@ -36,26 +36,36 @@ values
   ('40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000002', 'Copper Peak East Demo', 'Burnaby', 'America/Vancouver'),
   ('40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000003', 'Northstar Harbour Demo', 'Richmond', 'America/Vancouver');
 
+insert into public.equipment_models (
+  id, organization_id, model_code, manufacturer, model_name, category, spec_summary
+)
+values
+  ('e1000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'RS-800', 'Northstar Equipment', 'RS-800', 'Ride-on floor scrubber', 'Synthetic demo reference'),
+  ('e1000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'WB-420', 'Northstar Equipment', 'WB-420', 'Walk-behind floor scrubber', 'Synthetic demo reference'),
+  ('e1000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', 'CE-220', 'Pacific Facility Systems', 'CE-220', 'Carpet extractor', 'Synthetic demo reference');
+
 insert into public.equipment_assets (
-  organization_id, site_id, asset_tag, equipment_type, manufacturer, model, state, last_service_at, notes
+  organization_id, site_id, model_id, asset_code, status, condition,
+  last_service_date, next_service_date, notes, is_demo
 )
 select
   site.organization_id,
   site.id,
+  equipment.model_id,
   'EQ-' || upper(right(replace(site.id::text, '-', ''), 4)) || '-' || equipment.sequence,
-  equipment.equipment_type,
-  equipment.manufacturer,
-  equipment.model,
-  equipment.state,
-  equipment.last_service_at,
-  'Synthetic demo equipment record'
+  equipment.status,
+  equipment.condition,
+  equipment.last_service_date,
+  equipment.next_service_date,
+  'Synthetic demo equipment record',
+  true
 from public.sites as site
 cross join (
   values
-    ('01', 'Ride-on floor scrubber', 'Northstar Equipment', 'RS-800', 'available', '2026-08-28T16:00:00Z'::timestamptz),
-    ('02', 'Walk-behind floor scrubber', 'Northstar Equipment', 'WB-420', 'in_use', '2026-09-07T16:00:00Z'::timestamptz),
-    ('03', 'Carpet extractor', 'Pacific Facility Systems', 'CE-220', 'maintenance_due', '2026-07-15T16:00:00Z'::timestamptz)
-) as equipment(sequence, equipment_type, manufacturer, model, state, last_service_at)
+    ('01', 'e1000000-0000-4000-8000-000000000001'::uuid, 'available', 'good', '2026-08-28'::date, '2026-11-28'::date),
+    ('02', 'e1000000-0000-4000-8000-000000000002'::uuid, 'in_use', 'good', '2026-09-07'::date, '2026-12-07'::date),
+    ('03', 'e1000000-0000-4000-8000-000000000003'::uuid, 'maintenance', 'fair', '2026-07-15'::date, '2026-09-30'::date)
+) as equipment(sequence, model_id, status, condition, last_service_date, next_service_date)
 where site.organization_id = '10000000-0000-4000-8000-000000000001';
 
 insert into public.member_site_access (id, organization_id, membership_id, site_id, starts_at)

@@ -1,57 +1,47 @@
-create table public.equipment_assets (
-  id uuid primary key default gen_random_uuid(),
-  organization_id uuid not null references public.organizations(id) on delete cascade,
-  site_id uuid not null,
-  zone_id uuid,
-  asset_tag text not null check (length(trim(asset_tag)) between 2 and 80),
-  equipment_type text not null check (length(trim(equipment_type)) between 2 and 120),
-  manufacturer text,
-  model text,
-  state text not null default 'available'
-    check (state in ('available', 'in_use', 'maintenance_due', 'out_of_service')),
-  last_service_at timestamptz,
-  notes text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (organization_id, asset_tag),
-  unique (organization_id, site_id, id),
-  foreign key (organization_id, site_id)
-    references public.sites(organization_id, id) on delete cascade,
-  foreign key (organization_id, site_id, zone_id)
-    references public.site_zones(organization_id, site_id, id) on delete restrict
-);
+grant select on table public.equipment_models, public.equipment_assets to authenticated;
+grant all on table public.equipment_models, public.equipment_assets to service_role;
 
-create index equipment_assets_site_idx
-  on public.equipment_assets (organization_id, site_id, state);
-
-alter table public.equipment_assets enable row level security;
-revoke all on table public.equipment_assets from anon, authenticated;
-grant select on table public.equipment_assets to authenticated;
-grant all on table public.equipment_assets to service_role;
-
-create policy equipment_assets_select on public.equipment_assets
-  for select to authenticated
-  using (private.has_site_access(organization_id, site_id));
+insert into public.equipment_models (
+  id, organization_id, model_code, manufacturer, model_name, category, spec_summary
+)
+select model.id, organization.id, model.model_code, model.manufacturer,
+       model.model_name, model.category, 'Synthetic demo reference'
+from public.organizations as organization
+cross join (
+  values
+    ('e1000000-0000-4000-8000-000000000001'::uuid, 'RS-800', 'Northstar Equipment', 'RS-800', 'Ride-on floor scrubber'),
+    ('e1000000-0000-4000-8000-000000000002'::uuid, 'WB-420', 'Northstar Equipment', 'WB-420', 'Walk-behind floor scrubber'),
+    ('e1000000-0000-4000-8000-000000000003'::uuid, 'CE-220', 'Pacific Facility Systems', 'CE-220', 'Carpet extractor')
+) as model(id, model_code, manufacturer, model_name, category)
+where organization.id = '10000000-0000-4000-8000-000000000001'
+on conflict (organization_id, model_code) do update
+set manufacturer = excluded.manufacturer,
+    model_name = excluded.model_name,
+    category = excluded.category,
+    spec_summary = excluded.spec_summary,
+    updated_at = now();
 
 insert into public.equipment_assets (
-  organization_id, site_id, asset_tag, equipment_type, manufacturer, model, state, last_service_at, notes
+  organization_id, site_id, model_id, asset_code, status, condition,
+  last_service_date, next_service_date, notes, is_demo
 )
 select
   site.organization_id,
   site.id,
+  equipment.model_id,
   'EQ-' || upper(right(replace(site.id::text, '-', ''), 4)) || '-' || equipment.sequence,
-  equipment.equipment_type,
-  equipment.manufacturer,
-  equipment.model,
-  equipment.state,
-  equipment.last_service_at,
-  'Synthetic demo equipment record'
+  equipment.status,
+  equipment.condition,
+  equipment.last_service_date,
+  equipment.next_service_date,
+  'Synthetic demo equipment record',
+  true
 from public.sites as site
 cross join (
   values
-    ('01', 'Ride-on floor scrubber', 'Northstar Equipment', 'RS-800', 'available', '2026-08-28T16:00:00Z'::timestamptz),
-    ('02', 'Walk-behind floor scrubber', 'Northstar Equipment', 'WB-420', 'in_use', '2026-09-07T16:00:00Z'::timestamptz),
-    ('03', 'Carpet extractor', 'Pacific Facility Systems', 'CE-220', 'maintenance_due', '2026-07-15T16:00:00Z'::timestamptz)
-) as equipment(sequence, equipment_type, manufacturer, model, state, last_service_at)
+    ('01', 'e1000000-0000-4000-8000-000000000001'::uuid, 'available', 'good', '2026-08-28'::date, '2026-11-28'::date),
+    ('02', 'e1000000-0000-4000-8000-000000000002'::uuid, 'in_use', 'good', '2026-09-07'::date, '2026-12-07'::date),
+    ('03', 'e1000000-0000-4000-8000-000000000003'::uuid, 'maintenance', 'fair', '2026-07-15'::date, '2026-09-30'::date)
+) as equipment(sequence, model_id, status, condition, last_service_date, next_service_date)
 where site.organization_id = '10000000-0000-4000-8000-000000000001'
-on conflict (organization_id, asset_tag) do nothing;
+on conflict (organization_id, asset_code) do nothing;
