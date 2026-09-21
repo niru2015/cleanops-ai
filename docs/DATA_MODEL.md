@@ -23,7 +23,7 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | Group | Tables and key relationships |
 |---|---|
 | Access | organizations; memberships(user_id, role); member_site_access(membership, site) |
-| Places | clients → sites(client, timezone) → site_zones |
+| Places | clients → sites(client, city, timezone) → site_zones |
 | People | workers(user_id optional); worker_site_permissions(worker, site, validity) |
 | Work | service_tasks; task_schedules(task, zone); task_runs(schedule, zone, due_at, requirements snapshot, state, submission_revision) |
 | Staffing | shifts(site, starts_at, ends_at); shift_coverage_requirements(shift, positions); shift_assignments(shift, worker); attendance_events(assignment, type, occurred_at); replacement_selections(shift, worker, selector) |

@@ -1,10 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { signInAsDirector } from "./auth";
 
 test("submit, review, correct, approve, and retain the latest revision", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
+
+  await signInAsDirector(page);
 
   await page.goto("/review");
   await expect(page).toHaveTitle("CleanOps");
