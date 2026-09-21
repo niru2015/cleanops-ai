@@ -13,6 +13,18 @@ end;
 $$;
 reset role;
 
+insert into auth.users (id, email, raw_user_meta_data)
+values ('00000000-0000-4000-8000-000000000007', 'ops-a@cleanops.example', '{}')
+on conflict (id) do nothing;
+insert into public.memberships (id, organization_id, user_id, role)
+values (
+  '20000000-0000-4000-8000-000000000007',
+  '10000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000007',
+  'operations_manager'
+)
+on conflict (id) do nothing;
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
 
@@ -24,6 +36,16 @@ begin
   select count(*) into visible_count from public.organizations;
   if visible_count <> 1 then
     raise exception 'site supervisor expected 1 organization, saw %', visible_count;
+  end if;
+
+  select count(*) into visible_count from public.vendors;
+  if visible_count <> 0 then
+    raise exception 'site supervisor saw % supplier catalogue rows', visible_count;
+  end if;
+
+  select count(*) into visible_count from public.inventory_items;
+  if visible_count <> 0 then
+    raise exception 'site supervisor saw % inventory item catalogue rows', visible_count;
   end if;
 
   select count(*) into visible_count from public.sites;
@@ -82,6 +104,16 @@ declare
   visible_count integer;
   changed_count integer;
 begin
+  select count(*) into visible_count from public.vendors;
+  if visible_count <> 0 then
+    raise exception 'cleaner saw % supplier catalogue rows', visible_count;
+  end if;
+
+  select count(*) into visible_count from public.inventory_items;
+  if visible_count <> 0 then
+    raise exception 'cleaner saw % inventory item catalogue rows', visible_count;
+  end if;
+
   select count(*) into visible_count from public.shift_assignments;
   if visible_count <> 1 then
     raise exception 'cleaner expected 1 own assignment, saw %', visible_count;
@@ -126,6 +158,24 @@ begin
 end;
 $$;
 
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000005', true);
+
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.vendors;
+  if visible_count <> 0 then
+    raise exception 'client viewer saw % supplier catalogue rows', visible_count;
+  end if;
+
+  select count(*) into visible_count from public.inventory_items;
+  if visible_count <> 0 then
+    raise exception 'client viewer saw % inventory item catalogue rows', visible_count;
+  end if;
+end;
+$$;
+
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
 
 do $$
@@ -137,6 +187,23 @@ begin
   if visible_count <> 2 then
     raise exception 'organization administrator expected 2 sites, saw %', visible_count;
   end if;
+
+  select count(*) into visible_count from public.vendors;
+  if visible_count <> 2 then
+    raise exception 'organization administrator expected 2 supplier catalogue rows, saw %', visible_count;
+  end if;
+
+  select count(*) into visible_count from public.inventory_items;
+  if visible_count <> 3 then
+    raise exception 'organization administrator expected 3 inventory item catalogue rows, saw %', visible_count;
+  end if;
+
+  insert into public.vendors (organization_id, vendor_code, name)
+  values (
+    '10000000-0000-4000-8000-000000000001',
+    'DIRECTOR-ONLY',
+    'Director Only Supplier Demo'
+  );
 
   insert into public.site_zones (id, organization_id, site_id, name)
   values (
@@ -187,6 +254,67 @@ begin
   if changed_count <> 1 then
     raise exception 'membership revocation matched % rows', changed_count;
   end if;
+end;
+$$;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000003', true);
+
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.vendors;
+  if visible_count <> 3 then
+    raise exception 'area manager expected 3 supplier catalogue rows, saw %', visible_count;
+  end if;
+
+  select count(*) into visible_count from public.inventory_items;
+  if visible_count <> 3 then
+    raise exception 'area manager expected 3 inventory item catalogue rows, saw %', visible_count;
+  end if;
+
+  begin
+    insert into public.inventory_items (organization_id, sku, name, unit_of_measure)
+    values (
+      '10000000-0000-4000-8000-000000000001',
+      'AREA-FORBIDDEN',
+      'Area Manager Forbidden Item Demo',
+      'case'
+    );
+    raise exception 'area manager catalogue insert unexpectedly succeeded';
+  exception
+    when insufficient_privilege then null;
+  end;
+end;
+$$;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000007', true);
+
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.vendors;
+  if visible_count <> 3 then
+    raise exception 'operations manager expected 3 supplier catalogue rows, saw %', visible_count;
+  end if;
+
+  select count(*) into visible_count from public.inventory_items;
+  if visible_count <> 3 then
+    raise exception 'operations manager expected 3 inventory item catalogue rows, saw %', visible_count;
+  end if;
+
+  begin
+    insert into public.vendors (organization_id, vendor_code, name)
+    values (
+      '10000000-0000-4000-8000-000000000001',
+      'OPS-FORBIDDEN',
+      'Operations Manager Forbidden Supplier Demo'
+    );
+    raise exception 'operations manager catalogue insert unexpectedly succeeded';
+  exception
+    when insufficient_privilege then null;
+  end;
 end;
 $$;
 

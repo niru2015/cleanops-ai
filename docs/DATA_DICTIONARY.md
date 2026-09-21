@@ -129,7 +129,7 @@ Live OpenAI code exists but production execution remains gated by config, budget
 | `inventory_transactions` | Append-only site stock movement/cost. | site, optional vendor, item, optional source message, type receipt/issue/adjustment/count, quantity (> 0), unit cost, generated total cost (`round(quantity * unit_cost, 2)`), occurrence time, notes. |
 | `labor_cost_entries` | Append-only site labour cost. | site, optional worker/task/source message, work date, hours (> 0, <= 24), hourly cost, generated total cost (`round(hours * hourly_cost, 2)`), type regular/overtime/contractor, notes. |
 
-Access (migration `20260921051826_casino_demo_rbac_equipment`): both ledgers are readable only by a Director, or an Area Manager with a grant to that site (`private.can_view_site_finance`); only a Director may insert (`private.can_edit_site_finance`). Site supervisors and operations managers can no longer read them, which supersedes the CLEAN-027 rule that any site manager could insert. `vendors` and `inventory_items` are currently readable by every active member and writable by `private.can_operate_org`; the owner decided to narrow reads to Directors, Area Managers and Operations Managers (issue #49).
+Access (migrations `20260921051826_casino_demo_rbac_equipment`, `20260921120000_clean_029_supply_catalogue_rbac`): both ledgers are readable only by a Director, or an Area Manager with a grant to that site (`private.can_view_site_finance`); only a Director may insert (`private.can_edit_site_finance`). Site supervisors and operations managers cannot read ledger rows. `vendors` and `inventory_items` are readable only by Directors, Area Managers and Operations Managers (`private.can_view_supply_catalogue`) and writable only by Directors (`private.can_edit_supply_catalogue`), matching the current `/finance` UI.
 
 Append-only is grant-based: `authenticated` holds `select, insert` on both ledgers. The later migration also created `update` and `delete` policies for Directors, but with no matching grant they have no effect for browser roles; `service_role` can still modify rows. Owner decision 2026-09-21: grant Directors update and delete deliberately (issue #48), so these policies will become active and "append-only" will no longer hold. Until that migration lands, treat them as inert.
 
@@ -238,7 +238,7 @@ Business rules that live in the database. "Browser" means callable by `authentic
 | `reserve_openai_quality_run`, `finish_openai_quality_run`, `record_quality_ai_evaluation` | service | Capped live-AI reservation, completion and evaluation. |
 | `reset_hosted_demo` | service | Site-scoped synthetic demo reset. |
 
-Private helpers used by RLS (schema `private`, not callable by browsers): `has_org_role`, `has_site_access`, `has_operational_site_access`, `can_manage_site`, `can_administer_org`, `can_operate_org`, `is_active_member`, `can_view_site_finance`, `can_edit_site_finance`, `resolve_review_actor`.
+Private helpers used by RLS (schema `private`, not callable by browsers): `has_org_role`, `has_site_access`, `has_operational_site_access`, `can_manage_site`, `can_administer_org`, `can_operate_org`, `is_active_member`, `can_view_site_finance`, `can_edit_site_finance`, `can_view_supply_catalogue`, `can_edit_supply_catalogue`, `resolve_review_actor`.
 
 ## Not implemented (do not assume these exist)
 
