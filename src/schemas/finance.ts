@@ -1,17 +1,20 @@
 import { z } from "zod";
 
 const uuid = z.string().uuid();
-const money = z.number().finite().min(0).max(1_000_000);\nconst siteId = uuid;
+const money = z.number().finite().min(0).max(1_000_000);
+const siteId = uuid;
 
 export const financeActionSchema = z.discriminatedUnion("action", [
   z.object({
-    action: z.literal("create_vendor"),\n    siteId,
+    action: z.literal("create_vendor"),
+    siteId,
     name: z.string().trim().min(1).max(200),
     vendorCode: z.string().trim().min(1).max(80).optional(),
     contactReference: z.string().trim().min(1).max(200).optional(),
   }).strict(),
   z.object({
-    action: z.literal("create_inventory_item"),\n    siteId,
+    action: z.literal("create_inventory_item"),
+    siteId,
     sku: z.string().trim().min(1).max(80).optional(),
     name: z.string().trim().min(1).max(200),
     category: z.string().trim().min(1).max(100).optional(),
@@ -19,7 +22,8 @@ export const financeActionSchema = z.discriminatedUnion("action", [
     reorderLevel: z.number().finite().min(0).max(1_000_000),
   }).strict(),
   z.object({
-    action: z.literal("record_inventory"),\n    siteId,
+    action: z.literal("record_inventory"),
+    siteId,
     vendorId: uuid.optional(),
     inventoryItemId: uuid,
     transactionType: z.enum(["receipt", "issue", "adjustment", "count"]),
@@ -29,7 +33,8 @@ export const financeActionSchema = z.discriminatedUnion("action", [
     notes: z.string().trim().min(1).max(1_000).optional(),
   }).strict(),
   z.object({
-    action: z.literal("record_labour"),\n    siteId,
+    action: z.literal("record_labour"),
+    siteId,
     workerId: uuid.optional(),
     taskRunId: uuid.optional(),
     workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
