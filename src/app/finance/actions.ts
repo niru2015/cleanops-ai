@@ -16,8 +16,11 @@ export async function performFinanceAction(input: FinanceActionInput): Promise<F
   const parsed = financeActionSchema.safeParse(input);
   if (!parsed.success) return failure("The finance request was invalid.");
   try {
-    const runtime = await getOperationsRuntime("supervisor");
-    const client = runtime.demo ? runtime.writeClient : runtime.accessClient;
+    const client = await createSupabaseServerClient();
+    const access = await getAppAccessContext(client);
+    if (!access.canEditFinance || !isSiteAllowed(access, parsed.data.siteId)) {
+      return failure("Director access is required to change financial records.");
+    }
     if (parsed.data.action === "create_vendor") {
       const { error } = await client.from("vendors").insert({ organization_id: DEMO_ORGANIZATION_ID, name: parsed.data.name, vendor_code: parsed.data.vendorCode ?? null, contact_reference: parsed.data.contactReference ?? null });
       if (error) throw error;
