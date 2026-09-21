@@ -2,7 +2,9 @@
 
 Phase 0 is this context pack. CLEAN-001 through CLEAN-009 map to GitHub issues #1–#9;
 CLEAN-010 is the hosted synthetic demo access gate in issue #20.
-CLEAN-011 is real mobile camera/library upload in issue #22.
+CLEAN-011 is real mobile camera/library upload in issue #22 (merged, PR #23).
+CLEAN-026 and CLEAN-027 (issues #39 and #41) persist Make WhatsApp events and add normalized messages and finance.
+Tornado Phase 2 (parent issue #24) plans CLEAN-012 to CLEAN-025 as issues #25 to #38.
 Work one issue at a time; use its focused Read list rather than loading the whole pack.
 
 | Phase | Work / dependency | Exit gate |
@@ -14,7 +16,9 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 | P4 | CLEAN-008 OpenAI adapter; CLEAN-009 official WhatsApp adapter | Separate capped evaluations and sandbox end-to-end checks; pilot decisions resolved |
 | P5 | Scoped pilot hardening and adjacent modules | Agreed monitoring, restore, retention, support and operational acceptance |
 | Demo | CLEAN-010 hosted role access | Temporary Auth users, role/site isolation and browser walkthrough verified |
-| Demo | CLEAN-011 real mobile upload | Phone camera/library files privately uploaded, content-verified and linked |
+| Demo | CLEAN-011 real mobile upload | Phone camera/library files privately uploaded, content-verified and linked (merged; physical-phone hosted rehearsal open in #26) |
+| P5 | CLEAN-026 Make WhatsApp persistence | Scoped Make endpoint persists Cloud events durably; group capture not claimed |
+| Demo | Role-scoped BC casino demo (PRs #43-#46, no CLEAN id) | Role/casino navigation, Director-only finance writes, site portfolio, equipment register |
 | P5 | CLEAN-027 normalized message and finance workflows | Supervisors confirm site context; append-only inventory and labour costs carry secure site attribution |
 
 ## Bounded issue contracts
@@ -40,10 +44,44 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 - CLEAN-010: [hosted demo access implemented](completed/CLEAN-010.md), including Supabase Auth,
   role-scoped synthetic actions, a site-scoped reset and a shareable login flow; live providers
   remain disabled.
-- CLEAN-011: [real mobile photo upload](active/CLEAN-011.md), replacing the synthetic capture
+- CLEAN-011: [real mobile photo upload implemented](completed/CLEAN-011.md), replacing the synthetic capture
   control with camera/library selection, private direct upload and verified task linkage.
-- CLEAN-027: normalized WhatsApp context/media, supplier and item catalogues, append-only inventory
-  and labour cost capture, and site-authorized supervisor review of untrusted message text.
+- CLEAN-026: [Make WhatsApp persistence implemented](completed/CLEAN-026.md), a token-scoped endpoint that
+  reuses durable ingestion; existing-group capture remains unproven and gated (ADR 002, issue #37).
+- CLEAN-027: [normalized messages and finance implemented](completed/CLEAN-027.md): context/media tables, supplier and
+  item catalogues, append-only inventory and labour capture, and a site-authorized RPC for untrusted message text.
+  Its supervisor queue UI is currently unmounted; see the plan's status update.
+
+## Tornado Phase 2 backlog (parent #24) — implementation status
+
+Baseline for the issues was `b51399a`; status below is against `main` at `e6aedc5`. "Foundation" means reusable
+tables or code exist but the issue's acceptance criteria are not met. No item below is complete.
+
+| Issue | Work | Status on main |
+|---|---|---|
+| #25 CLEAN-012 | Production-mode hosted prep/reset | Not started. `submitSyntheticPair` in `src/app/review/actions.ts` still requires the simulator flag, which is forced off in production. |
+| #26 CLEAN-013 | Connected evidence, real photo review, correction | Not started. CLEAN-011 upload is merged; review still shows placeholder evidence and fixed task IDs. |
+| #27 CLEAN-014 | Canonical intake API + resolution inbox | Foundation: durable ingestion, Make Cloud adapter (CLEAN-026), context tables/RPC (CLEAN-027). No generic `/api/integrations/events`; existing queue UI unmounted (re-mount on `/finance` tracked in #50). |
+| #28 CLEAN-015 | Deterministic multi-site fixtures | Not started. `supabase/seed.sql` has the Aurora fixture, "Copper Peak East" and, in the isolation tenant, "Northstar Harbour"; no Harbour/Cedar sites, no June-August data. |
+| #29 CLEAN-016 | Announcements + acknowledgements | Not started. |
+| #30 CLEAN-017 | Supply requests, approval, stock history | Foundation: `vendors`, `inventory_items`, append-only `inventory_transactions`. No requests, approvals or conversions. |
+| #31 CLEAN-018 | Assets, inspections, repair cost | Foundation: read-only `equipment_models`/`equipment_assets`; `equipment_reports` intake. No inspections, checklists, cost lines or report-to-asset link. |
+| #32 CLEAN-019 | Absence register | Not started. Staffing coverage/replacement exists. |
+| #33 CLEAN-020 | Reconciled revenue/cost import | Foundation: manual `labor_cost_entries` and inventory capture. No revenue, import batches or reconciliation. |
+| #34 CLEAN-021 | Manager overview and exceptions | Not started. `/operations` site portfolio lists counts only. |
+| #35 CLEAN-022 | Contract obligations, one-off jobs | Not started. Versioned `sla_definitions` fixture exists. |
+| #36 CLEAN-023 | Handover, follow-up, complaint closure | Not started. Corrective actions and incidents exist. |
+| #37 CLEAN-024 | Make/WhatsApp proof and group strategy | Partial: CLEAN-026 proves authenticated persistence of Cloud events. Group media, phone-to-hash proof and the strategy ADR are open. |
+| #38 CLEAN-025 | Release gates | Not started. |
+
+## Owner decisions of 2026-09-21 and follow-up issues
+
+| Issue | Work |
+|---|---|
+| #48 CLEAN-028 | Grant Directors update/delete on finance ledgers (ends grant-based append-only). |
+| #49 CLEAN-029 | Narrow supplier and inventory item visibility to Directors, Area Managers and Operations Managers. |
+| #50 CLEAN-030 | Restore the message-context queue on `/finance`, scoped to the selected site. |
+| #51 CLEAN-031 | ADR 008: real casino names stay, repository stays public, supply requests approved by managers and Directors. |
 
 ## Open decisions / owners
 

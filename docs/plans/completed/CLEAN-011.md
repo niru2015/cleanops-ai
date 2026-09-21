@@ -1,6 +1,6 @@
 # CLEAN-011 — Real mobile camera and image upload
 
-Status: active on `codex/clean-011-real-mobile-upload`; GitHub issue #22.
+Status: complete. GitHub issue #22; merged as PR #23 (`b51399a`, 2026-09-17).
 
 ## Outcome
 
@@ -37,3 +37,9 @@ existing private evidence bucket and reuse deterministic evidence validation and
 
 No image editing, compression, background uploads, offline queue, HEIC conversion, native app,
 live WhatsApp media, face recognition or real casino data.
+
+## Verification
+
+Recorded in PR #23: `typecheck`, lint, 40 unit tests, build, `test:db:postgres` and 4 browser journeys
+including real before/after PNG uploads at 390x844. A rehearsal on a physical iPhone and a hosted
+production-mode run are not recorded here and are required by issue #26.

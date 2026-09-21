@@ -3,7 +3,7 @@
 A repo-ready specification for commercial cleaning operations in casinos and other
 24/7 facilities. Principle: digitize the existing workflow before replacing it.
 
-**Status:** CLEAN-001 through CLEAN-010 are complete. The hosted deployment includes temporary,
+**Status:** CLEAN-001 through CLEAN-011, CLEAN-026 and CLEAN-027 are complete, plus the role-scoped casino demo (PRs #43-#46). The hosted deployment includes temporary,
 role-scoped demo access for the synthetic tenant. Live WhatsApp and OpenAI providers remain disabled
 until separate provider readiness and business approval gates pass.
 
@@ -17,8 +17,10 @@ Completed plans: [CLEAN-001](docs/plans/completed/CLEAN-001.md),
 [CLEAN-006](docs/plans/completed/CLEAN-006.md),
 [CLEAN-007](docs/plans/completed/CLEAN-007.md),
 [CLEAN-008](docs/plans/completed/CLEAN-008.md),
-[CLEAN-009](docs/plans/completed/CLEAN-009.md) and
-[CLEAN-010](docs/plans/completed/CLEAN-010.md).
+[CLEAN-009](docs/plans/completed/CLEAN-009.md),
+[CLEAN-010](docs/plans/completed/CLEAN-010.md), [CLEAN-011](docs/plans/completed/CLEAN-011.md),
+[CLEAN-026](docs/plans/completed/CLEAN-026.md) and [CLEAN-027](docs/plans/completed/CLEAN-027.md).
+The manager-requirements backlog (Tornado Phase 2) is tracked in issue #24; its per-issue status is in the ROADMAP.
 
 ## Local development
 
@@ -104,7 +106,7 @@ supervisor release and a redacted site-authorized client view at `/incidents` an
 reset and test commands are local-only. CLEAN-010 adds hosted Supabase Auth access and a supervisor
 reset limited to the shared synthetic Aurora site. Keep each PR limited to one issue.
 
-Repository: https://github.com/niru2015/cleanops-ai (private).
+Repository: https://github.com/niru2015/cleanops-ai (public, by owner decision; see ADR 008).
 The local parent Vancouver project is a synced mirror, so this CleanOps folder remains
 separate from it.
 
@@ -116,7 +118,7 @@ The full available recent planning answer and bounded prototype specification in
 this pack; older long answers were truncated by the conversation reader.
 This is a compressed implementation baseline, not a verbatim research archive.
 Business claims about Tornado, regulations, API availability and vendor prices are not
-validated customer requirements. Demo organizations, people and performance are synthetic.
+validated customer requirements. Demo people and performance are synthetic; the hosted casino demo may use real casino and equipment names as reference data under [ADR 008](docs/adr/008-real-casino-names-public-repo.md).
 Accepted ADRs mean this pack's initial design baseline; no customer/legal approval implied.
 
 Phase ordering, role boundaries, retry limits and demo arithmetic are explicit design

@@ -2,7 +2,7 @@
 
 Purpose: implementation-aligned end-to-end flows for coding agents. Migrations, services and tests remain authoritative.
 
-Last reviewed: 2026-09-21.
+Last reviewed: 2026-09-21 against `main` at `e6aedc5`.
 
 ## 1. Authentication and site authorization
 
@@ -16,7 +16,8 @@ Supabase Auth
 Rules:
 - Auth proves identity only.
 - Membership establishes organization + role.
-- Site grant establishes which site the user may access.
+- Site grant establishes which site the user may access. Directors (`organization_administrator`) and `operations_manager` see every organization site without grant rows; supervisors, area managers, cleaners and client viewers need an active, time-bounded `member_site_access` row.
+- Route access by role is defined in `src/config/navigation.ts` and each page guard: finance is Director (write) and Area Manager (read) only; cleaner mobile is cleaner and Director; the released client report is client viewer and Director.
 - RLS/RPC checks are the enforcement boundary.
 - Worker eligibility uses `worker_site_permissions`, not app membership.
 
@@ -96,13 +97,16 @@ Rules:
 
 ## 5. Supervisor message context review
 
+**Currently unreachable from the UI.** The queue component and action exist but are not rendered since the
+role-scoped finance rework (PR #43); the flow below is the data path when it is mounted again on `/finance` (issue #50).
+
 ```text
 external_message_contexts
 + list_site_external_messages RPC
 + external_message_media
         |
         v
-/finance message queue
+message queue UI (unmounted; formerly /finance)
         |
         v
 supervisor confirms area/task/sender role/worker
@@ -188,6 +192,11 @@ equipment problem reported
 
 Current scope is intake only, not a full maintenance/CMMS lifecycle.
 
+Separately, `equipment_assets` (with `equipment_models`) is a read-only site register shown in the `/operations`
+portfolio: status, condition and service dates come from seed data. A report names equipment only by free-text
+label; there is no link to an asset, no inspection record and no repair cost, so repeat-fault history per machine
+cannot yet be derived (issue #31).
+
 ## 10. SLA and client release
 
 ```text
@@ -229,7 +238,9 @@ vendor + item + site + quantity + unit cost
   -> inventory ledger
 ```
 
-Transaction types: receipt, issue, adjustment, count. Current ledger is append-only.
+Transaction types: receipt, issue, adjustment, count. Current ledger is append-only for browser roles (grants allow
+select and insert only). Only a Director can insert; a Director or a granted Area Manager can read a site's ledger.
+An order is not consumption: `issue` records stock released to a site, not proof of use (issue #30).
 
 ## 12. Finance — labour
 
@@ -242,7 +253,9 @@ site + work date + hours + hourly cost + type
   -> labour ledger
 ```
 
-Cost types: regular, overtime, contractor. This is operational cost capture, not payroll.
+Cost types: regular, overtime, contractor. This is operational cost capture, not payroll. Same access rules as the
+inventory ledger. No revenue or imported accounting data exists yet, so no profitability or contribution can be
+computed from these tables (issue #33).
 
 ## 13. Official WhatsApp outbound
 
@@ -264,6 +277,12 @@ Messaging transport state must not change attendance or task completion.
 The supervisor reset is scoped to the shared synthetic demo/site. It restores golden workflow data and associated private evidence without exposing a general destructive reset function to browser roles.
 
 When new demo-mutated tables are added, decide whether reset must restore/delete them and extend reset tests.
+The reset function `reset_hosted_demo` (migration `20260916192408`) predates CLEAN-027 and the equipment tables. Message
+contexts and media are removed indirectly (they cascade from the deleted webhook events and messages), but it does not
+touch `inventory_transactions` or `labor_cost_entries` (append-only for browser roles, so a Director's demo entries
+persist across resets) or `equipment_assets`. It is service-role only. The review page's synthetic preparation/correction
+helper (`submitSyntheticPair`) still depends on the local simulator flag, which production forces off, so preparing
+the walkthrough on a production build is currently blocked (issue #25).
 
 ## 15. Agent change checklist
 

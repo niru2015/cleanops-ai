@@ -2,33 +2,52 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last reviewed: 2026-09-21.
+Last reviewed: 2026-09-21 against `main` at `e6aedc5`.
 
 ## Route summary
 
-| Route | Main implementation | Purpose |
-|---|---|---|
-| `/login` | `src/app/login`, hosted-demo services | Supabase Auth and role/site-gated entry. |
-| `/operations` | operations Supabase integration + actions | Staffing, replacements, zones, review/correction/SLA risk. |
-| `/mobile` | operations integration + mobile actions | Cleaner task context and before/after photo capture. |
-| `/review` | review Supabase integration + actions | Evidence pair, AI suggestion, findings, corrections, approval. |
-| `/finance` | finance + message-context integrations | Supplier/item setup, inventory/labour, WhatsApp context queue. |
-| `/incidents` | reporting integration + incident actions | Incident and equipment intake/correction. |
-| `/reports` | reporting integration + report actions | SLA snapshot preparation and release. |
-| `/reports/client` | reporting integration | Released-only redacted client report. |
+Roles per route come from `src/config/navigation.ts` and the page guards; RLS/RPCs remain the enforcement boundary.
+
+| Route | Roles | Main implementation | Purpose |
+|---|---|---|---|
+| `/login` | anonymous | `src/app/login`, hosted-demo services | Supabase Auth with a named demo persona selector. |
+| `/operations` | supervisor, area manager, operations manager, director | site-portfolio + operations Supabase integrations + actions | Portfolio of every accessible site; staffing, replacements, zones, review/correction/SLA risk for the walkthrough site. |
+| `/mobile` | cleaner, director | operations integration + mobile actions | Cleaner task context and before/after photo capture. |
+| `/review` | supervisor, area manager, operations manager, director | review Supabase integration + actions | Evidence pair, AI suggestion, findings, corrections, approval. |
+| `/finance` | area manager (read only), director (read + write) | finance integration + actions | Site-scoped supplier/item setup, inventory and labour ledgers. The WhatsApp context queue is **not mounted** (see below). |
+| `/incidents` | supervisor, area manager, operations manager, director | reporting integration + incident actions | Incident and equipment intake/correction. |
+| `/reports` | client viewer, supervisor, area manager, operations manager, director | reporting integration + report actions | SLA snapshot preparation and release. |
+| `/reports/client` | client viewer (and directors for inspection) | reporting integration | Released-only redacted client report. |
 
 ## /login
 
 | UI/behavior | Source | Rule |
 |---|---|---|
 | Sign-in | Supabase Auth | Cookie-bound session. |
+| Persona selector | `scripts/provision-demo-logins.mjs` | 17 named demo personas (2 directors, 2 area managers, 4 supervisors, 9 cleaners) provisioned with one shared rotated password; not in `supabase/seed.sql`. |
 | Organization role | `memberships.role/state` | Active membership required. |
-| Site access | `member_site_access` | Active site grant required for hosted capability. |
+| Site access | `member_site_access` | Directors and operations managers see every org site; other roles only sites with an active grant (`starts_at <= now < ends_at`). |
 | Supervisor/cleaner/client perspective | membership role + hosted capability | Page runtime checks capability before loading workflow data. |
 
 ## /operations
 
-### Reads
+### Site portfolio (all accessible sites)
+
+Source: `src/integrations/operations/supabase-site-portfolio.ts`, rendered by `SitePortfolio` above the command view. Every accessible site is listed, so accounts with no walkthrough site still see data.
+
+| UI field | Source | Transformation |
+|---|---|---|
+| Site name, city | `sites.name`, `sites.city` | Direct, from the access context. |
+| Zones | `site_zones` | Site scoped, ordered by name. |
+| Active tasks | `service_tasks` | Count where `active`. |
+| Task records | `task_runs` | Count of all runs per site. |
+| Eligible workers | `worker_site_permissions` | Count where `state='active'` (not filtered by `valid_until`). |
+| Equipment assets | `equipment_assets` + `equipment_models` | Asset code, category, manufacturer/model, status, condition, last/next service date. |
+| Equipment issues | `equipment_reports` | Label and state, newest first. |
+
+The interactive command view below is shown only when the account can manage operations and either is a director or has a grant to the fixed walkthrough site `DEMO_SITE_ID` (`src/services/operations-runtime.ts`).
+
+### Command view reads
 
 | UI field | Source | Transformation |
 |---|---|---|
@@ -97,7 +116,7 @@ Writes `conversation_contexts` with account/thread/sender/assignment/site/zone/t
 - finalize linkage;
 - create/update `evidence_pairs` and revision when deterministic rules allow.
 
-Real upload code is present on main; CLEAN-011 tracking docs should remain aligned with acceptance/deployment status.
+Real upload code is merged (CLEAN-011, PR #23; plan archived under `docs/plans/completed/`). Hosted rehearsal on a physical phone is still required by issue #26 before it is claimed for the demo.
 
 ## /review
 
@@ -130,18 +149,22 @@ AI score never directly approves work.
 
 ## /finance — supplier, inventory, labour
 
+Access: Directors read and write; Area Managers read the ledgers of their granted casinos only; every other role sees "Finance access restricted". A `siteId` query parameter (validated against the account's sites) selects the casino; the default is the first accessible site.
+
 ### Reads
 
 | UI | Source |
 |---|---|
-| Supplier options | active `vendors` |
-| Inventory item options | active `inventory_items` |
-| Worker options | `workers` |
-| Task options | `task_runs` + `service_tasks` |
-| Inventory ledger | `inventory_transactions` + item/vendor joins |
-| Labour ledger | `labor_cost_entries` + worker join |
+| Supplier options | active `vendors` (organization scoped) |
+| Inventory item options | active `inventory_items` (organization scoped) |
+| Worker options | `workers` (organization scoped) |
+| Task options | selected-site `task_runs` + `service_tasks` |
+| Inventory ledger | selected-site `inventory_transactions` + item/vendor joins |
+| Labour ledger | selected-site `labor_cost_entries` + worker join |
 
-### Writes
+The entry forms are rendered only for Directors (`editable`). RLS independently limits ledger reads to `private.can_view_site_finance` and inserts to `private.can_edit_site_finance`.
+
+### Writes (Directors only)
 
 | Action | Table | Key mapping |
 |---|---|---|
@@ -150,9 +173,15 @@ AI score never directly approves work.
 | Record stock movement | `inventory_transactions` | organization/site, vendor optional, item, type, quantity, unit cost, time, notes |
 | Record labour | `labor_cost_entries` | organization/site, worker/task optional, date, hours, hourly cost, cost type, notes |
 
-`total_cost` is database-generated.
+`total_cost` is database-generated. Rows cannot currently be edited or deleted by browser roles; corrections are new adjustment/labour rows. Director update/delete is decided and tracked in issue #48.
 
-## /finance — WhatsApp context queue
+Not implemented: revenue, cost import batches, source-document references and per-site profitability (issue #33). `source_message_id` exists on both ledgers but no UI sets it.
+
+## /finance — WhatsApp context queue (currently unmounted)
+
+**Status:** the database, RPC, integration (`src/integrations/messages/supabase-message-context.ts`), component (`src/components/message-context-queue.tsx`) and server action (`performMessageResolution` in `src/app/finance/actions.ts`) exist, but nothing renders `MessageContextQueue` or calls `getMessageWorkspace`. The role-scoped finance rework (PR #43) removed it from `/finance`, and supervisors can no longer reach `/finance`. There is therefore no UI path today to confirm message context. The integration also targets the fixed `DEMO_SITE_ID` rather than a selected site. Owner decision 2026-09-21: the queue stays on `/finance`, scoped to the selected site (issue #50). The generic resolution inbox in issue #27 is separate.
+
+What the data path does when mounted:
 
 ### Reads
 
@@ -166,7 +195,7 @@ AI score never directly approves work.
 | Worker choices | `workers` | Org scoped. |
 
 **Confirm context** updates `external_message_contexts`:
-`site_id`, optional zone/task/worker, `sender_role`, `resolution_status='confirmed'`, `resolution_source='manual'`, `confidence=1`, resolved/updated timestamps.
+`site_id`, optional zone/task/worker, `sender_role`, `resolution_status='confirmed'`, `resolution_source='manual'`, `confidence=1`, resolved/updated timestamps. RLS allows the update only for `private.can_manage_site` on the context's site.
 
 ## /incidents
 
@@ -220,7 +249,7 @@ Client view does not expose raw evidence, private worker statements, raw message
 `/api/webhooks/whatsapp` verifies provider trust boundary, persists `integration_webhook_events` + `processing_jobs`, then the worker normalizes to `external_messages`, media/context and evidence.
 
 ### Make WhatsApp transport
-`/api/integrations/make/whatsapp/v1` validates the flattened official Cloud API event bundle and reuses the same durable ingress path. Make does not supply tenant identity.
+`/api/integrations/make/whatsapp/v1` (CLEAN-026) requires `CLEANOPS_MAKE_WHATSAPP_ENABLED=true` (otherwise 404) and a dedicated bearer token, validates the flattened official Cloud API event bundle (JSON or Make-safe URL-encoded scalars, 1 MB cap) and reuses the same durable ingress path (`accept_whatsapp_ingress_event`). The tenant is derived from the receiving phone-number ID in `integration_accounts`; Make does not supply tenant identity. Delivery statuses are handled separately from operational messages. It is a WhatsApp Cloud event adapter, not the generic multi-source intake API proposed in issue #27.
 
 ### WhatsApp outbound
 `whatsapp_outbox` owns idempotency/retry state; `whatsapp_delivery_events` owns transport history.

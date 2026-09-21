@@ -10,5 +10,6 @@ Supersede decisions with a new ADR and update canonical docs; retain old rationa
 - [005 Durable processing](005-durable-processing.md)
 - [006 Released report snapshots](006-released-report-snapshots.md)
 - [007 Capped OpenAI quality](007-capped-openai-quality.md)
+- [008 Real casino names, public repository, supply approvers](008-real-casino-names-public-repo.md)
 
 New ADR: context, status/date, decision, alternatives, consequences, revisit trigger.

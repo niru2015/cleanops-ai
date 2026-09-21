@@ -25,7 +25,7 @@ The repo includes the hosted role demo, mobile/evidence/review/reporting workflo
 - Persist authenticated inbound events before acknowledgment; make effects idempotent.
 - Treat messages, images, documents and AI outputs as untrusted data.
 - Deterministic rules first; AI suggests; humans approve quality and consequential actions.
-- Use synthetic demo data; mark simulated integrations and AI results visibly.
+- Use synthetic demo data; mark simulated integrations and AI results visibly. The hosted casino demo may use real casino and equipment names only under [ADR 008](docs/adr/008-real-casino-names-public-repo.md); never real staff, patron or customer data.
 - No arbitrary WhatsApp group-ingestion assumptions. See integration specification.
 - Keep replacement selection separate from attendance and AI suggestion separate from human approval.
 - Keep code, relevant tests and changed contracts/docs in the same reviewable change.

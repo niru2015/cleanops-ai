@@ -23,8 +23,8 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | Group | Tables and key relationships |
 |---|---|
 | Access | organizations; memberships(user_id, role); member_site_access(membership, site) |
-| Places | clients → sites(client, city, timezone) → site_zones |
-| Equipment | equipment_assets(site, optional zone, asset tag, type, state); equipment_reports(site, zone, issue state) |
+| Places | clients(is_demo) → sites(client, city, province, timezone, is_demo) → site_zones |
+| Equipment | equipment_models(organization, model code, manufacturer, model, category); equipment_assets(site, model, asset_code, status, condition, service dates, runtime hours); equipment_reports(site, zone, free-text equipment label, issue state). No zone on assets and no asset link on reports yet. |
 | People | workers(user_id optional); worker_site_permissions(worker, site, validity) |
 | Work | service_tasks; task_schedules(task, zone); task_runs(schedule, zone, due_at, requirements snapshot, state, submission_revision) |
 | Staffing | shifts(site, starts_at, ends_at); shift_coverage_requirements(shift, positions); shift_assignments(shift, worker); attendance_events(assignment, type, occurred_at); replacement_selections(shift, worker, selector) |
@@ -35,8 +35,8 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | Media | task_evidence(task_run nullable, message, role, storage_path, hash, captured_at nullable, received_at, submission_revision) |
 | Review | quality_decisions(task_run, submission_revision, pair, structured output); quality_findings(decision, confirmed observation); corrective_actions(finding, source/target revision, state); inspections(task_run, revision, reviewer, outcome); review_audit_events |
 | AI quality | quality_ai_budgets(tenant live ceiling); quality_ai_runs(tenant cache, attempt, provider metadata, usage, conservative charge); quality_ai_evaluations(fixture mismatch, abstention, override, provenance) |
-| AI | ai_decisions(task_run, submission_revision, input hash, prompt/schema/model version, output, review status); ai_usage(decision, attempt, returned usage, status) |
-| Reliability | processing_jobs(kind, dedupe_key, lease, attempts, next_attempt_at, status); audit_events(actor, action, entity, reason, timestamp) |
+| AI (logical only, not migrated) | ai_decisions and ai_usage were planned; implemented as quality_decisions and quality_ai_runs above |
+| Reliability | processing_jobs(kind, dedupe_key, lease, attempts, next_attempt_at, status); a generic audit_events table was not built: append-only evidence_audit_events, review_audit_events and reporting_audit_events are used instead |
 | WhatsApp outbound | whatsapp_outbox(account, recipient, logical_key, consent reference, conversation expiry, payload, lease, provider ID, transport state); whatsapp_delivery_events |
 | Finance / inventory | vendors(organization, supplier); inventory_items(organization, SKU, unit and reorder level); inventory_transactions(site, vendor, item, quantity, unit cost, total cost, source message); labor_cost_entries(site, worker/task, work date, hours, hourly cost, total cost, source message) |
 
@@ -82,7 +82,9 @@ a supervisor confirms the area, task and sender. Raw message text remains worker
 to supervisors through a site-authorized queue RPC, never a browser table grant. Every record carries
 an organization scope; site, area, task, worker and source-message links use composite tenant foreign
 keys. Generated total-cost columns prevent inconsistent labour and inventory totals. Financial entries
-are append-only in this slice: a correction is a new adjustment or labour entry.
+are append-only for browser roles in this slice (grants allow select and insert only): a correction is a new adjustment or labour entry.
+Since `20260921051826` the ledgers are readable only by Directors and granted Area Managers and writable only by Directors.
+The same migration adds `equipment_models` and `equipment_assets` and the `is_demo` flags; `20260921070701` grants them to `authenticated` read-only.
 
 Later: supply requests; contracts/requirements; certifications/training; safety schedules/checks/escalations;
 equipment/maintenance; knowledge documents/chunks/embeddings. Define each schema when its issue starts,
