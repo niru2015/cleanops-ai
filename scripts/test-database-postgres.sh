@@ -60,6 +60,8 @@ psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/tests/database/official-whatsapp.sql" >/dev/null
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/normalized-finance.sql" >/dev/null
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/tests/database/hosted-demo-reset.sql" >/dev/null
 
 echo "CLEAN-002 through CLEAN-010 migrations, isolation, concurrency, reporting, release, AI budget, WhatsApp and hosted reset checks passed on PostgreSQL."

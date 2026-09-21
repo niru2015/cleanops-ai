@@ -78,3 +78,18 @@ Storage guidance rechecked 2026-09-15: [access control](https://supabase.com/doc
   fields only. Drafts, statements, evidence links, equipment originals and audit rows remain denied.
 - Changelog rechecked 2026-09-16. The current explicit Data API grant requirement is preserved;
   unrelated Management API, Realtime and self-hosting breaking changes do not affect this slice.
+
+## CLEAN-027 implementation
+
+- Migration `20260921002737_normalized_message_finance_records` adds message context/media metadata,
+  vendors, inventory items/transactions and labour cost entries.
+- Migrations `20260921021537_clean_027_supervisor_workflows.sql` and
+  `20260921022155_clean_027_message_queue_access.sql` make the supervisor slice available.
+  Triggers create account-site context/media metadata with message normalization and mirror evidence
+  processing state to media metadata.
+- Raw message table access stays service-only. The narrowly granted `list_site_external_messages`
+  function resolves the active actor, organization and site grant before returning review text.
+  Context update, finance reads and site transaction inserts use RLS; vendor/item catalogue changes
+  require organization operations authority. Finance transaction and labour records are append-only.
+- Composite tenant/site/task/worker foreign keys prevent cross-organization references; generated
+  total-cost columns derive inventory and labour totals from quantity/hours and unit rates.
