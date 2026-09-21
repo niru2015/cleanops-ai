@@ -80,17 +80,12 @@ guessed IDs, another site in the same tenant, another tenant and private-origina
 CLEAN-027 and the role-scoped demo migration (`20260921051826`) protect finance and equipment data.
 `inventory_transactions` and `labor_cost_entries` can be read only by an organization administrator or an area
 manager with an active grant to the site (`private.can_view_site_finance`) and inserted only by an organization
-administrator (`private.can_edit_site_finance`); site supervisors and operations managers have no finance access.
+administrator (`private.can_edit_site_finance`); site supervisors and operations managers have no finance ledger access.
 Browser roles currently hold only `select, insert` on both ledgers, which is what makes them append-only; the `update` and
-`delete` policies created for administrators have no grant behind them and do nothing today. The owner decided to grant Directors update and delete (issue #48); this paragraph changes when that migration lands. `equipment_models` is
+`delete` policies created for administrators have no grant behind them and do nothing today. The owner decided to grant Directors update and delete (issue #48); this paragraph changes when that migration lands. Supplier and inventory item catalogues are readable only by Directors, Area Managers and Operations Managers (`private.can_view_supply_catalogue`) and writable only by Directors (`private.can_edit_supply_catalogue`). `equipment_models` is
 readable by every active member and writable by administrators; `equipment_assets` is readable with operational
 site access. Both are select-only for browser roles. Raw `external_messages` remain service-only and reach
 supervisors only through `list_site_external_messages`.
-
-Known gap: `vendors` and `inventory_items` are readable by every active member (`private.is_active_member`), including
-cleaners and client viewers, and writable by `private.can_operate_org` (operations managers and administrators) even
-though the UI offers writes to Directors only. Supplier names and contact references are therefore visible to client
-viewers who query the API directly. Narrow the select policies before any real supplier data is loaded.
 
 ## Evidence privacy and pilot decisions
 

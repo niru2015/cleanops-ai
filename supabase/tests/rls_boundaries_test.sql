@@ -1,7 +1,19 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(16);
+select plan(31);
+
+insert into auth.users (id, email, raw_user_meta_data)
+values ('00000000-0000-4000-8000-000000000007', 'ops-a@cleanops.example', '{}')
+on conflict (id) do nothing;
+insert into public.memberships (id, organization_id, user_id, role)
+values (
+  '20000000-0000-4000-8000-000000000007',
+  '10000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000007',
+  'operations_manager'
+)
+on conflict (id) do nothing;
 
 select results_eq(
   $$
@@ -31,6 +43,15 @@ reset role;
 
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000002';
+
+select is_empty(
+  $$ select id from public.vendors $$,
+  'site supervisor cannot read supplier catalogue'
+);
+select is_empty(
+  $$ select id from public.inventory_items $$,
+  'site supervisor cannot read inventory item catalogue'
+);
 
 select results_eq(
   $$ select count(*) from public.sites $$,
@@ -89,6 +110,15 @@ select is_empty(
 
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000004';
 
+select is_empty(
+  $$ select id from public.vendors $$,
+  'cleaner cannot read supplier catalogue'
+);
+select is_empty(
+  $$ select id from public.inventory_items $$,
+  'cleaner cannot read inventory item catalogue'
+);
+
 select results_eq(
   $$ select count(*) from public.shift_assignments $$,
   array[1::bigint],
@@ -131,7 +161,42 @@ select throws_ok(
   'cleaner cannot record attendance for another site assignment'
 );
 
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000005';
+
+select is_empty(
+  $$ select id from public.vendors $$,
+  'client viewer cannot read supplier catalogue'
+);
+select is_empty(
+  $$ select id from public.inventory_items $$,
+  'client viewer cannot read inventory item catalogue'
+);
+
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
+
+select results_eq(
+  $$ select count(*) from public.vendors $$,
+  array[2::bigint],
+  'organization administrator can read supplier catalogue'
+);
+select results_eq(
+  $$ select count(*) from public.inventory_items $$,
+  array[3::bigint],
+  'organization administrator can read inventory item catalogue'
+);
+select results_eq(
+  $$
+    insert into public.vendors (organization_id, vendor_code, name)
+    values (
+      '10000000-0000-4000-8000-000000000001',
+      'DIRECTOR-ONLY',
+      'Director Only Supplier Demo'
+    )
+    returning vendor_code
+  $$,
+  $$ values ('DIRECTOR-ONLY'::text) $$,
+  'organization administrator can create supplier catalogue rows'
+);
 
 select results_eq(
   $$ select count(*) from public.sites $$,
@@ -175,6 +240,59 @@ select results_eq(
   $$,
   $$ values ('revoked'::text) $$,
   'organization administrator can revoke membership'
+);
+
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000003';
+
+select results_eq(
+  $$ select count(*) from public.vendors $$,
+  array[3::bigint],
+  'area manager can read supplier catalogue'
+);
+select results_eq(
+  $$ select count(*) from public.inventory_items $$,
+  array[3::bigint],
+  'area manager can read inventory item catalogue'
+);
+select throws_ok(
+  $$
+    insert into public.inventory_items (organization_id, sku, name, unit_of_measure)
+    values (
+      '10000000-0000-4000-8000-000000000001',
+      'AREA-FORBIDDEN',
+      'Area Manager Forbidden Item Demo',
+      'case'
+    )
+  $$,
+  '42501',
+  'new row violates row-level security policy for table "inventory_items"',
+  'area manager cannot create inventory item catalogue rows'
+);
+
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000007';
+
+select results_eq(
+  $$ select count(*) from public.vendors $$,
+  array[3::bigint],
+  'operations manager can read supplier catalogue'
+);
+select results_eq(
+  $$ select count(*) from public.inventory_items $$,
+  array[3::bigint],
+  'operations manager can read inventory item catalogue'
+);
+select throws_ok(
+  $$
+    insert into public.vendors (organization_id, vendor_code, name)
+    values (
+      '10000000-0000-4000-8000-000000000001',
+      'OPS-FORBIDDEN',
+      'Operations Manager Forbidden Supplier Demo'
+    )
+  $$,
+  '42501',
+  'new row violates row-level security policy for table "vendors"',
+  'operations manager cannot create supplier catalogue rows'
 );
 
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000002';
