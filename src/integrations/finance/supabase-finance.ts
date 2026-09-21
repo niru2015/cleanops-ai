@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { DEMO_ORGANIZATION_ID, DEMO_SITE_ID } from "@/services/operations-runtime";
+import { DEMO_ORGANIZATION_ID } from "@/services/operations-runtime";
 
 const uuid = z.string().uuid();
 const row = async <T>(promise: PromiseLike<{ data: unknown; error: { message?: string } | null }>, schema: z.ZodType<T>) => {
