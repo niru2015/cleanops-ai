@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { financeActionSchema, messageResolutionSchema, type FinanceActionInput, type MessageResolutionInput } from "@/schemas/finance";
 import { resolveMessageContext } from "@/integrations/messages/supabase-message-context";
-import { DEMO_ORGANIZATION_ID, DEMO_SITE_ID, getOperationsRuntime } from "@/services/operations-runtime";
+import { DEMO_ORGANIZATION_ID, getOperationsRuntime } from "@/services/operations-runtime";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAppAccessContext, isSiteAllowed } from "@/services/access-context";
 
 export type FinanceActionState = { ok: boolean; message: string };
 
@@ -29,12 +31,12 @@ export async function performFinanceAction(input: FinanceActionInput): Promise<F
       return success("Inventory item added to the organization catalogue.");
     }
     if (parsed.data.action === "record_inventory") {
-      const { error } = await client.from("inventory_transactions").insert({ organization_id: DEMO_ORGANIZATION_ID, site_id: DEMO_SITE_ID, vendor_id: parsed.data.vendorId ?? null, inventory_item_id: parsed.data.inventoryItemId, transaction_type: parsed.data.transactionType, quantity: parsed.data.quantity, unit_cost: parsed.data.unitCost, occurred_at: parsed.data.occurredAt, notes: parsed.data.notes ?? null });
+      const { error } = await client.from("inventory_transactions").insert({ organization_id: DEMO_ORGANIZATION_ID, site_id: parsed.data.siteId, vendor_id: parsed.data.vendorId ?? null, inventory_item_id: parsed.data.inventoryItemId, transaction_type: parsed.data.transactionType, quantity: parsed.data.quantity, unit_cost: parsed.data.unitCost, occurred_at: parsed.data.occurredAt, notes: parsed.data.notes ?? null });
       if (error) throw error;
       revalidatePath("/finance");
       return success("Inventory transaction recorded. Its total cost is calculated by the database.");
     }
-    const { error } = await client.from("labor_cost_entries").insert({ organization_id: DEMO_ORGANIZATION_ID, site_id: DEMO_SITE_ID, worker_id: parsed.data.workerId ?? null, task_run_id: parsed.data.taskRunId ?? null, work_date: parsed.data.workDate, hours: parsed.data.hours, hourly_cost: parsed.data.hourlyCost, cost_type: parsed.data.costType, notes: parsed.data.notes ?? null });
+    const { error } = await client.from("labor_cost_entries").insert({ organization_id: DEMO_ORGANIZATION_ID, site_id: parsed.data.siteId, worker_id: parsed.data.workerId ?? null, task_run_id: parsed.data.taskRunId ?? null, work_date: parsed.data.workDate, hours: parsed.data.hours, hourly_cost: parsed.data.hourlyCost, cost_type: parsed.data.costType, notes: parsed.data.notes ?? null });
     if (error) throw error;
     revalidatePath("/finance");
     return success("Labour cost recorded. Hours and cost rate determine the saved total.");
