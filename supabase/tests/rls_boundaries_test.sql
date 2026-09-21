@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(29);
+select plan(31);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values ('00000000-0000-4000-8000-000000000007', 'ops-a@cleanops.example', '{}')
