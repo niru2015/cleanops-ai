@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { MockMessage } from "@/schemas/mock-message";
 import type { AcceptEnvelopeInput, ClaimedJob, IngressRepository } from "@/services/ingress-repository";
+import { handleMakeWhatsAppPost } from "@/services/make-whatsapp-ingress";
 import { handleWhatsAppPost } from "@/services/whatsapp-webhook";
 import { WhatsAppMediaClient, WhatsAppMediaError } from "@/services/whatsapp-media";
 import { processNextWhatsAppReply, type ClaimedWhatsAppReply, type WhatsAppOutboxRepository } from "@/services/whatsapp-outbox";
@@ -73,5 +74,134 @@ describe("CLEAN-009 WhatsApp Business adapter", () => {
     expect(await processNextWhatsAppReply(repository, { workerId: "worker", leaseSeconds: 60, accessToken: "token", graphVersion: "v23.0", fetchImpl })).toMatchObject({ status: "sent" });
     expect(await processNextWhatsAppReply(repository, { workerId: "worker", leaseSeconds: 60, accessToken: "token", graphVersion: "v23.0", fetchImpl })).toEqual({ status: "idle" });
     expect(sent).toEqual(["wamid.sent-1"]);
+  });
+});
+
+describe("CLEAN-026 Make WhatsApp transport", () => {
+  const adapterToken = "make-adapter-token-at-least-32-characters";
+  const makeEvent = {
+    id: "waba-1",
+    time: null,
+    field: "messages",
+    messaging_product: "whatsapp",
+    metadata: { display_phone_number: "15550001111", phone_number_id: "phone-1" },
+    contacts: [{ wa_id: "15551234567" }],
+    messages: [{
+      id: "wamid.make-inbound-1",
+      from: "15551234567",
+      timestamp: "2026-09-20T21:20:03.000Z",
+      type: "text",
+      text: { body: "Synthetic Make ingress check" },
+    }],
+    statuses: [{
+      id: "wamid.make-outbound-1",
+      status: "delivered",
+      timestamp: "2026-09-20T21:21:07.000Z",
+      recipient_id: "15551234567",
+    }],
+  };
+
+  function makeRequest(value: unknown, token = adapterToken) {
+    return new Request("https://cleanops.example/api/integrations/make/whatsapp/v1", {
+      method: "POST",
+      body: JSON.stringify(value),
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    });
+  }
+
+  function makeFormRequest(value: Record<string, string>, token = adapterToken) {
+    return new Request("https://cleanops.example/api/integrations/make/whatsapp/v1", {
+      method: "POST",
+      body: new URLSearchParams(value),
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/x-www-form-urlencoded" },
+    });
+  }
+
+  it("authenticates, converts Make timestamps, persists, records statuses and dedupes", async () => {
+    const ingress = new FakeIngress();
+    const statuses: unknown[] = [];
+    const statusRepository = {
+      async recordStatuses(account: string, values: unknown[]) {
+        statuses.push({ account, values });
+      },
+    };
+    const config = { enabled: true, token: adapterToken };
+
+    const first = await handleMakeWhatsAppPost(makeRequest(makeEvent), ingress, statusRepository, config);
+    const replay = await handleMakeWhatsAppPost(makeRequest(makeEvent), ingress, statusRepository, config);
+
+    expect(first.status).toBe(202);
+    expect(await replay.json()).toMatchObject({ duplicateCount: 1, statusCount: 1 });
+    expect(ingress.inputs[0]?.payload).toMatchObject({
+      accountExternalId: "phone-1",
+      messages: [{
+        externalMessageId: "wamid.make-inbound-1",
+        occurredAt: "2026-09-20T21:20:03.000Z",
+        text: "Synthetic Make ingress check",
+      }],
+    });
+    expect(statuses).toHaveLength(2);
+  });
+
+  it("rejects missing credentials and malformed events before persistence", async () => {
+    const ingress = new FakeIngress();
+    const repository = { async recordStatuses() {} };
+    const config = { enabled: true, token: adapterToken };
+
+    const unauthorized = await handleMakeWhatsAppPost(makeRequest(makeEvent, "wrong"), ingress, repository, config);
+    const malformed = await handleMakeWhatsAppPost(makeRequest({ ...makeEvent, messages: undefined, statuses: undefined }), ingress, repository, config);
+
+    expect(unauthorized.status).toBe(401);
+    expect(malformed.status).toBe(400);
+    expect(ingress.inputs).toHaveLength(0);
+  });
+
+  it("accepts Make's URL-encoded scalar relay without corrupting message text", async () => {
+    const ingress = new FakeIngress();
+    const statuses: unknown[] = [];
+    const repository = {
+      async recordStatuses(account: string, values: unknown[]) {
+        statuses.push({ account, values });
+      },
+    };
+    const text = "Cleaner said: \"done\"\nSoap & towels replaced.";
+    const response = await handleMakeWhatsAppPost(makeFormRequest({
+      event_id: "waba-1",
+      field: "messages",
+      messaging_product: "whatsapp",
+      phone_number_id: "phone-1",
+      display_phone_number: "15550001111",
+      contact_wa_id: "15551234567",
+      message_id: "wamid.make-form-1",
+      message_from: "15551234567",
+      message_timestamp: "2026-09-20T22:55:51.000Z",
+      message_type: "text",
+      message_text_body: text,
+      status_id: "wamid.make-status-1",
+      status: "delivered",
+      status_timestamp: "2026-09-20T22:55:52.000Z",
+      status_recipient_id: "15551234567",
+    }), ingress, repository, { enabled: true, token: adapterToken });
+
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ envelopeCount: 1, statusCount: 1 });
+    expect(ingress.inputs[0]?.payload).toMatchObject({ messages: [{ text }] });
+    expect(statuses).toHaveLength(1);
+  });
+
+  it("rejects partial URL-encoded message and status records", async () => {
+    const ingress = new FakeIngress();
+    const repository = { async recordStatuses() {} };
+    const response = await handleMakeWhatsAppPost(makeFormRequest({
+      event_id: "waba-1",
+      field: "messages",
+      messaging_product: "whatsapp",
+      phone_number_id: "phone-1",
+      message_id: "wamid.incomplete",
+      message_type: "text",
+    }), ingress, repository, { enabled: true, token: adapterToken });
+
+    expect(response.status).toBe(400);
+    expect(ingress.inputs).toHaveLength(0);
   });
 });
