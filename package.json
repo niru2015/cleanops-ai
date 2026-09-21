@@ -24,7 +24,8 @@
     "worker:messages": "node --env-file=.env.local scripts/run-ingress-worker.mjs",
     "worker:whatsapp": "node --env-file=.env.local scripts/run-whatsapp-worker.mjs",
     "whatsapp:readiness": "node --env-file=.env.local scripts/check-whatsapp-readiness.mjs",
-    "demo:replay-evidence": "node --env-file=.env.local scripts/replay-golden-evidence.mjs"
+    "demo:replay-evidence": "node --env-file=.env.local scripts/replay-golden-evidence.mjs",
+    "demo:provision-logins": "node --env-file=.env.local scripts/provision-demo-logins.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { signInAsDirector } from "./auth";
 
 test("supervisor closes the staffing gap from attendance records", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  await signInAsDirector(page);
   await page.goto("/operations");
   await expect(page).toHaveTitle("CleanOps");
   await expect(page.getByRole("heading", { name: "Operations command" })).toBeVisible();
@@ -29,6 +31,7 @@ test("cleaner selects QR context and uploads real before and after images", asyn
   const consoleErrors: string[] = [];
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  await signInAsDirector(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/mobile");
   await expect(page.getByRole("heading", { name: "My tasks" })).toBeVisible();

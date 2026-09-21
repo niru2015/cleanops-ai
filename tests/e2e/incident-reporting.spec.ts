@@ -1,8 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { signInAsDirector } from "./auth";
 
 test("supervisor records events, computes the report and releases only its redacted client view", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+
+  await signInAsDirector(page);
 
   await page.goto("/incidents");
   await expect(page.getByRole("heading", { name: "Incident & equipment desk" })).toBeVisible();

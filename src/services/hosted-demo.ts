@@ -28,7 +28,7 @@ export type HostedDemoCapability = "supervisor" | "cleaner" | "client";
 
 const allowedRoles: Record<HostedDemoCapability, Set<string>> = {
   supervisor: new Set(["site_supervisor", "area_manager", "operations_manager", "organization_administrator"]),
-  cleaner: new Set(["cleaner"]),
+  cleaner: new Set(["cleaner", "organization_administrator"]),
   client: new Set(["client_viewer"]),
 };
 
@@ -56,17 +56,24 @@ export async function hasHostedDemoAccess(
   const membership = membershipSchema.safeParse(membershipResult.data);
   if (!membership.success || !allowedRoles[capability].has(membership.data.role)) return false;
 
-  const accessResult = await client
-    .from("member_site_access")
-    .select("id")
-    .eq("membership_id", membership.data.id)
-    .eq("site_id", HOSTED_DEMO_SITE_ID)
-    .lte("starts_at", new Date().toISOString())
-    .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`)
-    .maybeSingle();
-  if (accessResult.error || !idSchema.safeParse(accessResult.data).success) return false;
+  const role = membership.data.role;
+  const organizationWide =
+    role === "organization_administrator" || role === "operations_manager";
 
-  if (capability !== "cleaner") return true;
+  if (!organizationWide) {
+    const now = new Date().toISOString();
+    const accessResult = await client
+      .from("member_site_access")
+      .select("id")
+      .eq("membership_id", membership.data.id)
+      .lte("starts_at", now)
+      .or(`ends_at.is.null,ends_at.gt.${now}`)
+      .limit(1)
+      .maybeSingle();
+    if (accessResult.error || !idSchema.safeParse(accessResult.data).success) return false;
+  }
+
+  if (capability !== "cleaner" || role === "organization_administrator") return true;
 
   const workerResult = await client
     .from("workers")

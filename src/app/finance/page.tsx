@@ -1,20 +1,87 @@
 import { AppShell } from "@/components/app-shell";
 import { FinanceWorkspace } from "@/components/finance-workspace";
-import { MessageContextQueue } from "@/components/message-context-queue";
-import { getFinanceWorkspace } from "@/integrations/finance/supabase-finance";
-import { getMessageWorkspace } from "@/integrations/messages/supabase-message-context";
-import { getOperationsRuntime } from "@/services/operations-runtime";
+import { getFinanceWorkspace, type FinanceWorkspace as FinanceWorkspaceData } from "@/integrations/finance/supabase-finance";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAppAccessContext, resolveSelectedSite, type AppAccessContext, type AccessSite } from "@/services/access-context";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export default async function FinancePage() {
-  let loaded: { finance: Awaited<ReturnType<typeof getFinanceWorkspace>>; messages: Awaited<ReturnType<typeof getMessageWorkspace>> } | null = null;
+type Loaded = {
+  access: AppAccessContext;
+  selectedSite: AccessSite | null;
+  finance: FinanceWorkspaceData | null;
+};
+
+export default async function FinancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ siteId?: string }>;
+}) {
+  let loaded: Loaded | null = null;
   try {
-    const runtime = await getOperationsRuntime("supervisor");
-    const [finance, messages] = await Promise.all([getFinanceWorkspace(runtime.accessClient), getMessageWorkspace(runtime.accessClient, runtime.actorUserId)]);
-    loaded = { finance, messages };
+    const client = await createSupabaseServerClient();
+    const access = await getAppAccessContext(client);
+    const params = await searchParams;
+    const selectedSite = resolveSelectedSite(access, params.siteId);
+    const finance =
+      access.canViewFinance && selectedSite
+        ? await getFinanceWorkspace(client, selectedSite.id)
+        : null;
+    loaded = { access, selectedSite, finance };
   } catch {}
-  if (loaded) return <AppShell authenticated currentPath="/finance"><FinanceWorkspace workspace={loaded.finance} /><MessageContextQueue workspace={loaded.messages} /></AppShell>;
-  return <AppShell currentPath="/finance"><section className="accessState"><p className="eyebrow">Finance &amp; inventory</p><h1>Supervisor access required</h1><p>Sign in with the hosted demo supervisor account.</p><a className="reviewButton reviewButton-primary" href="/login">Sign in</a></section></AppShell>;
+
+  if (!loaded) {
+    return <AppShell currentPath="/finance"><section className="accessState"><p className="eyebrow">Finance &amp; inventory</p><h1>Sign in required</h1><p>Use a Director or Area Manager demo account.</p><a className="reviewButton reviewButton-primary" href="/login">Sign in</a></section></AppShell>;
+  }
+
+  const { access, selectedSite, finance } = loaded;
+
+  if (!access.canViewFinance) {
+    return (
+      <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
+        <section className="accessState">
+          <p className="eyebrow">Finance &amp; inventory</p>
+          <h1>Finance access restricted</h1>
+          <p>Financial information is available only to Directors and the Area Manager responsible for the selected casino.</p>
+        </section>
+      </AppShell>
+    );
+  }
+
+  if (!selectedSite || !finance) {
+    return (
+      <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
+        <section className="accessState">
+          <p className="eyebrow">Finance &amp; inventory</p>
+          <h1>No casino assignment</h1>
+          <p>This account does not currently have access to a casino.</p>
+        </section>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
+      <section className="siteScopeBar" aria-label="Casino scope">
+        <div>
+          <p className="eyebrow">Casino scope</p>
+          <strong>{selectedSite.name}{selectedSite.city ? ` · ${selectedSite.city}` : ""}</strong>
+        </div>
+        <form method="get">
+          <label>
+            <span className="visuallyHidden">Choose casino</span>
+            <select name="siteId" defaultValue={selectedSite.id}>
+              {access.sites.map((site) => (
+                <option key={site.id} value={site.id}>{site.name}{site.city ? ` · ${site.city}` : ""}</option>
+              ))}
+            </select>
+          </label>
+          <button className="reviewButton reviewButton-secondary" type="submit">Open casino</button>
+        </form>
+        <span className="recordLabel">{access.canEditFinance ? "Director · edit" : "Area Manager · read only"}</span>
+      </section>
+      <FinanceWorkspace workspace={finance} editable={access.canEditFinance} siteId={selectedSite.id} />
+    </AppShell>
+  );
 }

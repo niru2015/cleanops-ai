@@ -79,3 +79,22 @@ The presenter supplies one rotated temporary password for these reserved account
 
 Rotate the shared password after external presentations. Do not add customer emails or real casino
 records to the synthetic tenant.
+
+
+## BC casino role demo
+
+The hosted BC casino demo uses real casino and commercial-equipment names as reference/demo data only.
+No customer or service relationship is implied. Personnel names are demo display identities.
+
+Access rules:
+
+- Directors: organization-wide navigation and casino access; finance view/edit.
+- Area Managers: assigned casinos only; finance view is read-only.
+- Supervisors: assigned operational casinos; no finance page.
+- Cleaners: assigned cleaner workflow only; no finance page.
+- Client viewer: released client-report view only.
+
+Named hosted personas are provisioned with `npm run demo:provision-logins`.
+Set `CLEANOPS_DEMO_PASSWORD` in the local/server environment before running the command.
+The script uses Supabase Admin Auth to create/rotate confirmed email/password identities and keeps
+the public membership and worker links synchronized. Never commit the demo password.

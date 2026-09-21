@@ -9,13 +9,13 @@ export default function LoginPage() {
       <section className="loginCard" aria-labelledby="login-title">
         <div className="loginBrand"><BrandMark className="brandMark" /><span>CleanOps</span></div>
         <p className="eyebrow">Hosted business demonstration</p>
-        <h1 id="login-title">Explore a synthetic casino night shift</h1>
-        <p className="loginLead">Use the temporary credentials supplied by the presenter. Each role is limited to its assigned site and workflow.</p>
+        <h1 id="login-title">Explore the BC casino operations demo</h1>
+        <p className="loginLead">Choose a named demo persona. Directors have organization-wide access; managers, supervisors and cleaners remain restricted to their assigned casinos and workflows.</p>
         <LoginForm />
       </section>
       <aside className="loginStory" aria-label="Demo outline">
         <span className="prototypePill">Prototype · synthetic data</span>
-        <h2>One shift, three perspectives</h2>
+        <h2>Role-based casino operations</h2>
         <ol>
           <li><span>01</span><div><strong>Supervisor</strong><p>Close a staffing gap, review evidence and release the service report.</p></div></li>
           <li><span>02</span><div><strong>Cleaner</strong><p>Select the assigned zone and submit before/after evidence.</p></div></li>
