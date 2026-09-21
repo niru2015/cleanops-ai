@@ -2,6 +2,7 @@
 
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { navigationItems } from "@/config/navigation";
+import type { AppRole } from "@/services/access-context";
 import { BrandMark, CloseIcon, EmptyDocumentIcon, MenuIcon, NavigationGlyph } from "@/components/icons";
 import { signOutAction } from "@/app/login/actions";
 
@@ -14,11 +15,15 @@ function Brand() {
   );
 }
 
-function Navigation({ currentPath }: { currentPath: string }) {
+function Navigation({ currentPath, role }: { currentPath: string; role?: AppRole }) {
+  const visibleItems = role
+    ? navigationItems.filter((item) => item.roles.includes(role))
+    : navigationItems;
+
   return (
     <nav aria-label="Primary navigation" className="navigation">
       <ul>
-        {navigationItems.map((item) => (
+        {visibleItems.map((item) => (
           <li key={item.label}>
             {item.implemented ? (
               <a className={`navItem ${item.href === currentPath ? "navItemActive" : ""}`} href={item.href} aria-current={item.href === currentPath ? "page" : undefined}>
@@ -46,11 +51,15 @@ function NavigationPanel({
   onClose,
   currentPath,
   authenticated,
+  role,
+  roleLabel,
 }: {
   closeButtonRef?: RefObject<HTMLButtonElement | null>;
   onClose?: () => void;
   currentPath: string;
   authenticated: boolean;
+  role?: AppRole;
+  roleLabel?: string;
 }) {
   return (
     <div className="navigationPanel">
@@ -68,7 +77,8 @@ function NavigationPanel({
           </button>
         ) : null}
       </div>
-      <Navigation currentPath={currentPath} />
+      {authenticated && roleLabel ? <p className="shellRole">{roleLabel}</p> : null}
+      <Navigation currentPath={currentPath} role={role} />
       <div className="shellFooter">
         {authenticated ? <form action={signOutAction}><button className="signOutButton" type="submit">Sign out</button></form> : <a className="signInLink" href="/login">Demo sign in</a>}
         <p className="shellRevision">Phase P3 <span aria-hidden="true">•</span> Client reporting</p>
@@ -77,7 +87,19 @@ function NavigationPanel({
   );
 }
 
-export function AppShell({ children, currentPath = "/", authenticated = false }: { children?: ReactNode; currentPath?: string; authenticated?: boolean }) {
+export function AppShell({
+  children,
+  currentPath = "/",
+  authenticated = false,
+  role,
+  roleLabel,
+}: {
+  children?: ReactNode;
+  currentPath?: string;
+  authenticated?: boolean;
+  role?: AppRole;
+  roleLabel?: string;
+}) {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -111,7 +133,7 @@ export function AppShell({ children, currentPath = "/", authenticated = false }:
   return (
     <div className="appShell">
       <aside className="desktopSidebar">
-        <NavigationPanel authenticated={authenticated} currentPath={currentPath} />
+        <NavigationPanel authenticated={authenticated} currentPath={currentPath} role={role} roleLabel={roleLabel} />
       </aside>
 
       <div className="workspaceColumn">
@@ -151,7 +173,7 @@ export function AppShell({ children, currentPath = "/", authenticated = false }:
         <div className="mobileNavigationLayer" id="mobile-navigation">
           <div className="drawerBackdrop" role="presentation" onClick={closeMobileNavigation} />
           <aside className="mobileDrawer" aria-label="Navigation drawer">
-            <NavigationPanel authenticated={authenticated} closeButtonRef={closeButtonRef} onClose={closeMobileNavigation} currentPath={currentPath} />
+            <NavigationPanel authenticated={authenticated} closeButtonRef={closeButtonRef} onClose={closeMobileNavigation} currentPath={currentPath} role={role} roleLabel={roleLabel} />
           </aside>
         </div>
       ) : null}
