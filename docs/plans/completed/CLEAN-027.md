@@ -22,3 +22,13 @@ Inventory screen for supplier/item setup plus append-only inventory and labour r
 - Hosted project `jfhpbabelqldhemrmvgc` has both migrations applied and `db push --dry-run` reports
   up to date.
 - Browser access boundary was checked locally; a signed-in visual walkthrough awaits deployment.
+
+## Status update (2026-09-21, after PR #43 and #44)
+
+- Role-scoped finance (PR #43, migration `20260921051826_casino_demo_rbac_equipment`) replaced the acceptance rule
+  "supervisors can insert finance records": ledgers are now readable by Directors and granted Area Managers only and
+  writable by Directors only. Site supervisors no longer reach `/finance`.
+- The supervisor message-context queue built here (`MessageContextQueue`, `getMessageWorkspace`,
+  `performMessageResolution`) is no longer rendered anywhere, so the "confirm area, task and sender" acceptance item
+  has no reachable UI. The database, RPC and RLS parts remain and are covered by `tests/database/normalized-finance.sql`.
+  Re-mounting the queue on `/finance` is tracked in issue #50.

@@ -1,8 +1,9 @@
 # Golden demo: Sunday Casino Night Shift
 
-Synthetic organization “Demo Cleaning Co”; fictional “Pacific Crown Casino”, Restroom B
-and Slot Bank 14. Never imply a real Tornado deployment or real measured performance.
-Second tenant “Isolation Test Co” exists for tests, not a demo customer.
+Synthetic organization “Demo Nightshift Services” (`supabase/seed.sql`); fictional client “Aurora Casino Demo”,
+site “Aurora Downtown Demo”, Restroom B and Slot Bank 14. Never imply a real Tornado deployment or real measured
+performance. Second tenant “Demo Harbour Facilities” exists for isolation tests, not as a demo customer. The hosted
+casino demo below presents the same walkthrough site as “Grand Villa”; those hosted names are not in the repository seed.
 All screens display “Prototype • synthetic data”; suggestions display “Mock AI” until live.
 
 Seed clock: Sunday 2026-09-13 22:00 through Monday 2026-09-14 06:00 America/Vancouver.
@@ -71,9 +72,11 @@ server verifies the expected role and active Aurora Downtown site grant. The pro
 The supervisor can reset synthetic staffing, evidence, review, incident and report changes from
 `/operations`; the service-only database function cannot be invoked by a browser session.
 
-The presenter supplies one rotated temporary password for these reserved accounts:
+The presenter supplies one rotated temporary password. CLEAN-010 defined these three reserved accounts; the login
+selector now uses the named personas in the next section, and no script in this repository creates the accounts below,
+so confirm they still exist before relying on them:
 
-- `demo-supervisor@cleanops.example.com` → operations, evidence review, incidents and report release
+- (CLEAN-010, legacy) `demo-supervisor@cleanops.example.com` → operations, evidence review, incidents and report release
 - `demo-cleaner@cleanops.example.com` → assigned mobile task and real camera/library upload using synthetic demo content
 - `demo-client@cleanops.example.com` → released redacted client report
 
@@ -86,10 +89,13 @@ records to the synthetic tenant.
 The hosted BC casino demo uses real casino and commercial-equipment names as reference/demo data only.
 No customer or service relationship is implied. Personnel names are demo display identities.
 
+> Owner decision 2026-09-21 ([ADR 008](adr/008-real-casino-names-public-repo.md)): real names stay, as reference data only. The casino records are still not in `supabase/seed.sql` or any migration; making them reproducible is tracked in issue #28.
+
 Access rules:
 
 - Directors: organization-wide navigation and casino access; finance view/edit.
 - Area Managers: assigned casinos only; finance view is read-only.
+- Operations Managers: organization-wide operational access; no finance page.
 - Supervisors: assigned operational casinos; no finance page.
 - Cleaners: assigned cleaner workflow only; no finance page.
 - Client viewer: released client-report view only.

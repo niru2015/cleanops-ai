@@ -2,15 +2,16 @@
 
 Purpose: agent-readable business dictionary for the current CleanOps Supabase model. Exact SQL, constraints, grants, RLS and RPC behavior are owned by `supabase/migrations/`; if this file disagrees with a migration, the migration wins.
 
-Last reviewed: 2026-09-21.
+Last reviewed: 2026-09-21 against migrations through `20260921070701_site_equipment_assets`.
 
 ## Conventions
 
 - `organization_id` is the cleaning-contractor tenant boundary.
 - Site-scoped operational records also carry `site_id`.
-- Supabase Auth identifies a person; app authorization comes from `memberships` plus `member_site_access`.
+- Supabase Auth identifies a person; app authorization comes from `memberships` plus `member_site_access`. `operations_manager` and `organization_administrator` are organization-wide in the app layer and do not need `member_site_access` rows; all other roles do.
 - Worker eligibility is separate from app access and uses `worker_site_permissions`.
-- Financial transaction rows are append-only in the current slice.
+- Financial transaction rows are append-only for browser roles in the current slice. This is enforced by grants (`select, insert` only for `authenticated`), not by a trigger; see [Finance and inventory](#finance-and-inventory).
+- Demo rows are flagged with `is_demo` (clients, sites, workers, equipment) so they can be told apart from real data.
 - `inventory_transactions.total_cost` and `labor_cost_entries.total_cost` are database-generated.
 - External messages, media and AI output are untrusted until validated/resolved.
 - AI output is advisory; findings and approvals are separate human records.
@@ -23,15 +24,26 @@ Last reviewed: 2026-09-21.
 | `organizations` | Cleaning contractor tenant. | `name`, `slug`. |
 | `memberships` | User role in an organization. | `user_id`, `role`, `state`. Roles include cleaner, site_supervisor, area_manager, operations_manager, organization_administrator, client_viewer. |
 | `member_site_access` | Time-bounded app access to a site. | `membership_id`, `site_id`, `starts_at`, `ends_at`. |
-| `clients` | Customer of the cleaning contractor, e.g. casino operator. | `name`. |
-| `sites` | Physical customer property. | `client_id`, `name`, `timezone`. |
+| `clients` | Customer of the cleaning contractor, e.g. casino operator. | `name`, `is_demo`, `demo_note`. |
+| `sites` | Physical customer property. | `client_id`, `name`, `city` (2-120 chars when set), `province`, `timezone`, `is_demo`, `demo_note`. |
 | `site_zones` | Operational area inside a site. | `site_id`, `name`. |
+
+Role capabilities as implemented in `src/services/access-context.ts` and the finance RLS helpers (the database policies remain the enforcement boundary):
+
+| Role | Sites in scope | Ops / review / incidents | Finance | Cleaner mobile | Reports |
+|---|---|---|---|---|---|
+| `organization_administrator` (label "Director") | all org sites | yes | view + edit | yes | yes |
+| `operations_manager` | all org sites | yes | **no** | no | yes |
+| `area_manager` | granted sites | yes | view only, granted sites | no | yes |
+| `site_supervisor` | granted sites | yes | no | no | yes |
+| `cleaner` | granted sites | no | no | yes | no |
+| `client_viewer` | granted sites | no | no | no | released client report only |
 
 ## People, work and staffing
 
 | Table | Meaning | Key fields |
 |---|---|---|
-| `workers` | Operational worker profile. Login is optional. | `auth_user_id`, `display_name`, `active`. |
+| `workers` | Operational worker profile. Login is optional. | `auth_user_id`, `display_name`, `job_title`, `is_demo`, `active`. |
 | `worker_site_permissions` | Worker eligibility for a site. | `worker_id`, `site_id`, `state`, `valid_from`, `valid_until`. |
 | `service_tasks` | Reusable cleaning task definition. | `site_id`, `name`, `evidence_required`, `active`. |
 | `task_schedules` | Recurrence for a task in a zone. | `task_id`, `zone_id`, `recurrence`, `active`. |
@@ -90,7 +102,11 @@ Live OpenAI code exists but production execution remains gated by config, budget
 | `incident_actions` | Action/note recorded for incident. | incident, action key, note, state, recorder/time. |
 | `incident_timeline_events` | Chronological incident history. | incident, event key/type, description, occurrence time, actor. |
 | `incident_evidence` | Link between incident and task evidence. | incident, evidence, linker/time. |
-| `equipment_reports` | Equipment issue intake, not a full maintenance system. | site/zone, idempotency key, equipment label, issue, state, report time/worker, maintenance reference, resolved time. |
+| `equipment_reports` | Equipment issue intake, not a full maintenance system. | site/zone, idempotency key, equipment label (free text), issue, state, report time/worker, maintenance reference, resolved time. |
+| `equipment_models` | Organization catalogue of machine models. Read by every active role; written only by administrators. | `model_code`, `manufacturer`, `model_name`, `category`, `spec_summary`, `source_url`, `is_demo_reference`. Unique per organization on model code and on manufacturer + model name. |
+| `equipment_assets` | Machine register per site (one row per physical unit). Read-only to browser roles; site managers hold RLS insert/update/delete policies but only `select` is granted to `authenticated`, so writes currently come from seed/service role. | `site_id`, `model_id`, `asset_code` (unique per organization), `status`, `condition`, `serial_number`, `runtime_hours`, `last_service_date`, `next_service_date`, `notes`, `is_demo`. |
+
+`equipment_assets.status` is one of `available`, `in_use`, `maintenance`, `out_of_service`, `proposed`; `condition` is one of `new`, `good`, `fair`, `poor`, `not_applicable`. There is no zone, acquisition date, location history or foreign key between `equipment_reports` and `equipment_assets`: a report names its equipment only by free-text label, so repair history cannot yet be attributed to an asset.
 
 ## SLA and client reporting
 
@@ -104,12 +120,18 @@ Live OpenAI code exists but production execution remains gated by config, budget
 
 ## Finance and inventory
 
+<a id="finance-and-inventory"></a>
+
 | Table | Meaning | Key fields |
 |---|---|---|
 | `vendors` | Organization supplier catalogue. | vendor code, name, contact reference, active. |
 | `inventory_items` | Cleaning supply catalogue. | SKU, name, category, unit of measure, reorder level, active. |
-| `inventory_transactions` | Append-only site stock movement/cost. | site, optional vendor, item, optional source message, type receipt/issue/adjustment/count, quantity, unit cost, generated total cost, occurrence time, notes. |
-| `labor_cost_entries` | Append-only site labour cost. | site, optional worker/task/source message, work date, hours, hourly cost, generated total cost, type regular/overtime/contractor, notes. |
+| `inventory_transactions` | Append-only site stock movement/cost. | site, optional vendor, item, optional source message, type receipt/issue/adjustment/count, quantity (> 0), unit cost, generated total cost (`round(quantity * unit_cost, 2)`), occurrence time, notes. |
+| `labor_cost_entries` | Append-only site labour cost. | site, optional worker/task/source message, work date, hours (> 0, <= 24), hourly cost, generated total cost (`round(hours * hourly_cost, 2)`), type regular/overtime/contractor, notes. |
+
+Access (migration `20260921051826_casino_demo_rbac_equipment`): both ledgers are readable only by a Director, or an Area Manager with a grant to that site (`private.can_view_site_finance`); only a Director may insert (`private.can_edit_site_finance`). Site supervisors and operations managers can no longer read them, which supersedes the CLEAN-027 rule that any site manager could insert. `vendors` and `inventory_items` are currently readable by every active member and writable by `private.can_operate_org`; the owner decided to narrow reads to Directors, Area Managers and Operations Managers (issue #49).
+
+Append-only is grant-based: `authenticated` holds `select, insert` on both ledgers. The later migration also created `update` and `delete` policies for Directors, but with no matching grant they have no effect for browser roles; `service_role` can still modify rows. Owner decision 2026-09-21: grant Directors update and delete deliberately (issue #48), so these policies will become active and "append-only" will no longer hold. Until that migration lands, treat them as inert.
 
 ## Official WhatsApp outbound
 
@@ -141,7 +163,88 @@ task_runs + sla_task_results + incidents + equipment_reports
 
 vendors + inventory_items -> inventory_transactions
 workers + task_runs -> labor_cost_entries
+
+organizations -> equipment_models
+sites + equipment_models -> equipment_assets      (no link yet to equipment_reports)
 ```
+
+## Controlled vocabularies
+
+Postgres enums (values in lifecycle order where one exists):
+
+| Enum / column | Values |
+|---|---|
+| `app_role` | cleaner, site_supervisor, area_manager, operations_manager, organization_administrator, client_viewer |
+| `membership_state` | active, revoked |
+| `permission_state` | active, suspended, expired |
+| `task_run_state` | planned, ready, in_progress, submitted, correction_required, approved, completed, cancelled |
+| `shift_state` | planned, active, completed, cancelled |
+| `assignment_state` | assigned, accepted, completed, cancelled |
+| `attendance_event_type` | check_in, check_out |
+| `integration_provider` | mock_legacy_whatsapp_group, whatsapp_cloud_api |
+| `integration_event_status` | pending, processed, failed |
+| `processing_job_status` | pending, processing, succeeded, failed |
+| `external_identity_state` | verified, revoked |
+| `conversation_context_state` | active, switched, expired |
+| `evidence_processing_status` | staged, ready, quarantined, missing |
+| `evidence_linkage_status` | unresolved, linked, ignored |
+| `evidence_role` | before, after |
+| `quality_result_status` | assessed, insufficient_evidence, failed |
+| `finding_severity` | low, medium, high |
+| `corrective_action_state` | open, submitted, closed |
+| `inspection_outcome` | correction_required, approved |
+| `quality_ai_run_status` | reserved, completed, failed |
+| `incident_state` | reported, triaged, action_required, resolved, closed |
+| `incident_action_state` | recorded, open, completed |
+| `equipment_report_state` | reported, triaged, maintenance_requested, resolved |
+| `client_report_state` | draft, released |
+| `whatsapp_outbox_status` | pending, processing, sent, delivered, read, failed |
+
+Text columns constrained by `check`:
+
+| Column | Values |
+|---|---|
+| `external_message_contexts.sender_role` | supervisor, manager, cleaner, system, unknown |
+| `external_message_contexts.resolution_status` | unresolved, suggested, confirmed, rejected |
+| `external_message_contexts.resolution_source` | manual, deterministic, ai (null until resolved) |
+| `external_message_media.media_kind` | image, document, video, audio, sticker |
+| `external_message_media.ingestion_status` | pending, downloaded, quarantined, failed |
+| `inventory_transactions.transaction_type` | receipt, issue, adjustment, count |
+| `labor_cost_entries.cost_type` | regular, overtime, contractor |
+| `equipment_assets.status` | available, in_use, maintenance, out_of_service, proposed |
+| `equipment_assets.condition` | new, good, fair, poor, not_applicable |
+
+## Database functions (RPCs)
+
+Business rules that live in the database. "Browser" means callable by `authenticated` (the function still checks role and site); "service" means `service_role` only, i.e. server code or workers.
+
+| Function | Caller | Purpose |
+|---|---|---|
+| `get_shift_coverage_at` | browser | Required / present / gap for a shift at a time. |
+| `record_quality_decision` | service | Store Mock AI or live AI assessment. |
+| `confirm_quality_suggestion`, `dismiss_quality_suggestion` | browser | Human confirms (finding + correction) or dismisses an AI suggestion. |
+| `approve_submission` | browser | Approve the current task revision; rejects stale revisions. |
+| `resolve_evidence_manually`, `ignore_evidence` | browser | Supervisor resolves or ignores unlinked evidence. |
+| `record_incident`, `correct_incident_summary` | browser | Neutral incident capture and audited wording correction. |
+| `record_equipment_report` | browser | Equipment issue intake in `reported` state. |
+| `prepare_client_service_report`, `release_client_service_report` | browser | Build the draft SLA snapshot; explicit release. |
+| `get_released_client_service_report` | browser | Redacted client view for an active client_viewer with a site grant. |
+| `list_site_external_messages` | browser | Site-authorized raw message text for review (no table grant on `external_messages`). |
+| `accept_mock_ingress_event`, `accept_whatsapp_ingress_event` | service | Atomically persist envelope + job before acknowledgement. |
+| `claim_processing_job`, `complete_processing_job`, `fail_processing_job`, `retry_failed_processing_job` | service | Leased job queue. |
+| `begin_evidence_ingestion`, `finalize_evidence_ingestion`, `mark_evidence_ingestion_problem`, `list_staged_evidence` | service | Evidence staging and verification (mock path). |
+| `begin_whatsapp_evidence_ingestion`, `retry_whatsapp_evidence_ingestion` | service | Evidence staging for official WhatsApp media. |
+| `enqueue_whatsapp_reply`, `claim_whatsapp_reply`, `mark_whatsapp_reply_sent`, `fail_whatsapp_reply`, `record_whatsapp_delivery_status`, `get_whatsapp_queue_health` | service | Consent-aware outbound queue, delivery history, queue health. |
+| `reserve_openai_quality_run`, `finish_openai_quality_run`, `record_quality_ai_evaluation` | service | Capped live-AI reservation, completion and evaluation. |
+| `reset_hosted_demo` | service | Site-scoped synthetic demo reset. |
+
+Private helpers used by RLS (schema `private`, not callable by browsers): `has_org_role`, `has_site_access`, `has_operational_site_access`, `can_manage_site`, `can_administer_org`, `can_operate_org`, `is_active_member`, `can_view_site_finance`, `can_edit_site_finance`, `resolve_review_actor`.
+
+## Not implemented (do not assume these exist)
+
+`docs/DATA_MODEL.md` lists logical tables that have no migration: `ai_decisions`, `ai_usage` (superseded by `quality_decisions` and `quality_ai_runs`) and a generic `audit_events` (superseded by `evidence_audit_events`, `review_audit_events` and `reporting_audit_events`).
+
+Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), supply requests/orders/stock (#30; only the `inventory_*` ledger exists), asset inspections/checklists/repair cost lines (#31; only the read-only `equipment_assets` register exists), absence register (#32), revenue and cost import batches (#33; only manual labour/inventory capture exists), contract obligations and ad-hoc jobs (#35), handover and complaints (#36). Fixture data for these must be added with each schema, not before.
 
 ## Agent guidance
 

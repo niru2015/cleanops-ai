@@ -8,9 +8,9 @@ All roles require active organization membership; site-scoped roles also need si
 |---|---|
 | Cleaner | Own assigned work, own uploads/reports; no peer private records or approvals |
 | Site supervisor | Granted sites; resolve evidence, review quality, manage local actions |
-| Area manager | Explicitly granted sites; same review rights and aggregate reporting |
-| Operations manager | Organization operations; no other tenant |
-| Organization administrator | Membership/integration configuration and organization operations |
+| Area manager | Explicitly granted sites; same review rights and aggregate reporting; read-only finance for granted sites |
+| Operations manager | Organization operations; no other tenant; no finance access |
+| Organization administrator | Membership/integration configuration and organization operations; the only role that writes finance records |
 | Client viewer | Explicit client/site grants; released, redacted reports only |
 
 Database policies enforce access independently of UI. Never authorize from an editable
@@ -77,9 +77,24 @@ an immutable audience record, and the client export function checks active `clie
 membership plus an active grant to that site before returning a redacted snapshot. Tests cover
 guessed IDs, another site in the same tenant, another tenant and private-original denial.
 
+CLEAN-027 and the role-scoped demo migration (`20260921051826`) protect finance and equipment data.
+`inventory_transactions` and `labor_cost_entries` can be read only by an organization administrator or an area
+manager with an active grant to the site (`private.can_view_site_finance`) and inserted only by an organization
+administrator (`private.can_edit_site_finance`); site supervisors and operations managers have no finance access.
+Browser roles currently hold only `select, insert` on both ledgers, which is what makes them append-only; the `update` and
+`delete` policies created for administrators have no grant behind them and do nothing today. The owner decided to grant Directors update and delete (issue #48); this paragraph changes when that migration lands. `equipment_models` is
+readable by every active member and writable by administrators; `equipment_assets` is readable with operational
+site access. Both are select-only for browser roles. Raw `external_messages` remain service-only and reach
+supervisors only through `list_site_external_messages`.
+
+Known gap: `vendors` and `inventory_items` are readable by every active member (`private.is_active_member`), including
+cleaners and client viewers, and writable by `private.can_operate_org` (operations managers and administrators) even
+though the UI offers writes to Directors only. Supplier names and contact references are therefore visible to client
+viewers who query the API directly. Narrow the select policies before any real supplier data is loaded.
+
 ## Evidence privacy and pilot decisions
 
-Use synthetic people/sites/media in demos. Casino images may contain patrons, staff,
+Use synthetic people and media in demos; real casino names are allowed only as reference data under ADR 008. Casino images may contain patrons, staff,
 screens or sensitive operational details; minimize capture, restrict originals and use
 reviewed/redacted derivatives before AI or client release. No face recognition or background
 location collection. Original hashes establish file consistency, not truth or causation.
