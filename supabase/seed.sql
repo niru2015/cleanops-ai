@@ -37,12 +37,12 @@ values
   ('40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000003', 'Northstar Harbour Demo', 'Richmond', 'America/Vancouver');
 
 insert into public.equipment_models (
-  id, organization_id, model_code, manufacturer, model_name, category, spec_summary
+  organization_id, model_code, manufacturer, model_name, category, spec_summary
 )
 values
-  ('e1000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'RS-800', 'Northstar Equipment', 'RS-800', 'Ride-on floor scrubber', 'Synthetic demo reference'),
-  ('e1000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'WB-420', 'Northstar Equipment', 'WB-420', 'Walk-behind floor scrubber', 'Synthetic demo reference'),
-  ('e1000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', 'CE-220', 'Pacific Facility Systems', 'CE-220', 'Carpet extractor', 'Synthetic demo reference');
+  ('10000000-0000-4000-8000-000000000001', 'RS-800', 'Northstar Equipment', 'RS-800', 'Ride-on floor scrubber', 'Synthetic demo reference'),
+  ('10000000-0000-4000-8000-000000000001', 'WB-420', 'Northstar Equipment', 'WB-420', 'Walk-behind floor scrubber', 'Synthetic demo reference'),
+  ('10000000-0000-4000-8000-000000000001', 'CE-220', 'Pacific Facility Systems', 'CE-220', 'Carpet extractor', 'Synthetic demo reference');
 
 insert into public.equipment_assets (
   organization_id, site_id, model_id, asset_code, status, condition,
@@ -51,21 +51,24 @@ insert into public.equipment_assets (
 select
   site.organization_id,
   site.id,
-  equipment.model_id,
-  'EQ-' || upper(right(replace(site.id::text, '-', ''), 4)) || '-' || equipment.sequence,
-  equipment.status,
-  equipment.condition,
-  equipment.last_service_date,
-  equipment.next_service_date,
+  equipment.id,
+  'EQ-' || upper(right(replace(site.id::text, '-', ''), 4)) || '-' || fixture.sequence,
+  fixture.status,
+  fixture.condition,
+  fixture.last_service_date,
+  fixture.next_service_date,
   'Synthetic demo equipment record',
   true
 from public.sites as site
 cross join (
   values
-    ('01', 'e1000000-0000-4000-8000-000000000001'::uuid, 'available', 'good', '2026-08-28'::date, '2026-11-28'::date),
-    ('02', 'e1000000-0000-4000-8000-000000000002'::uuid, 'in_use', 'good', '2026-09-07'::date, '2026-12-07'::date),
-    ('03', 'e1000000-0000-4000-8000-000000000003'::uuid, 'maintenance', 'fair', '2026-07-15'::date, '2026-09-30'::date)
-) as equipment(sequence, model_id, status, condition, last_service_date, next_service_date)
+    ('01', 'RS-800', 'available', 'good', '2026-08-28'::date, '2026-11-28'::date),
+    ('02', 'WB-420', 'in_use', 'good', '2026-09-07'::date, '2026-12-07'::date),
+    ('03', 'CE-220', 'maintenance', 'fair', '2026-07-15'::date, '2026-09-30'::date)
+) as fixture(sequence, model_code, status, condition, last_service_date, next_service_date)
+join public.equipment_models as equipment
+  on equipment.organization_id = site.organization_id
+ and equipment.model_code = fixture.model_code
 where site.organization_id = '10000000-0000-4000-8000-000000000001';
 
 insert into public.member_site_access (id, organization_id, membership_id, site_id, starts_at)
