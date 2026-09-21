@@ -27,7 +27,7 @@ const groups = ["Directors", "Area Managers", "Supervisors", "Cleaners"] as cons
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(signInAction, null);
-  const [email, setEmail] = useState(accounts[0].email);
+  const [email, setEmail] = useState<string>(accounts[0].email);
 
   return (
     <form action={action} className="loginForm">
