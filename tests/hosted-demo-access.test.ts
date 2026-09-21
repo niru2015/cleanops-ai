@@ -17,6 +17,7 @@ function clientWith(rows: Record<string, unknown>) {
         eq() { return builder; },
         lte() { return builder; },
         or() { return builder; },
+        limit() { return builder; },
         async maybeSingle() { return { data: rows[table] ?? null, error: null }; },
       };
       return builder;
