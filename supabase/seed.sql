@@ -276,3 +276,22 @@ select
     else null
   end
 from generate_series(1, 150) as sequence;
+-- CLEAN-027 synthetic finance catalogue. Keep this after the organizations seed.
+insert into public.vendors (organization_id, vendor_code, name, contact_reference)
+values
+  ('10000000-0000-4000-8000-000000000001', 'NORTHSTAR', 'Northstar Janitorial Supply', 'demo-order-desk'),
+  ('10000000-0000-4000-8000-000000000001', 'NIGHTOWL', 'Night Owl Facility Goods', 'demo-account-204')
+on conflict (organization_id, vendor_code) do update
+  set name = excluded.name, contact_reference = excluded.contact_reference, active = true;
+
+insert into public.inventory_items (organization_id, sku, name, category, unit_of_measure, reorder_level)
+values
+  ('10000000-0000-4000-8000-000000000001', 'CHEM-NEUTRAL-5L', 'Neutral floor cleaner', 'Chemicals', 'bottle', 12),
+  ('10000000-0000-4000-8000-000000000001', 'PPE-NITRILE-M', 'Nitrile gloves, medium', 'PPE', 'box', 8),
+  ('10000000-0000-4000-8000-000000000001', 'LINER-45G', '45-gallon waste liners', 'Consumables', 'case', 6)
+on conflict (organization_id, sku) do update
+  set name = excluded.name,
+      category = excluded.category,
+      unit_of_measure = excluded.unit_of_measure,
+      reorder_level = excluded.reorder_level,
+      active = true;

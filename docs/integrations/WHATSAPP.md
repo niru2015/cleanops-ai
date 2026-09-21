@@ -33,13 +33,17 @@ failure returns `503`; retrying the same event is safe.
 3. Transactionally persist accepted envelope and pending processing job, then acknowledge.
    Persistence failure returns retryable failure, never false success. Duplicate accepted
    envelope is acknowledged without repeating effects.
-4. Worker normalizes each message; dedupe by account + provider message ID. Envelope key uses
+4. Worker normalizes each message; dedupe by account + provider message ID. The registered receiving
+   account contributes a deterministic site suggestion, and each media reference is stored as
+   pending metadata. Envelope key uses
    provider event identity if available, otherwise stable digest; message dedupe is mandatory
    even if batch boundaries change. Preserve arrival/source times and ordering uncertainty.
 5. Map verified sender within account/tenant. Unknown or unverified sender enters review.
 6. Resolve authorized shift/site/zone/task per DOMAIN; stale or conflicting context is unresolved.
 7. Fetch provider media through authenticated allowlisted endpoints, validate and stage it in
    private Storage, compute hash, finalize evidence record. Reconcile orphan uploads.
+   The normalized media row reflects downloaded, quarantined or failed evidence processing state;
+   it never issues a public Storage URL.
 8. Link role/pair only to compatible task context; create mock/live suggestion once, then review.
 
 ## Pairing and review

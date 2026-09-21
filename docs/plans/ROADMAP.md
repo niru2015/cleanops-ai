@@ -15,6 +15,7 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 | P5 | Scoped pilot hardening and adjacent modules | Agreed monitoring, restore, retention, support and operational acceptance |
 | Demo | CLEAN-010 hosted role access | Temporary Auth users, role/site isolation and browser walkthrough verified |
 | Demo | CLEAN-011 real mobile upload | Phone camera/library files privately uploaded, content-verified and linked |
+| P5 | CLEAN-027 normalized message and finance workflows | Supervisors confirm site context; append-only inventory and labour costs carry secure site attribution |
 
 ## Bounded issue contracts
 
@@ -41,6 +42,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
   remain disabled.
 - CLEAN-011: [real mobile photo upload](active/CLEAN-011.md), replacing the synthetic capture
   control with camera/library selection, private direct upload and verified task linkage.
+- CLEAN-027: normalized WhatsApp context/media, supplier and item catalogues, append-only inventory
+  and labour cost capture, and site-authorized supervisor review of untrusted message text.
 
 ## Open decisions / owners
 

@@ -75,10 +75,13 @@ P3 implements incidents, incident_statements, incident_evidence, incident_action
 incident_timeline_events, equipment_reports, sla_definitions, sla_task_results,
 client_service_reports, client_report_releases and reporting_audit_events. Released reports are
 redacted snapshots; client access reuses active membership and site grants.
-The CLEAN-027 migration adds the finance/inventory tables and the normalized message context/media
-tables. They are service-role-only until authenticated supervisor workflows are implemented. Every
-record carries an organization scope; site, area, task, worker and source-message links use composite
-tenant foreign keys. Generated total-cost columns prevent inconsistent labour and inventory totals.
+The CLEAN-027 migrations add the finance/inventory tables and normalized message context/media
+tables. Registered-account site is a deterministic suggestion created with each normalized message;
+a supervisor confirms the area, task and sender. Raw message text remains worker-only and is exposed
+to supervisors through a site-authorized queue RPC, never a browser table grant. Every record carries
+an organization scope; site, area, task, worker and source-message links use composite tenant foreign
+keys. Generated total-cost columns prevent inconsistent labour and inventory totals. Financial entries
+are append-only in this slice: a correction is a new adjustment or labour entry.
 
 Later: supply requests; contracts/requirements; certifications/training; safety schedules/checks/escalations;
 equipment/maintenance; knowledge documents/chunks/embeddings. Define each schema when its issue starts,

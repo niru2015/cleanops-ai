@@ -83,7 +83,13 @@ Storage guidance rechecked 2026-09-15: [access control](https://supabase.com/doc
 
 - Migration `20260921002737_normalized_message_finance_records` adds message context/media metadata,
   vendors, inventory items/transactions and labour cost entries.
-- All six tables have RLS enabled and are granted only to `service_role` while supervisor-facing
-  workflows are being designed.
+- Migrations `20260921021537_clean_027_supervisor_workflows.sql` and
+  `20260921022155_clean_027_message_queue_access.sql` make the supervisor slice available.
+  Triggers create account-site context/media metadata with message normalization and mirror evidence
+  processing state to media metadata.
+- Raw message table access stays service-only. The narrowly granted `list_site_external_messages`
+  function resolves the active actor, organization and site grant before returning review text.
+  Context update, finance reads and site transaction inserts use RLS; vendor/item catalogue changes
+  require organization operations authority. Finance transaction and labour records are append-only.
 - Composite tenant/site/task/worker foreign keys prevent cross-organization references; generated
   total-cost columns derive inventory and labour totals from quantity/hours and unit rates.

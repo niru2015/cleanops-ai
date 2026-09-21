@@ -1628,12 +1628,59 @@ a:focus-visible {
 .clientReportEmpty p { color: var(--muted); line-height: 1.55; }
 .clientReportEmpty a { color: #087a88; font-weight: 700; }
 
+.financeWorkspace,
+.messageQueue { display: grid; gap: 20px; }
+.financeHeader,
+.messageQueueHeader { display: flex; justify-content: space-between; gap: 24px; align-items: start; }
+.financeHeader h1,
+.messageQueueHeader h2 { margin: 4px 0 8px; }
+.financeHeader p,
+.messageQueueHeader p { max-width: 760px; margin: 0; color: var(--muted); line-height: 1.55; }
+.financeGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.financeGrid-secondary { align-items: start; }
+.financePanel,
+.messageQueue { padding: 24px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 10px 30px rgb(8 38 62 / 7%); }
+.financePanel h2 { margin: 4px 0 0; font-size: 1.2rem; }
+.financeForm { display: grid; gap: 13px; margin-top: 20px; }
+.financeForm label,
+.messageResolutionForm label { display: grid; gap: 6px; color: #405266; font-size: .76rem; font-weight: 700; letter-spacing: .02em; }
+.financeForm input,
+.financeForm select,
+.messageResolutionForm select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #c7d5de; border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: .9rem; }
+.financeFormRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.financeForm .reviewButton { justify-self: start; margin-top: 4px; }
+.financeLedger { overflow: hidden; }
+.financeTable { margin-top: 18px; overflow-x: auto; }
+.financeTableHead,
+.financeTableRow { display: grid; grid-template-columns: minmax(180px, 1.5fr) minmax(95px, .8fr) minmax(120px, 1fr) minmax(100px, .75fr) minmax(90px, .7fr); gap: 12px; min-width: 720px; align-items: center; }
+.financeTableHead { padding: 0 12px 9px; color: var(--muted); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.financeTableRow { padding: 13px 12px; border-top: 1px solid var(--border); color: #405266; font-size: .86rem; }
+.financeTableRow strong { color: var(--text); }
+.financeTableRow small { display: block; margin-top: 3px; color: var(--muted); font-weight: 500; }
+.messageQueue { margin-top: 20px; }
+.messageQueueList { display: grid; gap: 14px; }
+.messageQueueItem { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, .75fr); gap: 20px; padding: 17px 0; border-top: 1px solid var(--border); }
+.messageQueueItem:first-child { border-top: 0; }
+.messageQueueBody > div:first-child { display: flex; justify-content: space-between; gap: 12px; }
+.messageQueueBody time { color: var(--muted); font-size: .78rem; white-space: nowrap; }
+.messageQueueBody p { margin: 9px 0; color: #30475a; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.messageMediaList { display: flex; flex-wrap: wrap; gap: 6px; }
+.messageMediaList span,
+.resolutionStatus { padding: 4px 7px; border-radius: 6px; background: #eef3f6; color: #506575; font-size: .72rem; font-weight: 700; text-transform: capitalize; }
+.resolutionStatus { width: max-content; background: #fff7df; color: #725412; }
+.resolutionStatus-confirmed { background: #e5f6ed; color: #176a43; }
+.messageResolutionForm { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; }
+.messageResolutionForm .resolutionStatus,
+.messageResolutionForm .reviewButton { grid-column: 1 / -1; justify-self: start; }
+
 @media (max-width: 900px) {
   .reportingGrid { grid-template-columns: 1fr; }
   .metricDefinition { grid-template-columns: 1fr; }
   .reportMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .reportMetrics article:nth-child(2) { border-right: 0; }
   .reportMetrics article:nth-child(-n + 2) { border-bottom: 1px solid var(--border); }
+  .financeGrid { grid-template-columns: 1fr; }
+  .messageQueueItem { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 600px) {
@@ -1649,4 +1696,9 @@ a:focus-visible {
   .releasePanel .reviewButton { width: 100%; text-align: center; }
   .clientSafety { grid-template-columns: auto auto; }
   .clientSafety p { grid-column: 1 / -1; }
+  .financeHeader, .messageQueueHeader { flex-direction: column; }
+  .financePanel, .messageQueue { padding: 18px; }
+  .financeFormRow, .messageResolutionForm { grid-template-columns: 1fr; }
+  .messageResolutionForm .resolutionStatus, .messageResolutionForm .reviewButton { grid-column: auto; }
+  .financeForm .reviewButton { width: 100%; }
 }
