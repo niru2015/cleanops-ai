@@ -36,6 +36,28 @@ values
   ('40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000002', 'Copper Peak East Demo', 'Burnaby', 'America/Vancouver'),
   ('40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000003', 'Northstar Harbour Demo', 'Richmond', 'America/Vancouver');
 
+insert into public.equipment_assets (
+  organization_id, site_id, asset_tag, equipment_type, manufacturer, model, state, last_service_at, notes
+)
+select
+  site.organization_id,
+  site.id,
+  'EQ-' || upper(right(replace(site.id::text, '-', ''), 4)) || '-' || equipment.sequence,
+  equipment.equipment_type,
+  equipment.manufacturer,
+  equipment.model,
+  equipment.state,
+  equipment.last_service_at,
+  'Synthetic demo equipment record'
+from public.sites as site
+cross join (
+  values
+    ('01', 'Ride-on floor scrubber', 'Northstar Equipment', 'RS-800', 'available', '2026-08-28T16:00:00Z'::timestamptz),
+    ('02', 'Walk-behind floor scrubber', 'Northstar Equipment', 'WB-420', 'in_use', '2026-09-07T16:00:00Z'::timestamptz),
+    ('03', 'Carpet extractor', 'Pacific Facility Systems', 'CE-220', 'maintenance_due', '2026-07-15T16:00:00Z'::timestamptz)
+) as equipment(sequence, equipment_type, manufacturer, model, state, last_service_at)
+where site.organization_id = '10000000-0000-4000-8000-000000000001';
+
 insert into public.member_site_access (id, organization_id, membership_id, site_id, starts_at)
 values
   ('41000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000001', '2026-01-01T00:00:00Z'),
