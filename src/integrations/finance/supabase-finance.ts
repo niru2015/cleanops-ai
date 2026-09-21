@@ -29,14 +29,14 @@ export type FinanceWorkspace = {
   labour: { id: string; workDate: string; worker: string | null; hours: number; hourlyCost: number; totalCost: number; type: string; notes: string | null }[];
 };
 
-export async function getFinanceWorkspace(client: SupabaseClient): Promise<FinanceWorkspace> {
+export async function getFinanceWorkspace(client: SupabaseClient, siteId: string): Promise<FinanceWorkspace> {
   const [vendors, items, workers, tasks, inventory, labour] = await Promise.all([
     row(client.from("vendors").select("id,name,vendor_code").eq("organization_id", DEMO_ORGANIZATION_ID).eq("active", true).order("name"), z.array(vendorSchema)),
     row(client.from("inventory_items").select("id,name,sku,unit_of_measure,reorder_level").eq("organization_id", DEMO_ORGANIZATION_ID).eq("active", true).order("name"), z.array(itemSchema)),
     row(client.from("workers").select("id,display_name").eq("organization_id", DEMO_ORGANIZATION_ID).order("display_name"), z.array(workerSchema)),
-    row(client.from("task_runs").select("id,state,service_tasks(name)").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", DEMO_SITE_ID).order("due_at"), z.array(taskSchema)),
-    row(client.from("inventory_transactions").select("id,transaction_type,quantity,unit_cost,total_cost,occurred_at,notes,inventory_items(name,unit_of_measure),vendors(name)").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", DEMO_SITE_ID).order("occurred_at", { ascending: false }).limit(12), z.array(inventoryRowSchema)),
-    row(client.from("labor_cost_entries").select("id,work_date,hours,hourly_cost,total_cost,cost_type,notes,workers(display_name)").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", DEMO_SITE_ID).order("work_date", { ascending: false }).limit(12), z.array(labourRowSchema)),
+    row(client.from("task_runs").select("id,state,service_tasks(name)").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", siteId).order("due_at"), z.array(taskSchema)),
+    row(client.from("inventory_transactions").select("id,transaction_type,quantity,unit_cost,total_cost,occurred_at,notes,inventory_items(name,unit_of_measure),vendors(name)").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", siteId).order("occurred_at", { ascending: false }).limit(12), z.array(inventoryRowSchema)),
+    row(client.from("labor_cost_entries").select("id,work_date,hours,hourly_cost,total_cost,cost_type,notes,workers(display_name)").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", siteId).order("work_date", { ascending: false }).limit(12), z.array(labourRowSchema)),
   ]);
 
   return {
