@@ -1,0 +1,150 @@
+# CleanOps Data Dictionary
+
+Purpose: agent-readable business dictionary for the current CleanOps Supabase model. Exact SQL, constraints, grants, RLS and RPC behavior are owned by `supabase/migrations/`; if this file disagrees with a migration, the migration wins.
+
+Last reviewed: 2026-09-21.
+
+## Conventions
+
+- `organization_id` is the cleaning-contractor tenant boundary.
+- Site-scoped operational records also carry `site_id`.
+- Supabase Auth identifies a person; app authorization comes from `memberships` plus `member_site_access`.
+- Worker eligibility is separate from app access and uses `worker_site_permissions`.
+- Financial transaction rows are append-only in the current slice.
+- `inventory_transactions.total_cost` and `labor_cost_entries.total_cost` are database-generated.
+- External messages, media and AI output are untrusted until validated/resolved.
+- AI output is advisory; findings and approvals are separate human records.
+- Evidence files are private Supabase Storage objects; `task_evidence.storage_path` is metadata, not authorization.
+
+## Access and places
+
+| Table | Meaning | Key fields |
+|---|---|---|
+| `organizations` | Cleaning contractor tenant. | `name`, `slug`. |
+| `memberships` | User role in an organization. | `user_id`, `role`, `state`. Roles include cleaner, site_supervisor, area_manager, operations_manager, organization_administrator, client_viewer. |
+| `member_site_access` | Time-bounded app access to a site. | `membership_id`, `site_id`, `starts_at`, `ends_at`. |
+| `clients` | Customer of the cleaning contractor, e.g. casino operator. | `name`. |
+| `sites` | Physical customer property. | `client_id`, `name`, `timezone`. |
+| `site_zones` | Operational area inside a site. | `site_id`, `name`. |
+
+## People, work and staffing
+
+| Table | Meaning | Key fields |
+|---|---|---|
+| `workers` | Operational worker profile. Login is optional. | `auth_user_id`, `display_name`, `active`. |
+| `worker_site_permissions` | Worker eligibility for a site. | `worker_id`, `site_id`, `state`, `valid_from`, `valid_until`. |
+| `service_tasks` | Reusable cleaning task definition. | `site_id`, `name`, `evidence_required`, `active`. |
+| `task_schedules` | Recurrence for a task in a zone. | `task_id`, `zone_id`, `recurrence`, `active`. |
+| `task_runs` | One scheduled occurrence of work; central operational record. | `task_id`, `zone_id`, `task_schedule_id`, `scheduled_at`, `due_at`, `requirements_snapshot`, `state`, `submission_revision`. |
+| `task_run_assignments` | Worker assigned to a specific task occurrence. | `task_run_id`, `worker_id`, `assigned_by`, `assigned_at`. |
+| `shifts` | Site shift. | `site_id`, `starts_at`, `ends_at`, `state`. |
+| `shift_coverage_requirements` | Required staffed positions. | `shift_id`, `required_positions`. |
+| `shift_assignments` | Worker assigned to a shift. | `shift_id`, `worker_id`, `state`. |
+| `attendance_events` | Actual attendance events. | `assignment_id`, `event_type`, `occurred_at`, `recorded_by`. |
+| `replacement_selections` | Audited supervisor choice of replacement worker. | `shift_id`, `worker_id`, `assignment_id`, `selected_by`, `selected_at`. |
+
+Important rule: a replacement selection does not count as present. Coverage changes after a valid check-in event.
+
+## Durable ingestion and normalized messages
+
+| Table | Meaning | Key fields |
+|---|---|---|
+| `integration_accounts` | Registered external provider account/receiving number. | `provider`, `external_account_id`, `display_name`, `enabled`, optional `site_id`. Tenant is derived from this record. |
+| `integration_webhook_events` | Durable raw provider envelope. | account, provider event ID, `dedupe_key`, `payload`, `payload_sha256`, status, received/processed times, error. |
+| `processing_jobs` | Postgres-backed leased retry queue. | event, `kind`, `dedupe_key`, status, attempts, next attempt, lease owner/expiry, error, completion. |
+| `external_messages` | Normalized inbound message. Raw text is restricted. | account, provider message/thread IDs, sender, occurrence/receipt times, `text_content`, `media_refs`, schema version. |
+| `external_message_contexts` | Supervisor-reviewable operational interpretation. | message, suggested/confirmed site, zone, task run, sender worker/role, resolution status/source/confidence/time. |
+| `external_message_media` | Attachment metadata. | message, media kind/external ID, MIME, caption, private storage path, ingestion status. |
+| `external_worker_identities` | Verified external sender -> CleanOps worker mapping. | account, sender ID, worker, verification state/time. |
+| `conversation_contexts` | Expiring context linking thread/sender to assignment/site/zone/task. | account, thread/sender, assignment, site, zone, optional task run, state, start/expiry. |
+
+## Evidence and quality review
+
+| Table | Meaning | Key fields |
+|---|---|---|
+| `task_evidence` | Private evidence plus resolved operational linkage. | message/media refs, worker/site/zone/task, `role` before/after, processing/linkage status, resolution code, storage path, MIME/size/hash, capture/receipt times, revision. |
+| `evidence_pairs` | Before/after pair for one task revision. | task run, revision, before evidence, after evidence. |
+| `evidence_audit_events` | Append-only evidence audit history. | evidence, actor, action, reason code, details. |
+| `quality_decisions` | Structured Mock AI or live AI assessment. | task/revision/pair, service/version/schema, source label, status, advisory score/confidence, observations, limitations, error. |
+| `quality_findings` | Human-confirmed quality issue. | decision, criterion, observation, severity, confirmer/time, resolved time. |
+| `corrective_actions` | Remedial work requested after a confirmed finding. | task, finding, source/target revision, state, instruction, request/submission/closure times. |
+| `inspections` | Human review outcome for a revision. | task, revision, optional decision, outcome, reviewer, reason. |
+| `review_audit_events` | Append-only review history. | task, revision, actor, action, details. |
+
+## Live AI controls
+
+| Table | Meaning | Key fields |
+|---|---|---|
+| `quality_ai_budgets` | Tenant live-AI gate and budget ceiling. | `live_enabled`, maximum/reserved/spent cents. |
+| `quality_ai_runs` | Provider run/cache/retry/cost provenance. | task/revision/pair/cache key, status, attempts, reserved/charged cents, provider/model/prompt/schema, usage/output, latency, resulting decision, error. |
+| `quality_ai_evaluations` | Synthetic evaluation provenance. | case, expected/observed outcome, mismatch, abstention, override, run/model/version/cost data. |
+
+Live OpenAI code exists but production execution remains gated by config, budget and provider/business readiness. AI never performs final approval.
+
+## Incidents and equipment
+
+| Table | Meaning | Key fields |
+|---|---|---|
+| `incidents` | Neutral incident record. | site/zone, idempotency key, occurrence/report times, summary, cause status, state, reporting worker, creator. |
+| `incident_statements` | Attributed worker statement. | incident, worker, text, attributed time, recorder. |
+| `incident_actions` | Action/note recorded for incident. | incident, action key, note, state, recorder/time. |
+| `incident_timeline_events` | Chronological incident history. | incident, event key/type, description, occurrence time, actor. |
+| `incident_evidence` | Link between incident and task evidence. | incident, evidence, linker/time. |
+| `equipment_reports` | Equipment issue intake, not a full maintenance system. | site/zone, idempotency key, equipment label, issue, state, report time/worker, maintenance reference, resolved time. |
+
+## SLA and client reporting
+
+| Table | Meaning | Key fields |
+|---|---|---|
+| `sla_definitions` | Versioned SLA rule set/window. | name, version, window start/end, numerator/denominator/exclusion rule text. |
+| `sla_task_results` | Task-run result under an SLA. | SLA definition, task run, required flag, approved time, exclusion reason. |
+| `client_service_reports` | Stored redacted client report snapshot. | client/site/SLA/window, draft/released state, required/approved/excluded counts, completion rate, incident/equipment counts + summaries, safety N/A text, prepare/release provenance. |
+| `client_report_releases` | Explicit release record. | client/site/report, releaser/time. |
+| `reporting_audit_events` | Append-only audit for reporting and incident corrections/releases. | site, entity type/id, actor, action, reason, redacted changes. |
+
+## Finance and inventory
+
+| Table | Meaning | Key fields |
+|---|---|---|
+| `vendors` | Organization supplier catalogue. | vendor code, name, contact reference, active. |
+| `inventory_items` | Cleaning supply catalogue. | SKU, name, category, unit of measure, reorder level, active. |
+| `inventory_transactions` | Append-only site stock movement/cost. | site, optional vendor, item, optional source message, type receipt/issue/adjustment/count, quantity, unit cost, generated total cost, occurrence time, notes. |
+| `labor_cost_entries` | Append-only site labour cost. | site, optional worker/task/source message, work date, hours, hourly cost, generated total cost, type regular/overtime/contractor, notes. |
+
+## Official WhatsApp outbound
+
+| Table | Meaning | Key fields |
+|---|---|---|
+| `whatsapp_outbox` | Consent-aware durable outbound queue. | account, recipient, logical idempotency key, payload, consent reference, conversation-window expiry, retry/lease/provider IDs, sent/delivered/read times, error. |
+| `whatsapp_delivery_events` | Provider transport history. | account, outbox, provider message ID, status, occurrence time, error. |
+
+Transport status is not task completion or worker acknowledgement.
+
+## Relationship summary
+
+```text
+organizations
+  -> clients -> sites -> site_zones
+  -> memberships -> member_site_access
+  -> workers -> worker_site_permissions
+  -> service_tasks -> task_schedules -> task_runs
+  -> shifts -> shift_assignments -> attendance_events
+
+integration_accounts
+  -> integration_webhook_events -> processing_jobs -> external_messages
+  -> external_message_contexts / external_message_media
+  -> task_evidence -> evidence_pairs
+  -> quality_decisions -> quality_findings -> corrective_actions -> inspections
+
+task_runs + sla_task_results + incidents + equipment_reports
+  -> client_service_reports -> client_report_releases
+
+vendors + inventory_items -> inventory_transactions
+workers + task_runs -> labor_cost_entries
+```
+
+## Agent guidance
+
+- For page-to-source details, read [DATA_MAPPING.md](DATA_MAPPING.md).
+- For state transitions and multi-step effects, read [PROCESS_FLOWS.md](PROCESS_FLOWS.md).
+- Before changing columns, RLS, constraints or RPCs, inspect the owning migration and database tests.
