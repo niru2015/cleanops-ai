@@ -2,25 +2,28 @@ import { AppShell } from "@/components/app-shell";
 import { ClientReport } from "@/components/client-report";
 import { getClientReportWorkspace, getSupervisorReportWorkspace, type ClientReportWorkspace } from "@/integrations/reporting/supabase-reporting";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getAppAccessContext } from "@/services/access-context";
+import { getAppAccessContext, type AppAccessContext } from "@/services/access-context";
 import { getReportingRuntime } from "@/services/reporting-runtime";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+type Loaded = {
+  access: AppAccessContext;
+  report: ClientReportWorkspace | null;
+};
+
 export default async function ClientReportPage() {
+  let loaded: Loaded | null = null;
   try {
     const client = await createSupabaseServerClient();
     const access = await getAppAccessContext(client);
-    if (access.role !== "client_viewer" && access.role !== "organization_administrator") {
-      return <AppShell authenticated currentPath="/reports" role={access.role} roleLabel={access.roleLabel}><section className="accessState"><p className="eyebrow">Client report</p><h1>Client report access restricted</h1><p>This view is reserved for the client-viewer role and Directors.</p></section></AppShell>;
-    }
-
     let report: ClientReportWorkspace | null = null;
+
     if (access.role === "client_viewer") {
       const runtime = await getReportingRuntime("client");
       report = await getClientReportWorkspace(runtime.accessClient, runtime.actorUserId);
-    } else {
+    } else if (access.role === "organization_administrator") {
       const supervisor = await getSupervisorReportWorkspace(client);
       if (supervisor.report?.state === "released" && supervisor.report.released_at) {
         report = {
@@ -49,8 +52,17 @@ export default async function ClientReportPage() {
       }
     }
 
-    return <AppShell authenticated currentPath="/reports" role={access.role} roleLabel={access.roleLabel}><ClientReport report={report} /></AppShell>;
-  } catch {
+    loaded = { access, report };
+  } catch {}
+
+  if (!loaded) {
     return <AppShell currentPath="/reports"><section className="accessState"><p className="eyebrow">Client report</p><h1>Client site access required</h1><p>Sign in with an authorized demo account.</p><a className="reviewButton reviewButton-primary" href="/login">Sign in</a></section></AppShell>;
   }
+
+  const { access, report } = loaded;
+  if (access.role !== "client_viewer" && access.role !== "organization_administrator") {
+    return <AppShell authenticated currentPath="/reports" role={access.role} roleLabel={access.roleLabel}><section className="accessState"><p className="eyebrow">Client report</p><h1>Client report access restricted</h1><p>This view is reserved for the client-viewer role and Directors.</p></section></AppShell>;
+  }
+
+  return <AppShell authenticated currentPath="/reports" role={access.role} roleLabel={access.roleLabel}><ClientReport report={report} /></AppShell>;
 }
