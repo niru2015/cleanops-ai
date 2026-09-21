@@ -78,3 +78,12 @@ Storage guidance rechecked 2026-09-15: [access control](https://supabase.com/doc
   fields only. Drafts, statements, evidence links, equipment originals and audit rows remain denied.
 - Changelog rechecked 2026-09-16. The current explicit Data API grant requirement is preserved;
   unrelated Management API, Realtime and self-hosting breaking changes do not affect this slice.
+
+## CLEAN-027 implementation
+
+- Migration `20260921002737_normalized_message_finance_records` adds message context/media metadata,
+  vendors, inventory items/transactions and labour cost entries.
+- All six tables have RLS enabled and are granted only to `service_role` while supervisor-facing
+  workflows are being designed.
+- Composite tenant/site/task/worker foreign keys prevent cross-organization references; generated
+  total-cost columns derive inventory and labour totals from quantity/hours and unit rates.

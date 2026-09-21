@@ -29,7 +29,7 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | Staffing | shifts(site, starts_at, ends_at); shift_coverage_requirements(shift, positions); shift_assignments(shift, worker); attendance_events(assignment, type, occurred_at); replacement_selections(shift, worker, selector) |
 | Task allocation | task_run_assignments(task_run, worker, assigner, assigned_at) |
 | Inbound | integration_accounts(provider, external account, secret reference); integration_webhook_events(account, dedupe_key, payload, status) |
-| Normalized | external_messages(account, provider message ID, sender, worker nullable, received_at, occurred_at, status) |
+| Normalized | external_messages(account, provider message ID, sender, received_at, occurred_at, status); external_message_contexts(message, casino site, area/zone, task run, sender worker/role, resolution status); external_message_media(message, media ID, image/document metadata, private storage state) |
 | Resolution | external_worker_identities(account, sender, worker, verified_at); conversation_contexts(account, thread, sender, task, expiry) |
 | Media | task_evidence(task_run nullable, message, role, storage_path, hash, captured_at nullable, received_at, submission_revision) |
 | Review | quality_decisions(task_run, submission_revision, pair, structured output); quality_findings(decision, confirmed observation); corrective_actions(finding, source/target revision, state); inspections(task_run, revision, reviewer, outcome); review_audit_events |
@@ -37,6 +37,7 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | AI | ai_decisions(task_run, submission_revision, input hash, prompt/schema/model version, output, review status); ai_usage(decision, attempt, returned usage, status) |
 | Reliability | processing_jobs(kind, dedupe_key, lease, attempts, next_attempt_at, status); audit_events(actor, action, entity, reason, timestamp) |
 | WhatsApp outbound | whatsapp_outbox(account, recipient, logical_key, consent reference, conversation expiry, payload, lease, provider ID, transport state); whatsapp_delivery_events |
+| Finance / inventory | vendors(organization, supplier); inventory_items(organization, SKU, unit and reorder level); inventory_transactions(site, vendor, item, quantity, unit cost, total cost, source message); labor_cost_entries(site, worker/task, work date, hours, hourly cost, total cost, source message) |
 
 CLEAN-003 implements integration_accounts, integration_webhook_events, processing_jobs and
 external_messages. CLEAN-004 implements external_worker_identities, conversation_contexts,
@@ -74,9 +75,14 @@ P3 implements incidents, incident_statements, incident_evidence, incident_action
 incident_timeline_events, equipment_reports, sla_definitions, sla_task_results,
 client_service_reports, client_report_releases and reporting_audit_events. Released reports are
 redacted snapshots; client access reuses active membership and site grants.
+The CLEAN-027 migration adds the finance/inventory tables and the normalized message context/media
+tables. They are service-role-only until authenticated supervisor workflows are implemented. Every
+record carries an organization scope; site, area, task, worker and source-message links use composite
+tenant foreign keys. Generated total-cost columns prevent inconsistent labour and inventory totals.
+
 Later: supply requests; contracts/requirements; certifications/training; safety schedules/checks/escalations;
-equipment/maintenance; inventory/transactions; knowledge documents/chunks/embeddings;
-costing. Define each schema when its issue starts, not as speculative migrations.
+equipment/maintenance; knowledge documents/chunks/embeddings. Define each schema when its issue starts,
+not as speculative migrations.
 
 Raw envelopes/media have restricted retention and access. Unresolved evidence stays tenant-scoped
 without an invented site/task. Cross-site reassignment requires authorized review and audit.
