@@ -7,6 +7,9 @@ test("supervisor closes the staffing gap from attendance records", async ({ page
   await signInAsDirector(page);
   await page.goto("/operations");
   await expect(page).toHaveTitle("CleanOps");
+  await expect(page.getByRole("heading", { name: "Assigned casinos" })).toBeVisible();
+  await expect(page.getByText("equipment assets", { exact: true })).toBeVisible();
+  await expect(page.getByText("Ride-on floor scrubber").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Operations command" })).toBeVisible();
   await expect(page.getByText("40 / 42")).toBeVisible();
   await expect(page.getByText("2 position gap")).toBeVisible();

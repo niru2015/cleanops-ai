@@ -94,6 +94,11 @@ Access rules:
 - Cleaners: assigned cleaner workflow only; no finance page.
 - Client viewer: released client-report view only.
 
+The operations landing page is database-backed for every casino assigned to the signed-in role. It
+shows all accessible sites, areas, task/run counts, eligible-worker counts, equipment assets and
+equipment issue reports. The interactive Sunday-night walkthrough remains an additional Grand Villa
+scenario when that site is within the account's access scope.
+
 Named hosted personas are provisioned with `npm run demo:provision-logins`.
 Set `CLEANOPS_DEMO_PASSWORD` in the local/server environment before running the command.
 The script uses Supabase Admin Auth to create/rotate confirmed email/password identities and keeps

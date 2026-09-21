@@ -24,6 +24,7 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 |---|---|
 | Access | organizations; memberships(user_id, role); member_site_access(membership, site) |
 | Places | clients → sites(client, city, timezone) → site_zones |
+| Equipment | equipment_assets(site, optional zone, asset tag, type, state); equipment_reports(site, zone, issue state) |
 | People | workers(user_id optional); worker_site_permissions(worker, site, validity) |
 | Work | service_tasks; task_schedules(task, zone); task_runs(schedule, zone, due_at, requirements snapshot, state, submission_revision) |
 | Staffing | shifts(site, starts_at, ends_at); shift_coverage_requirements(shift, positions); shift_assignments(shift, worker); attendance_events(assignment, type, occurred_at); replacement_selections(shift, worker, selector) |

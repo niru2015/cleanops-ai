@@ -1578,6 +1578,52 @@ a:focus-visible {
 .incidentTimeline p { margin: 0; color: #3f5265; font-size: 0.88rem; line-height: 1.4; }
 
 .equipmentIssue { margin: 0 0 18px; font-size: 1rem; }
+
+.sitePortfolio { padding: 34px; }
+.portfolioHeader { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.portfolioHeader h1 { margin: 4px 0 8px; font-size: clamp(1.8rem, 4vw, 2.7rem); }
+.portfolioHeader p:last-child { max-width: 720px; margin: 0; color: var(--muted); }
+.portfolioTotals { display: grid; grid-template-columns: auto auto; gap: 3px 10px; min-width: 160px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.portfolioTotals strong { font-size: 1.35rem; line-height: 1; }
+.portfolioTotals span { color: var(--muted); font-size: .78rem; }
+.sitePortfolioGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.sitePortfolioCard { padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 8px 28px rgba(21, 36, 45, .05); }
+.sitePortfolioTitle, .equipmentRegisterHeading, .equipmentAsset { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.sitePortfolioTitle p { margin: 0 0 3px; color: var(--muted); font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; }
+.sitePortfolioTitle h2 { margin: 0; font-size: 1.18rem; }
+.sitePortfolioTitle > span { padding: 5px 9px; border-radius: 999px; background: var(--cyan-100); color: var(--navy-800); font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.sitePortfolioMetrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 18px 0; }
+.sitePortfolioMetrics div { padding: 10px; border-radius: 10px; background: var(--canvas); }
+.sitePortfolioMetrics dt { color: var(--muted); font-size: .68rem; }
+.sitePortfolioMetrics dd { margin: 4px 0 0; font-size: 1.05rem; font-weight: 750; }
+.sitePortfolioAreas { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.sitePortfolioAreas strong, .equipmentRegisterHeading strong { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+.sitePortfolioAreas p { margin: 6px 0 0; color: var(--muted); font-size: .82rem; line-height: 1.45; }
+.equipmentRegister { padding-top: 16px; }
+.equipmentRegisterHeading { margin-bottom: 8px; }
+.equipmentRegisterHeading span { color: var(--muted); font-size: .72rem; }
+.equipmentAsset { padding: 11px 0; border-top: 1px solid var(--border); }
+.equipmentAsset:first-of-type { border-top: 0; }
+.equipmentAsset div { display: grid; gap: 2px; }
+.equipmentAsset div > strong { font-size: .86rem; }
+.equipmentAsset div > span, .equipmentAsset div > small { color: var(--muted); font-size: .72rem; }
+.equipmentAssetState { padding: 4px 7px; border-radius: 7px; background: var(--canvas); color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: capitalize; white-space: nowrap; }
+.equipmentAssetState-available { background: #e7f6ef; color: #19704b; }
+.equipmentAssetState-maintenance_due, .equipmentAssetState-out_of_service { background: #fff0df; color: #9a5514; }
+.equipmentIssueSummary { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: #fff0df; color: #7e4818; font-size: .75rem; }
+.portfolioEmpty { color: var(--muted); font-size: .78rem; }
+
+@media (max-width: 900px) {
+  .sitePortfolioGrid { grid-template-columns: 1fr; }
+  .portfolioHeader { align-items: stretch; flex-direction: column; }
+  .portfolioTotals { align-self: flex-start; }
+}
+
+@media (max-width: 560px) {
+  .sitePortfolio { padding: 22px 16px; }
+  .sitePortfolioMetrics { grid-template-columns: repeat(2, 1fr); }
+  .sitePortfolioTitle { align-items: flex-start; flex-direction: column; }
+}
 .boundaryCallout { margin-top: 18px; padding: 15px; border-radius: 10px; background: #fff8e7; color: #604910; }
 .boundaryCallout p { margin: 6px 0 0; color: inherit; line-height: 1.45; }
 .reportingEmpty { display: grid; justify-items: start; gap: 14px; padding: 28px 0 4px; color: var(--muted); }
