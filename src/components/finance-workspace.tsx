@@ -25,6 +25,8 @@ export function FinanceWorkspace({
   const [preview, setPreview] = useState<FinanceImportPreview | null>(null);
   const [completeness, setCompleteness] = useState<"complete" | "incomplete" | "estimated">("complete");
   const [supersedesBatchId, setSupersedesBatchId] = useState("");
+  const [editingInventoryId, setEditingInventoryId] = useState<string | null>(null);
+  const [editingLabourId, setEditingLabourId] = useState<string | null>(null);
   const act = (input: Parameters<typeof performFinanceAction>[0]) => {
     setNotice(null);
     startTransition(async () => setNotice(await performFinanceAction(input)));
@@ -217,8 +219,51 @@ export function FinanceWorkspace({
         <div className="panelHeading"><div><p className="eyebrow">Recent site records</p><h2 id="inventory-ledger-title">Inventory ledger</h2></div></div>
         {workspace.inventory.length ? (
           <div className="financeTable">
-            <div className="financeTableHead"><span>Item</span><span>Movement</span><span>Supplier</span><span>Quantity</span><span>Total</span></div>
-            {workspace.inventory.map((entry) => <div key={entry.id} className="financeTableRow"><strong>{entry.item}<small>{new Date(entry.occurredAt).toLocaleString()}</small></strong><span>{entry.type}</span><span>{entry.vendor ?? "—"}</span><span>{entry.quantity} {entry.unit}</span><span>{money.format(entry.totalCost)}</span></div>)}
+            <div className={editable ? "financeTableHead financeTableHead-editable" : "financeTableHead"}><span>Item</span><span>Movement</span><span>Supplier</span><span>Quantity</span><span>Total</span>{editable ? <span>Actions</span> : null}</div>
+            {workspace.inventory.map((entry) => editingInventoryId === entry.id ? (
+              <form key={entry.id} className="financeEditRow" onSubmit={(event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                act({
+                  action: "update_inventory",
+                  id: entry.id,
+                  siteId,
+                  vendorId: String(form.get("vendorId") || "") || undefined,
+                  inventoryItemId: String(form.get("inventoryItemId")),
+                  transactionType: String(form.get("transactionType")) as "receipt" | "issue" | "adjustment" | "count",
+                  quantity: Number(form.get("quantity")),
+                  unitCost: Number(form.get("unitCost")),
+                  occurredAt: entry.occurredAt,
+                  notes: String(form.get("notes") || "") || undefined,
+                });
+                setEditingInventoryId(null);
+              }}>
+                <label>Item<select name="inventoryItemId" required defaultValue={entry.itemId}>{workspace.items.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.unit}</option>)}</select></label>
+                <div className="financeFormRow">
+                  <label>Movement<select name="transactionType" defaultValue={entry.type}><option value="receipt">Supplier receipt</option><option value="issue">Issued to site</option><option value="adjustment">Adjustment</option><option value="count">Stock count</option></select></label>
+                  <label>Supplier<select name="vendorId" defaultValue={entry.vendorId ?? ""}><option value="">No supplier reference</option>{workspace.vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select></label>
+                  <label>Quantity<input name="quantity" type="number" min="0.001" step="0.001" defaultValue={entry.quantity} required /></label>
+                  <label>Unit cost<input name="unitCost" type="number" min="0" step="0.01" defaultValue={entry.unitCost} required /></label>
+                </div>
+                <label>Note<input name="notes" maxLength={1000} defaultValue={entry.notes ?? ""} /></label>
+                <div className="financeRowActions">
+                  <button className="reviewButton reviewButton-primary" type="submit" disabled={pending}>Save</button>
+                  <button className="reviewButton reviewButton-secondary" type="button" disabled={pending} onClick={() => setEditingInventoryId(null)}>Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <div key={entry.id} className={editable ? "financeTableRow financeTableRow-editable" : "financeTableRow"}>
+                <strong>{entry.item}<small>{new Date(entry.occurredAt).toLocaleString()}</small></strong><span>{entry.type}</span><span>{entry.vendor ?? "—"}</span><span>{entry.quantity} {entry.unit}</span><span>{money.format(entry.totalCost)}</span>
+                {editable ? <div className="financeRowActions">
+                  <button className="reviewButton reviewButton-secondary" type="button" disabled={pending} onClick={() => setEditingInventoryId(entry.id)}>Edit</button>
+                  <button className="reviewButton reviewButton-danger" type="button" disabled={pending} onClick={() => {
+                    if (window.confirm(`Delete this ${entry.item} ${entry.type} of ${entry.quantity} ${entry.unit}? This is recorded in the finance audit trail.`)) {
+                      act({ action: "delete_inventory", id: entry.id, siteId });
+                    }
+                  }}>Delete</button>
+                </div> : null}
+              </div>
+            ))}
           </div>
         ) : <p className="recordNote">No inventory movements have been recorded.</p>}
       </section>
@@ -227,8 +272,51 @@ export function FinanceWorkspace({
         <div className="panelHeading"><div><p className="eyebrow">Recent site records</p><h2 id="labour-ledger-title">Labour ledger</h2></div></div>
         {workspace.labour.length ? (
           <div className="financeTable">
-            <div className="financeTableHead"><span>Worker</span><span>Date</span><span>Type</span><span>Hours</span><span>Total</span></div>
-            {workspace.labour.map((entry) => <div key={entry.id} className="financeTableRow"><strong>{entry.worker ?? "Unassigned labour"}<small>{entry.notes ?? "No note"}</small></strong><span>{entry.workDate}</span><span>{entry.type}</span><span>{entry.hours}</span><span>{money.format(entry.totalCost)}</span></div>)}
+            <div className={editable ? "financeTableHead financeTableHead-editable" : "financeTableHead"}><span>Worker</span><span>Date</span><span>Type</span><span>Hours</span><span>Total</span>{editable ? <span>Actions</span> : null}</div>
+            {workspace.labour.map((entry) => editingLabourId === entry.id ? (
+              <form key={entry.id} className="financeEditRow" onSubmit={(event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                act({
+                  action: "update_labour",
+                  id: entry.id,
+                  siteId,
+                  workerId: String(form.get("workerId") || "") || undefined,
+                  taskRunId: entry.taskRunId ?? undefined,
+                  workDate: String(form.get("workDate")),
+                  hours: Number(form.get("hours")),
+                  hourlyCost: Number(form.get("hourlyCost")),
+                  costType: String(form.get("costType")) as "regular" | "overtime" | "contractor",
+                  notes: String(form.get("notes") || "") || undefined,
+                });
+                setEditingLabourId(null);
+              }}>
+                <div className="financeFormRow">
+                  <label>Worker<select name="workerId" defaultValue={entry.workerId ?? ""}><option value="">Unassigned labour</option>{workspace.workers.map((worker) => <option key={worker.id} value={worker.id}>{worker.name}</option>)}</select></label>
+                  <label>Work date<input name="workDate" type="date" defaultValue={entry.workDate} required /></label>
+                  <label>Cost type<select name="costType" defaultValue={entry.type}><option value="regular">Regular</option><option value="overtime">Overtime</option><option value="contractor">Contractor</option></select></label>
+                  <label>Hours<input name="hours" type="number" min="0.01" max="24" step="0.25" defaultValue={entry.hours} required /></label>
+                  <label>Hourly cost<input name="hourlyCost" type="number" min="0" step="0.01" defaultValue={entry.hourlyCost} required /></label>
+                </div>
+                <label>Note<input name="notes" maxLength={1000} defaultValue={entry.notes ?? ""} /></label>
+                <div className="financeRowActions">
+                  <button className="reviewButton reviewButton-primary" type="submit" disabled={pending}>Save</button>
+                  <button className="reviewButton reviewButton-secondary" type="button" disabled={pending} onClick={() => setEditingLabourId(null)}>Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <div key={entry.id} className={editable ? "financeTableRow financeTableRow-editable" : "financeTableRow"}>
+                <strong>{entry.worker ?? "Unassigned labour"}<small>{entry.notes ?? "No note"}</small></strong><span>{entry.workDate}</span><span>{entry.type}</span><span>{entry.hours}</span><span>{money.format(entry.totalCost)}</span>
+                {editable ? <div className="financeRowActions">
+                  <button className="reviewButton reviewButton-secondary" type="button" disabled={pending} onClick={() => setEditingLabourId(entry.id)}>Edit</button>
+                  <button className="reviewButton reviewButton-danger" type="button" disabled={pending} onClick={() => {
+                    if (window.confirm(`Delete this ${entry.hours}h ${entry.type} labour entry for ${entry.workDate}? This is recorded in the finance audit trail.`)) {
+                      act({ action: "delete_labour", id: entry.id, siteId });
+                    }
+                  }}>Delete</button>
+                </div> : null}
+              </div>
+            ))}
           </div>
         ) : <p className="recordNote">No labour cost entries have been recorded.</p>}
       </section>

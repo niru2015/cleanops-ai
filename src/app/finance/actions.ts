@@ -86,10 +86,38 @@ export async function performFinanceAction(input: FinanceActionInput): Promise<F
       revalidatePath("/finance");
       return success("Inventory transaction recorded. Its total cost is calculated by the database.");
     }
-    const { error } = await client.from("labor_cost_entries").insert({ organization_id: DEMO_ORGANIZATION_ID, site_id: parsed.data.siteId, worker_id: parsed.data.workerId ?? null, task_run_id: parsed.data.taskRunId ?? null, work_date: parsed.data.workDate, hours: parsed.data.hours, hourly_cost: parsed.data.hourlyCost, cost_type: parsed.data.costType, notes: parsed.data.notes ?? null });
+    if (parsed.data.action === "record_labour") {
+      const { error } = await client.from("labor_cost_entries").insert({ organization_id: DEMO_ORGANIZATION_ID, site_id: parsed.data.siteId, worker_id: parsed.data.workerId ?? null, task_run_id: parsed.data.taskRunId ?? null, work_date: parsed.data.workDate, hours: parsed.data.hours, hourly_cost: parsed.data.hourlyCost, cost_type: parsed.data.costType, notes: parsed.data.notes ?? null });
+      if (error) throw error;
+      revalidatePath("/finance");
+      return success("Labour cost recorded. Hours and cost rate determine the saved total.");
+    }
+    if (parsed.data.action === "update_inventory") {
+      const { error, count } = await client.from("inventory_transactions").update({ vendor_id: parsed.data.vendorId ?? null, inventory_item_id: parsed.data.inventoryItemId, transaction_type: parsed.data.transactionType, quantity: parsed.data.quantity, unit_cost: parsed.data.unitCost, occurred_at: parsed.data.occurredAt, notes: parsed.data.notes ?? null }, { count: "exact" }).eq("id", parsed.data.id).eq("site_id", parsed.data.siteId);
+      if (error) throw error;
+      if (!count) return failure("That inventory transaction could not be found for this casino.");
+      revalidatePath("/finance");
+      return success("Inventory transaction updated. Its total cost is recalculated by the database.");
+    }
+    if (parsed.data.action === "delete_inventory") {
+      const { error, count } = await client.from("inventory_transactions").delete({ count: "exact" }).eq("id", parsed.data.id).eq("site_id", parsed.data.siteId);
+      if (error) throw error;
+      if (!count) return failure("That inventory transaction could not be found for this casino.");
+      revalidatePath("/finance");
+      return success("Inventory transaction deleted. The change is recorded in the finance audit trail.");
+    }
+    if (parsed.data.action === "update_labour") {
+      const { error, count } = await client.from("labor_cost_entries").update({ worker_id: parsed.data.workerId ?? null, task_run_id: parsed.data.taskRunId ?? null, work_date: parsed.data.workDate, hours: parsed.data.hours, hourly_cost: parsed.data.hourlyCost, cost_type: parsed.data.costType, notes: parsed.data.notes ?? null }, { count: "exact" }).eq("id", parsed.data.id).eq("site_id", parsed.data.siteId);
+      if (error) throw error;
+      if (!count) return failure("That labour cost entry could not be found for this casino.");
+      revalidatePath("/finance");
+      return success("Labour cost entry updated. Its total cost is recalculated by the database.");
+    }
+    const { error, count } = await client.from("labor_cost_entries").delete({ count: "exact" }).eq("id", parsed.data.id).eq("site_id", parsed.data.siteId);
     if (error) throw error;
+    if (!count) return failure("That labour cost entry could not be found for this casino.");
     revalidatePath("/finance");
-    return success("Labour cost recorded. Hours and cost rate determine the saved total.");
+    return success("Labour cost entry deleted. The change is recorded in the finance audit trail.");
   } catch {
     revalidatePath("/finance");
     return failure("The record could not be saved. Review the site access and values, then try again.");

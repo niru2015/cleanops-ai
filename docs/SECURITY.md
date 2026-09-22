@@ -8,7 +8,7 @@ All roles require active organization membership; site-scoped roles also need si
 |---|---|
 | Cleaner | Own assigned work, own uploads/reports; no peer private records or approvals |
 | Site supervisor | Granted sites; resolve evidence, review quality, manage local actions |
-| Area manager | Explicitly granted sites; same review rights and aggregate reporting; read-only finance for granted sites |
+| Area manager | Explicitly granted sites; same review rights and aggregate reporting; read-only inventory ledger and finance reconciliation totals for granted sites; no labour ledger or import detail |
 | Operations manager | Organization operations; no other tenant; no finance access |
 | Organization administrator | Membership/integration configuration and organization operations; the only role that writes finance records |
 | Client viewer | Explicit client/site grants; released, redacted reports only |
@@ -81,11 +81,18 @@ CLEAN-027 and the role-scoped demo migration (`20260921051826`) protect finance 
 `inventory_transactions` and `labor_cost_entries` can be read only by an organization administrator or an area
 manager with an active grant to the site (`private.can_view_site_finance`) and inserted only by an organization
 administrator (`private.can_edit_site_finance`); site supervisors and operations managers have no finance ledger access.
-Browser roles currently hold only `select, insert` on both ledgers, which is what makes them append-only; the `update` and
-`delete` policies created for administrators have no grant behind them and do nothing today. The owner decided to grant Directors update and delete (issue #48); this paragraph changes when that migration lands. Supplier and inventory item catalogues are readable only by Directors, Area Managers and Operations Managers (`private.can_view_supply_catalogue`) and writable only by Directors (`private.can_edit_supply_catalogue`). `equipment_models` is
-readable by every active member and writable by administrators; `equipment_assets` is readable with operational
-site access. Both are select-only for browser roles. Raw `external_messages` remain service-only and reach
-supervisors only through `list_site_external_messages`.
+Since issue #48 (migration `20260922034200`), Directors also hold `update, delete` on both ledgers — matching the
+`update`/`delete` RLS policies that administrators already had. A `before update or delete` trigger
+(`private.log_finance_ledger_change`) rejects any update that reassigns `organization_id`, `site_id` or `id`, and
+writes every real edit/delete to `finance_ledger_audit_events` with the actor, action and before/after state. That
+audit table is a dedicated table, not a reuse of `reporting_audit_events`: its select policy matches the ledgers'
+own `can_view_site_finance` rule, whereas `reporting_audit_events` uses the broader `can_manage_site`, which would
+have let site supervisors and operations managers read finance edit history despite having no ledger access.
+Supplier and inventory item catalogues are readable only by Directors, Area Managers and Operations Managers
+(`private.can_view_supply_catalogue`) and writable only by Directors (`private.can_edit_supply_catalogue`).
+`equipment_models` is readable by every active member and writable by administrators; `equipment_assets` is readable
+with operational site access. Both are select-only for browser roles. Raw `external_messages` remain service-only
+and reach supervisors only through `list_site_external_messages`.
 
 CLEAN-020 keeps imported batches, source rows, raw CSV values, allocations and the worker-level labour ledger Director-only. This prevents Area Managers from reading individual labour/payroll detail. `finance_reconciliations` contains only approved actual aggregate totals and is readable by Directors or an Area Manager with an active site grant. Supervisors, Operations Managers, cleaners and clients cannot read imported finance totals; clients never receive margins. Staging and acceptance RPCs independently require Director authorization and derive the acceptance actor from `auth.uid()`.
 

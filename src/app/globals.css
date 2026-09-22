@@ -1711,10 +1711,20 @@ a:focus-visible {
 .financeTable { margin-top: 18px; overflow-x: auto; }
 .financeTableHead,
 .financeTableRow { display: grid; grid-template-columns: minmax(180px, 1.5fr) minmax(95px, .8fr) minmax(120px, 1fr) minmax(100px, .75fr) minmax(90px, .7fr); gap: 12px; min-width: 720px; align-items: center; }
+.financeTableHead-editable,
+.financeTableRow-editable { grid-template-columns: minmax(180px, 1.5fr) minmax(95px, .8fr) minmax(120px, 1fr) minmax(100px, .75fr) minmax(90px, .7fr) minmax(130px, .9fr); min-width: 850px; }
 .financeTableHead { padding: 0 12px 9px; color: var(--muted); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .financeTableRow { padding: 13px 12px; border-top: 1px solid var(--border); color: #405266; font-size: .86rem; }
 .financeTableRow strong { color: var(--text); }
 .financeTableRow small { display: block; margin-top: 3px; color: var(--muted); font-weight: 500; }
+.financeRowActions { display: flex; gap: 8px; }
+.financeRowActions .reviewButton { min-height: 34px; padding: 6px 10px; font-size: .78rem; }
+.reviewButton-danger { border: 1px solid #efb7b1; background: #fff2f0; color: #8a2e27; }
+.reviewButton-danger:hover:not(:disabled) { background: #ffe4e0; }
+.financeEditRow { display: grid; gap: 10px; padding: 13px 12px; border-top: 1px solid var(--border); background: #f8fafc; }
+.financeEditRow .financeFormRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.financeEditRow label { display: grid; gap: 5px; color: #405266; font-size: .76rem; font-weight: 700; }
+.financeEditRow select, .financeEditRow input { min-height: 38px; padding: 7px 9px; border: 1px solid #c7d5de; border-radius: 8px; background: #fff; }
 .messageQueue { margin-top: 20px; }
 .messageQueueList { display: grid; gap: 14px; }
 .messageQueueItem { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, .75fr); gap: 20px; padding: 17px 0; border-top: 1px solid var(--border); }
