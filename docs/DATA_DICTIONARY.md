@@ -127,9 +127,15 @@ Live OpenAI code exists but production execution remains gated by config, budget
 | `vendors` | Organization supplier catalogue. | vendor code, name, contact reference, active. |
 | `inventory_items` | Cleaning supply catalogue. | SKU, name, category, unit of measure, reorder level, active. |
 | `inventory_transactions` | Append-only site stock movement/cost. | site, optional vendor, item, optional source message, type receipt/issue/adjustment/count, quantity (> 0), unit cost, generated total cost (`round(quantity * unit_cost, 2)`), occurrence time, notes. |
-| `labor_cost_entries` | Append-only site labour cost. | site, optional worker/task/source message, work date, hours (> 0, <= 24), hourly cost, generated total cost (`round(hours * hourly_cost, 2)`), type regular/overtime/contractor, notes. |
+| `labor_cost_entries` | Append-only site labour cost. Director-only read (see below). | site, optional worker/task/source message, work date, hours (> 0, <= 24), hourly cost, generated total cost (`round(hours * hourly_cost, 2)`), type regular/overtime/contractor, notes. |
+| `finance_import_batches` | Immutable record of one accepted/rejected CSV import. Director-only. | organization, source file name/hash, mapping version, currency, service period, state (preview/accepted/superseded/rejected), completeness, accepted_by/at, supersedes_batch_id. |
+| `finance_source_rows` | Immutable imported line, one per source document line. Director-only. | batch, source document/line ID, optional site/contract/job/asset reference, optional link to a supply or repair record, service/accounting period, currency, category, amount, tax, approval/recognition/allocation state, raw row JSON. |
+| `finance_source_allocations` | Site (and optional job) share of one source row's amount. Director-only. | source row, site, job reference, amount. |
+| `finance_reconciliations` | Accepted, approved-actual site totals for a period; the only imported-finance surface open to Area Managers. | batch, site, period, currency, recognized revenue, direct labour/supplies/repairs/other direct cost, generated `direct_contribution`, completeness, `is_current`. |
 
-Access (migrations `20260921051826_casino_demo_rbac_equipment`, `20260921120000_clean_029_supply_catalogue_rbac`): both ledgers are readable only by a Director, or an Area Manager with a grant to that site (`private.can_view_site_finance`); only a Director may insert (`private.can_edit_site_finance`). Site supervisors and operations managers cannot read ledger rows. `vendors` and `inventory_items` are readable only by Directors, Area Managers and Operations Managers (`private.can_view_supply_catalogue`) and writable only by Directors (`private.can_edit_supply_catalogue`), matching the current `/finance` UI.
+Access (migrations `20260921051826_casino_demo_rbac_equipment`, `20260921120000_clean_029_supply_catalogue_rbac`, `20260921230000_clean_020_reconciled_finance_imports`): `inventory_transactions` is readable by a Director or an Area Manager with a grant to that site (`private.can_view_site_finance`); `labor_cost_entries` is readable by a Director only (`private.can_administer_org`), narrowed by CLEAN-020 so individual payroll/labour detail never reaches Area Managers — they see only the aggregate `direct_labour` figure in `finance_reconciliations`. Only a Director may insert to either ledger (`private.can_edit_site_finance`). Site supervisors and operations managers cannot read either ledger. `vendors` and `inventory_items` are readable only by Directors, Area Managers and Operations Managers (`private.can_view_supply_catalogue`) and writable only by Directors (`private.can_edit_supply_catalogue`), matching the current `/finance` UI.
+
+Known UI gap (not yet filed): `getFinanceWorkspace` still queries `labor_cost_entries` for every `/finance` viewer and `finance-workspace.tsx` renders the "Labour ledger" table unconditionally. RLS returns zero rows for an Area Manager rather than an error, so the table silently shows "No labour cost entries have been recorded." — indistinguishable from an actually empty ledger. The component should hide or relabel that section when `editable` is false.
 
 Append-only is grant-based: `authenticated` holds `select, insert` on both ledgers. The later migration also created `update` and `delete` policies for Directors, but with no matching grant they have no effect for browser roles; `service_role` can still modify rows. Owner decision 2026-09-21: grant Directors update and delete deliberately (issue #48), so these policies will become active and "append-only" will no longer hold. Until that migration lands, treat them as inert.
 
@@ -163,6 +169,7 @@ task_runs + sla_task_results + incidents + equipment_reports
 
 vendors + inventory_items -> inventory_transactions
 workers + task_runs -> labor_cost_entries
+finance_import_batches -> finance_source_rows -> finance_source_allocations -> finance_reconciliations
 
 organizations -> equipment_models
 sites + equipment_models -> equipment_assets      (no link yet to equipment_reports)
