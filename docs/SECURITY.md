@@ -87,6 +87,8 @@ readable by every active member and writable by administrators; `equipment_asset
 site access. Both are select-only for browser roles. Raw `external_messages` remain service-only and reach
 supervisors only through `list_site_external_messages`.
 
+CLEAN-020 keeps imported batches, source rows, raw CSV values, allocations and the worker-level labour ledger Director-only. This prevents Area Managers from reading individual labour/payroll detail. `finance_reconciliations` contains only approved actual aggregate totals and is readable by Directors or an Area Manager with an active site grant. Supervisors, Operations Managers, cleaners and clients cannot read imported finance totals; clients never receive margins. Staging and acceptance RPCs independently require Director authorization and derive the acceptance actor from `auth.uid()`.
+
 ## Evidence privacy and pilot decisions
 
 Use synthetic people and media in demos; real casino names are allowed only as reference data under ADR 008. Casino images may contain patrons, staff,

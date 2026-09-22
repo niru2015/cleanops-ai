@@ -6,11 +6,58 @@ import { resolveMessageContext } from "@/integrations/messages/supabase-message-
 import { DEMO_ORGANIZATION_ID, getOperationsRuntime } from "@/services/operations-runtime";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext, isSiteAllowed } from "@/services/access-context";
+import { createHash } from "node:crypto";
+import { z } from "zod";
+import { FINANCE_MAPPING_VERSION, parseFinanceCsv, type FinanceImportPreview } from "@/services/finance-csv";
 
 export type FinanceActionState = { ok: boolean; message: string };
+export type FinancePreviewState = FinanceActionState & { preview?: FinanceImportPreview };
+
+const importInput = z.object({ fileName: z.string().min(1).max(255), csv: z.string().min(1).max(2_000_000) });
+const acceptInput = importInput.extend({ completeness: z.enum(["complete", "incomplete", "estimated"]), supersedesBatchId: z.string().uuid().optional() });
 
 function success(message: string) { return { ok: true, message } satisfies FinanceActionState; }
 function failure(message: string) { return { ok: false, message } satisfies FinanceActionState; }
+
+export async function previewFinanceImport(input: unknown): Promise<FinancePreviewState> {
+  const parsed = importInput.safeParse(input);
+  if (!parsed.success) return failure("Choose a CSV file under 2 MB.");
+  try {
+    const client = await createSupabaseServerClient();
+    const access = await getAppAccessContext(client);
+    if (!access.canEditFinance) return failure("Director access is required to import financial records.");
+    const preview = parseFinanceCsv(parsed.data.csv, access.sites);
+    return { ok: preview.errors.length === 0, message: preview.errors.length ? "Resolve the preview errors before acceptance." : "Preview ready. Review the totals and exceptions before accepting.", preview };
+  } catch (error) {
+    return failure(error instanceof Error ? error.message : "The CSV could not be previewed.");
+  }
+}
+
+export async function acceptFinanceImport(input: unknown): Promise<FinanceActionState> {
+  const parsed = acceptInput.safeParse(input);
+  if (!parsed.success) return failure("The finance import request was invalid.");
+  try {
+    const client = await createSupabaseServerClient();
+    const access = await getAppAccessContext(client);
+    if (!access.canEditFinance) return failure("Director access is required to accept financial records.");
+    const preview = parseFinanceCsv(parsed.data.csv, access.sites);
+    if (preview.errors.length) return failure("Resolve the preview errors before acceptance.");
+    if (parsed.data.completeness === "complete" && preview.warnings.length) return failure("A complete import cannot contain unallocated or unmapped rows.");
+    const hash = createHash("sha256").update(parsed.data.csv).digest("hex");
+    const staged = await client.rpc("stage_finance_csv_import", {
+      p_organization_id: DEMO_ORGANIZATION_ID, p_source_file_name: parsed.data.fileName, p_source_file_hash: hash,
+      p_mapping_version: FINANCE_MAPPING_VERSION, p_currency: preview.currency, p_period_start: preview.periodStart,
+      p_period_end: preview.periodEnd, p_rows: preview.rows, p_supersedes_batch_id: parsed.data.supersedesBatchId ?? null,
+    });
+    if (staged.error || typeof staged.data !== "string") throw new Error(staged.error?.message ?? "The import could not be staged.");
+    const accepted = await client.rpc("accept_finance_import", { p_batch_id: staged.data, p_completeness: parsed.data.completeness });
+    if (accepted.error) throw new Error(accepted.error.message);
+    revalidatePath("/finance");
+    return success("Finance import accepted and reconciled. Re-importing the same file will not duplicate it.");
+  } catch (error) {
+    return failure(error instanceof Error ? error.message : "The finance import could not be accepted.");
+  }
+}
 
 export async function performFinanceAction(input: FinanceActionInput): Promise<FinanceActionState> {
   const parsed = financeActionSchema.safeParse(input);

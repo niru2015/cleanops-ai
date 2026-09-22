@@ -243,6 +243,16 @@ No repair completion is invented.
 
 Client view does not expose raw evidence, private worker statements, raw messages or internal audit tables.
 
+## /finance accounting imports
+
+| UI | Source |
+|---|---|
+| CSV preview | `parseFinanceCsv` with current organization sites; no database write |
+| Accepted import history | `finance_import_batches` (Director only) |
+| Site contribution | `finance_reconciliations` (Director or granted Area Manager) |
+
+`previewFinanceImport` validates source IDs, periods, currency, category, amount, site mapping, approval and recognition. `acceptFinanceImport` hashes the unchanged CSV, calls `stage_finance_csv_import`, then `accept_finance_import`. The hash plus mapping version is the idempotency key. Raw rows and individual labour detail never feed the Area Manager query. Direct contribution is recognized revenue minus direct labour, supplies, repairs and other direct costs; zero revenue produces an N/A margin in the UI.
+
 ## Backend/provider mappings
 
 ### Official WhatsApp inbound

@@ -1,0 +1,6 @@
+source_account_id,source_document_id,source_line_id,site_reference,contract_reference,job_reference,asset_reference,service_period,accounting_period,currency,category,amount,tax_amount,tax_treatment,approval_state,recognition_state
+4000,REV-AUG-2026,1,Aurora Downtown Demo,CASINO-001,MONTHLY-CLEAN,,2026-08-01,2026-08-01,CAD,revenue,350000.00,0.00,exclusive,approved,actual
+5000,PAY-AUG-2026,1,Aurora Downtown Demo,CASINO-001,MONTHLY-CLEAN,,2026-08-01,2026-08-01,CAD,direct_labour,230000.00,0.00,exempt,approved,actual
+5100,SUP-AUG-2026,1,Aurora Downtown Demo,CASINO-001,MONTHLY-CLEAN,,2026-08-01,2026-08-01,CAD,supplies,35000.00,4200.00,exclusive,approved,actual
+5200,REP-AUG-2026,1,Aurora Downtown Demo,CASINO-001,MONTHLY-CLEAN,FLOOR-01,2026-08-01,2026-08-01,CAD,repairs,15000.00,1800.00,exclusive,approved,actual
+5300,OTH-AUG-2026,1,Aurora Downtown Demo,CASINO-001,MONTHLY-CLEAN,,2026-08-01,2026-08-01,CAD,other_direct_cost,10000.00,1200.00,exclusive,approved,actual

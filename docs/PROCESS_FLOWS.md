@@ -257,7 +257,20 @@ Cost types: regular, overtime, contractor. This is operational cost capture, not
 inventory ledger. No revenue or imported accounting data exists yet, so no profitability or contribution can be
 computed from these tables (issue #33).
 
-## 13. Official WhatsApp outbound
+## 13. Reconciled finance import
+
+```text
+Director selects neutral CSV -> server preview (mapping + errors + warnings)
+  -> Director chooses completeness and accepts
+  -> hash + mapping-version dedupe
+  -> immutable batch/source rows/allocations
+  -> approved actual site-period totals persisted
+  -> Director and granted Area Manager see contribution summary
+```
+
+Unknown sites and categories remain visible as unallocated warnings. A complete batch cannot contain unallocated, pending, rejected, estimated or committed rows. Incomplete and estimated batches retain those exceptions without counting them as approved actuals. A correction names the prior batch, marks its totals non-current and preserves both histories. Operational invoice/report references identify one imported source cost; they do not create a second expense.
+
+## 14. Official WhatsApp outbound
 
 ```text
 authorized reply request
@@ -272,7 +285,7 @@ authorized reply request
 
 Messaging transport state must not change attendance or task completion.
 
-## 14. Hosted demo reset
+## 15. Hosted demo reset
 
 The supervisor reset is scoped to the shared synthetic demo/site. It restores golden workflow data and associated private evidence without exposing a general destructive reset function to browser roles.
 
@@ -284,7 +297,7 @@ persist across resets) or `equipment_assets`. It is service-role only. The revie
 helper (`submitSyntheticPair`) still depends on the local simulator flag, which production forces off, so preparing
 the walkthrough on a production build is currently blocked (issue #25).
 
-## 15. Agent change checklist
+## 16. Agent change checklist
 
 Before changing a flow:
 
