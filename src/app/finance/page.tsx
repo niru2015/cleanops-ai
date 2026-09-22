@@ -26,7 +26,7 @@ export default async function FinancePage({
     const selectedSite = resolveSelectedSite(access, params.siteId);
     const finance =
       access.canViewFinance && selectedSite
-        ? await getFinanceWorkspace(client, selectedSite.id)
+        ? await getFinanceWorkspace(client, selectedSite.id, access.canEditFinance)
         : null;
     loaded = { access, selectedSite, finance };
   } catch {}

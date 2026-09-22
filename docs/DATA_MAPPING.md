@@ -2,7 +2,7 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last reviewed: 2026-09-22, includes issue #48 (finance ledger edit/delete) on top of `main` at `9efa8d3`.
+Last reviewed: 2026-09-22, includes issues #48 and #55 on top of `main` at `9efa8d3`.
 
 ## Route summary
 
@@ -164,7 +164,7 @@ Access: Directors read and write everything below; Area Managers read the invent
 
 The entry forms are rendered only for Directors (`editable`). RLS independently limits `inventory_transactions` reads to `private.can_view_site_finance`, `labor_cost_entries` reads to `private.can_administer_org` (Director only, since CLEAN-020) and both inserts to `private.can_edit_site_finance`.
 
-**Known gap (issue #55, not fixed on this branch):** `getFinanceWorkspace` queries `labor_cost_entries` for every viewer regardless of role, and the "Labour ledger" table at the bottom of `finance-workspace.tsx` is rendered unconditionally (outside the `editable` branch). RLS silently returns zero rows to an Area Manager instead of an error, so that viewer sees "No labour cost entries have been recorded." — indistinguishable from a genuinely empty ledger.
+Fixed (issue #55): `getFinanceWorkspace` now takes a `canReadLabour` flag and skips the `labor_cost_entries` query entirely when the caller cannot read it, returning `labourRestricted: true` instead of an empty array. `FinanceWorkspace` shows an explicit "restricted to Directors" message for the labour ledger in that case, distinct from the genuine "No labour cost entries have been recorded." empty state a Director still sees.
 
 ### Writes (Directors only)
 

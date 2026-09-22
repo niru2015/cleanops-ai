@@ -270,7 +270,9 @@ export function FinanceWorkspace({
 
       <section className="financePanel financeLedger" aria-labelledby="labour-ledger-title">
         <div className="panelHeading"><div><p className="eyebrow">Recent site records</p><h2 id="labour-ledger-title">Labour ledger</h2></div></div>
-        {workspace.labour.length ? (
+        {workspace.labourRestricted ? (
+          <p className="recordNote">Individual labour entries are restricted to Directors. The aggregate labour cost for this casino is in the site contribution summary above.</p>
+        ) : workspace.labour.length ? (
           <div className="financeTable">
             <div className={editable ? "financeTableHead financeTableHead-editable" : "financeTableHead"}><span>Worker</span><span>Date</span><span>Type</span><span>Hours</span><span>Total</span>{editable ? <span>Actions</span> : null}</div>
             {workspace.labour.map((entry) => editingLabourId === entry.id ? (

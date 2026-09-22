@@ -143,7 +143,7 @@ A `before update or delete` trigger on both ledgers (`private.log_finance_ledger
 
 `finance_ledger_audit_events` is a dedicated table, not a reuse of `reporting_audit_events`: its select policy matches the ledgers' own `can_view_site_finance` rule (Director or a granted Area Manager), whereas `reporting_audit_events` uses the broader `can_manage_site`, which would have let site supervisors and operations managers read finance edit history despite having no access to the ledgers themselves.
 
-Known UI gap (issue #55, not yet fixed on this branch): `getFinanceWorkspace` still queries `labor_cost_entries` for every `/finance` viewer and `finance-workspace.tsx` renders the "Labour ledger" table unconditionally. RLS returns zero rows for an Area Manager rather than an error, so the table silently shows "No labour cost entries have been recorded." — indistinguishable from an actually empty ledger.
+Fixed (issue #55): `getFinanceWorkspace` now skips the `labor_cost_entries` query entirely for a caller who cannot read it, and `finance-workspace.tsx` shows an explicit "restricted to Directors" message for the labour ledger instead of the empty-state message, so a restricted Area Manager is no longer told the casino simply has no labour records.
 
 ## Official WhatsApp outbound
 
