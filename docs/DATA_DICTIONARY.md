@@ -213,6 +213,12 @@ Text columns constrained by `check`:
 | `labor_cost_entries.cost_type` | regular, overtime, contractor |
 | `equipment_assets.status` | available, in_use, maintenance, out_of_service, proposed |
 | `equipment_assets.condition` | new, good, fair, poor, not_applicable |
+| `finance_import_batches.state` | preview, accepted, superseded, rejected |
+| `finance_import_batches.completeness` | complete, incomplete, estimated |
+| `finance_source_rows.category` | revenue, direct_labour, supplies, repairs, other_direct_cost, overhead, depreciation, tax, unmapped |
+| `finance_source_rows.approval_state` | pending, approved, rejected |
+| `finance_source_rows.recognition_state` | actual, estimate, committed |
+| `finance_source_rows.allocation_state` | allocated, unallocated |
 
 ## Database functions (RPCs)
 
@@ -237,6 +243,8 @@ Business rules that live in the database. "Browser" means callable by `authentic
 | `enqueue_whatsapp_reply`, `claim_whatsapp_reply`, `mark_whatsapp_reply_sent`, `fail_whatsapp_reply`, `record_whatsapp_delivery_status`, `get_whatsapp_queue_health` | service | Consent-aware outbound queue, delivery history, queue health. |
 | `reserve_openai_quality_run`, `finish_openai_quality_run`, `record_quality_ai_evaluation` | service | Capped live-AI reservation, completion and evaluation. |
 | `reset_hosted_demo` | service | Site-scoped synthetic demo reset. |
+| `stage_finance_csv_import` | browser | Director-only idempotent staging by file hash and mapping version. |
+| `accept_finance_import` | browser | Director-only validation, acceptance, supersession and persisted reconciliation. |
 
 Private helpers used by RLS (schema `private`, not callable by browsers): `has_org_role`, `has_site_access`, `has_operational_site_access`, `can_manage_site`, `can_administer_org`, `can_operate_org`, `is_active_member`, `can_view_site_finance`, `can_edit_site_finance`, `can_view_supply_catalogue`, `can_edit_supply_catalogue`, `resolve_review_actor`.
 
@@ -244,7 +252,7 @@ Private helpers used by RLS (schema `private`, not callable by browsers): `has_o
 
 `docs/DATA_MODEL.md` lists logical tables that have no migration: `ai_decisions`, `ai_usage` (superseded by `quality_decisions` and `quality_ai_runs`) and a generic `audit_events` (superseded by `evidence_audit_events`, `review_audit_events` and `reporting_audit_events`).
 
-Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), supply requests/orders/stock (#30; only the `inventory_*` ledger exists), asset inspections/checklists/repair cost lines (#31; only the read-only `equipment_assets` register exists), absence register (#32), revenue and cost import batches (#33; only manual labour/inventory capture exists), contract obligations and ad-hoc jobs (#35), handover and complaints (#36). Fixture data for these must be added with each schema, not before.
+Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), supply requests/orders/stock (#30; only the `inventory_*` ledger exists), asset inspections/checklists/repair cost lines (#31; only the read-only `equipment_assets` register exists), absence register (#32), contract obligations and ad-hoc jobs (#35), handover and complaints (#36). CLEAN-020 implements neutral finance imports and reconciliation; it does not implement a Sage connector, GL, payments or payroll calculation.
 
 ## Agent guidance
 

@@ -67,7 +67,7 @@ tables or code exist but the issue's acceptance criteria are not met. No item be
 | #30 CLEAN-017 | Supply requests, approval, stock history | Foundation: `vendors`, `inventory_items`, append-only `inventory_transactions`. No requests, approvals or conversions. |
 | #31 CLEAN-018 | Assets, inspections, repair cost | Foundation: read-only `equipment_models`/`equipment_assets`; `equipment_reports` intake. No inspections, checklists, cost lines or report-to-asset link. |
 | #32 CLEAN-019 | Absence register | Not started. Staffing coverage/replacement exists. |
-| #33 CLEAN-020 | Reconciled revenue/cost import | Foundation: manual `labor_cost_entries` and inventory capture. No revenue, import batches or reconciliation. |
+| #33 CLEAN-020 | Reconciled revenue/cost import | Implemented on `codex/clean-020-finance-import`: neutral CSV preview/acceptance, immutable source audit, supersession, persisted site totals and role-scoped UI. |
 | #34 CLEAN-021 | Manager overview and exceptions | Not started. `/operations` site portfolio lists counts only. |
 | #35 CLEAN-022 | Contract obligations, one-off jobs | Not started. Versioned `sla_definitions` fixture exists. |
 | #36 CLEAN-023 | Handover, follow-up, complaint closure | Not started. Corrective actions and incidents exist. |

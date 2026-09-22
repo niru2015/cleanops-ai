@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { performFinanceAction, type FinanceActionState } from "@/app/finance/actions";
+import { acceptFinanceImport, performFinanceAction, previewFinanceImport, type FinanceActionState } from "@/app/finance/actions";
 import type { FinanceWorkspace } from "@/integrations/finance/supabase-finance";
+import type { FinanceImportPreview } from "@/services/finance-csv";
 
 const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
+const importedMoney = (amount: number, currency: string) => `${currency || "—"} ${amount.toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const now = () => new Date().toISOString();
 const date = () => new Date().toISOString().slice(0, 10);
 
@@ -19,6 +21,10 @@ export function FinanceWorkspace({
 }) {
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<FinanceActionState | null>(null);
+  const [importFile, setImportFile] = useState<{ name: string; csv: string } | null>(null);
+  const [preview, setPreview] = useState<FinanceImportPreview | null>(null);
+  const [completeness, setCompleteness] = useState<"complete" | "incomplete" | "estimated">("complete");
+  const [supersedesBatchId, setSupersedesBatchId] = useState("");
   const act = (input: Parameters<typeof performFinanceAction>[0]) => {
     setNotice(null);
     startTransition(async () => setNotice(await performFinanceAction(input)));
@@ -42,8 +48,65 @@ export function FinanceWorkspace({
       {notice ? <div className={`reviewNotice ${notice.ok ? "reviewNoticeSuccess" : "reviewNoticeError"}`} role="status">{notice.message}</div> : null}
       {pending ? <div className="reviewProgress" role="status">Saving financial record…</div> : null}
 
+      <section className="financePanel financeReconciliation" aria-labelledby="reconciliation-title">
+        <div className="panelHeading"><div><p className="eyebrow">Approved actuals</p><h2 id="reconciliation-title">Site contribution</h2></div></div>
+        {workspace.reconciliations.length ? workspace.reconciliations.map((entry) => {
+          const margin = entry.revenue === 0 ? null : entry.contribution / entry.revenue;
+          return <div className="financeMetricGrid" key={`${entry.period}-${entry.reconciledAt}`}>
+            <div><span>Revenue</span><strong>{importedMoney(entry.revenue, entry.currency)}</strong></div>
+            <div><span>Direct cost</span><strong>{importedMoney(entry.labour + entry.supplies + entry.repairs + entry.otherDirectCost, entry.currency)}</strong></div>
+            <div><span>Direct contribution</span><strong>{importedMoney(entry.contribution, entry.currency)}</strong></div>
+            <div><span>Contribution margin</span><strong>{margin === null ? "N/A" : `${(margin * 100).toFixed(1)}%`}</strong></div>
+            <p>{entry.period} · {entry.completeness} · reconciled {new Date(entry.reconciledAt).toLocaleString()}</p>
+          </div>;
+        }) : <p className="recordNote">No accepted accounting import is available for this casino.</p>}
+        <p className="recordNote">Direct contribution is revenue less direct labour, supplies, repairs and other direct costs. It is not net profit; overhead, depreciation and tax are excluded.</p>
+      </section>
+
       {editable ? (
         <>
+          <section className="financePanel" aria-labelledby="finance-import-title">
+            <div className="panelHeading"><div><p className="eyebrow">Director-controlled import</p><h2 id="finance-import-title">Accounting CSV</h2></div></div>
+            <form className="financeForm" onSubmit={(event) => {
+              event.preventDefault();
+              if (!importFile) return;
+              setNotice(null);
+              startTransition(async () => {
+                const result = await previewFinanceImport({ fileName: importFile.name, csv: importFile.csv });
+                setPreview(result.preview ?? null);
+                setNotice(result);
+              });
+            }}>
+              <label>CSV file<input name="financeCsv" type="file" accept=".csv,text/csv" required onChange={async (event) => {
+                const file = event.target.files?.[0];
+                setPreview(null);
+                setImportFile(file ? { name: file.name, csv: await file.text() } : null);
+              }} /></label>
+              <button className="reviewButton reviewButton-secondary" type="submit" disabled={pending || !importFile}>Preview import</button>
+            </form>
+            {preview ? <div className="financeImportPreview">
+              <div className="financeMetricGrid">
+                <div><span>Rows</span><strong>{preview.rows.length}</strong></div><div><span>Revenue</span><strong>{importedMoney(preview.totals.revenue, preview.currency)}</strong></div>
+                <div><span>Direct cost</span><strong>{importedMoney(preview.totals.directCost, preview.currency)}</strong></div><div><span>Contribution</span><strong>{importedMoney(preview.totals.directContribution, preview.currency)}</strong></div>
+              </div>
+              {preview.errors.map((message) => <p className="importIssue importIssueError" key={message}>{message}</p>)}
+              {preview.warnings.map((message) => <p className="importIssue" key={message}>{message}</p>)}
+              {!preview.errors.length ? <div className="financeImportAccept">
+                <label>Import status<select value={completeness} onChange={(event) => setCompleteness(event.target.value as typeof completeness)}><option value="complete">Complete</option><option value="incomplete">Incomplete</option><option value="estimated">Estimated</option></select></label>
+                <label>Correction of<select value={supersedesBatchId} onChange={(event) => setSupersedesBatchId(event.target.value)}><option value="">New import</option>{workspace.imports.filter((entry) => entry.state === "accepted").map((entry) => <option key={entry.id} value={entry.id}>{entry.fileName}</option>)}</select></label>
+                <button className="reviewButton reviewButton-primary" type="button" disabled={pending || !importFile} onClick={() => {
+                  if (!importFile) return;
+                  startTransition(async () => {
+                    const result = await acceptFinanceImport({ ...importFile, completeness, supersedesBatchId: supersedesBatchId || undefined });
+                    setNotice(result);
+                    if (result.ok) setPreview(null);
+                  });
+                }}>Accept import</button>
+              </div> : null}
+            </div> : null}
+            {workspace.imports.length ? <p className="recordNote">Last import: {workspace.imports[0].fileName} · {workspace.imports[0].state} · {workspace.imports[0].acceptedAt ? new Date(workspace.imports[0].acceptedAt).toLocaleString() : "not accepted"}</p> : null}
+          </section>
+
           <div className="financeGrid">
             <section className="financePanel" aria-labelledby="inventory-entry-title">
               <div className="panelHeading"><div><p className="eyebrow">Site stock movement</p><h2 id="inventory-entry-title">Inventory transaction</h2></div></div>

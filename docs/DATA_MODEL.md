@@ -38,7 +38,7 @@ updated_at and revision where concurrency matters. Auth users are identities, no
 | AI (logical only, not migrated) | ai_decisions and ai_usage were planned; implemented as quality_decisions and quality_ai_runs above |
 | Reliability | processing_jobs(kind, dedupe_key, lease, attempts, next_attempt_at, status); a generic audit_events table was not built: append-only evidence_audit_events, review_audit_events and reporting_audit_events are used instead |
 | WhatsApp outbound | whatsapp_outbox(account, recipient, logical_key, consent reference, conversation expiry, payload, lease, provider ID, transport state); whatsapp_delivery_events |
-| Finance / inventory | vendors(organization, supplier); inventory_items(organization, SKU, unit and reorder level); inventory_transactions(site, vendor, item, quantity, unit cost, total cost, source message); labor_cost_entries(site, worker/task, work date, hours, hourly cost, total cost, source message) |
+| Finance / inventory | vendors; inventory_items; inventory_transactions; labor_cost_entries; finance_import_batches(file identity, mapping, state, supersession); finance_source_rows(source IDs, periods, dimensions, recognition/approval); finance_source_allocations(site/job amount); finance_reconciliations(site-period approved actual totals) |
 
 CLEAN-003 implements integration_accounts, integration_webhook_events, processing_jobs and
 external_messages. CLEAN-004 implements external_worker_identities, conversation_contexts,
@@ -85,6 +85,8 @@ keys. Generated total-cost columns prevent inconsistent labour and inventory tot
 are append-only for browser roles in this slice (grants allow select and insert only): a correction is a new adjustment or labour entry.
 Since `20260921051826` the ledgers are readable only by Directors and granted Area Managers and writable only by Directors.
 The same migration adds `equipment_models` and `equipment_assets` and the `is_demo` flags; `20260921070701` grants them to `authenticated` read-only.
+
+CLEAN-020 adds an accounting-neutral CSV boundary. Immutable batches and source rows preserve source identity and corrections; a corrected batch supersedes rather than deletes its predecessor. Only Directors can read raw rows or invoke staging and acceptance. Acceptance persists site-period totals from approved actual rows. Area Managers can read those totals only through `finance_reconciliations` for granted sites, so individual payroll detail is not exposed. Estimates, commitments, pending rows, overhead, depreciation and tax are excluded from direct contribution.
 
 Later: supply requests; contracts/requirements; certifications/training; safety schedules/checks/escalations;
 equipment/maintenance; knowledge documents/chunks/embeddings. Define each schema when its issue starts,
