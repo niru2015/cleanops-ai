@@ -238,9 +238,8 @@ vendor + item + site + quantity + unit cost
   -> inventory ledger
 ```
 
-Transaction types: receipt, issue, adjustment, count. A Director can insert, edit and delete rows (issue #48); a
-granted Area Manager can read but not write. Every edit/delete is recorded in `finance_ledger_audit_events` with the
-actor, before/after state and action; a trigger rejects reassigning `organization_id`, `site_id` or `id`.
+Transaction types: receipt, issue, adjustment, count. Current ledger is append-only for browser roles (grants allow
+select and insert only; Director update/delete is decided but not yet granted, issue #48). Only a Director can insert; a Director or a granted Area Manager can read a site's ledger.
 An order is not consumption: `issue` records stock released to a site, not proof of use (issue #30).
 
 ## 12. Finance — labour
@@ -255,9 +254,8 @@ site + work date + hours + hourly cost + type
 ```
 
 Cost types: regular, overtime, contractor. This is operational cost capture, not payroll. Since CLEAN-020
-(`20260921230000`), this ledger is readable and writable by a Director only (issue #48 added edit/delete on top of
-the existing insert); an Area Manager sees the site's labour cost only as the aggregate `direct_labour` figure in a
-`finance_reconciliations` row (§13), never a per-worker entry.
+(`20260921230000`), this ledger is readable by a Director only; an Area Manager sees the site's labour cost only as
+the aggregate `direct_labour` figure in a `finance_reconciliations` row (§13), never a per-worker entry.
 
 ## 13. Reconciled finance import
 
@@ -292,12 +290,14 @@ Messaging transport state must not change attendance or task completion.
 The supervisor reset is scoped to the shared synthetic demo/site. It restores golden workflow data and associated private evidence without exposing a general destructive reset function to browser roles.
 
 When new demo-mutated tables are added, decide whether reset must restore/delete them and extend reset tests.
-The reset function `reset_hosted_demo` (migration `20260916192408`) predates CLEAN-027 and the equipment tables. Message
-contexts and media are removed indirectly (they cascade from the deleted webhook events and messages), but it does not
-touch `inventory_transactions` or `labor_cost_entries` (append-only for browser roles, so a Director's demo entries
-persist across resets) or `equipment_assets`. It is service-role only. The review page's synthetic preparation/correction
-helper (`submitSyntheticPair`) still depends on the local simulator flag, which production forces off, so preparing
-the walkthrough on a production build is currently blocked (issue #25).
+The reset function `reset_hosted_demo` (migration `20260916192408`, extended by `20260922031000`) is service-role
+only. Message contexts and media are removed indirectly (they cascade from the deleted webhook events and messages).
+It now also clears `inventory_transactions` and `labor_cost_entries` for the walkthrough site, so a Director's demo
+finance entries no longer survive a reset. It deliberately does not touch `equipment_assets`: that table is seeded
+fixture data with no application write path today (only `select` is granted to `authenticated`), so there is nothing
+for a demo to mutate there — add reset coverage only once a write path exists. The review page's synthetic
+preparation/correction helper (`submitSyntheticPair`) still depends on the local simulator flag, which production
+forces off, so preparing the walkthrough on a production build is currently blocked (issue #25).
 
 ## 16. Agent change checklist
 
