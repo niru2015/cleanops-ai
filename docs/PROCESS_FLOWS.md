@@ -290,12 +290,14 @@ Messaging transport state must not change attendance or task completion.
 The supervisor reset is scoped to the shared synthetic demo/site. It restores golden workflow data and associated private evidence without exposing a general destructive reset function to browser roles.
 
 When new demo-mutated tables are added, decide whether reset must restore/delete them and extend reset tests.
-The reset function `reset_hosted_demo` (migration `20260916192408`) predates CLEAN-027 and the equipment tables. Message
-contexts and media are removed indirectly (they cascade from the deleted webhook events and messages), but it does not
-touch `inventory_transactions` or `labor_cost_entries` (append-only for browser roles, so a Director's demo entries
-persist across resets) or `equipment_assets`. It is service-role only. The review page's synthetic preparation/correction
-helper (`submitSyntheticPair`) still depends on the local simulator flag, which production forces off, so preparing
-the walkthrough on a production build is currently blocked (issue #25).
+The reset function `reset_hosted_demo` (migration `20260916192408`, extended by `20260922031000`) is service-role
+only. Message contexts and media are removed indirectly (they cascade from the deleted webhook events and messages).
+It now also clears `inventory_transactions` and `labor_cost_entries` for the walkthrough site, so a Director's demo
+finance entries no longer survive a reset. It deliberately does not touch `equipment_assets`: that table is seeded
+fixture data with no application write path today (only `select` is granted to `authenticated`), so there is nothing
+for a demo to mutate there — add reset coverage only once a write path exists. The review page's synthetic
+preparation/correction helper (`submitSyntheticPair`) still depends on the local simulator flag, which production
+forces off, so preparing the walkthrough on a production build is currently blocked (issue #25).
 
 ## 16. Agent change checklist
 
