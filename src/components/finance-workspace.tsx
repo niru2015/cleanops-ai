@@ -6,6 +6,7 @@ import type { FinanceWorkspace } from "@/integrations/finance/supabase-finance";
 import type { FinanceImportPreview } from "@/services/finance-csv";
 
 const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
+const importedMoney = (amount: number, currency: string) => `${currency || "—"} ${amount.toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const now = () => new Date().toISOString();
 const date = () => new Date().toISOString().slice(0, 10);
 
@@ -52,9 +53,9 @@ export function FinanceWorkspace({
         {workspace.reconciliations.length ? workspace.reconciliations.map((entry) => {
           const margin = entry.revenue === 0 ? null : entry.contribution / entry.revenue;
           return <div className="financeMetricGrid" key={`${entry.period}-${entry.reconciledAt}`}>
-            <div><span>Revenue</span><strong>{money.format(entry.revenue)}</strong></div>
-            <div><span>Direct cost</span><strong>{money.format(entry.labour + entry.supplies + entry.repairs + entry.otherDirectCost)}</strong></div>
-            <div><span>Direct contribution</span><strong>{money.format(entry.contribution)}</strong></div>
+            <div><span>Revenue</span><strong>{importedMoney(entry.revenue, entry.currency)}</strong></div>
+            <div><span>Direct cost</span><strong>{importedMoney(entry.labour + entry.supplies + entry.repairs + entry.otherDirectCost, entry.currency)}</strong></div>
+            <div><span>Direct contribution</span><strong>{importedMoney(entry.contribution, entry.currency)}</strong></div>
             <div><span>Contribution margin</span><strong>{margin === null ? "N/A" : `${(margin * 100).toFixed(1)}%`}</strong></div>
             <p>{entry.period} · {entry.completeness} · reconciled {new Date(entry.reconciledAt).toLocaleString()}</p>
           </div>;
@@ -85,8 +86,8 @@ export function FinanceWorkspace({
             </form>
             {preview ? <div className="financeImportPreview">
               <div className="financeMetricGrid">
-                <div><span>Rows</span><strong>{preview.rows.length}</strong></div><div><span>Revenue</span><strong>{money.format(preview.totals.revenue)}</strong></div>
-                <div><span>Direct cost</span><strong>{money.format(preview.totals.directCost)}</strong></div><div><span>Contribution</span><strong>{money.format(preview.totals.directContribution)}</strong></div>
+                <div><span>Rows</span><strong>{preview.rows.length}</strong></div><div><span>Revenue</span><strong>{importedMoney(preview.totals.revenue, preview.currency)}</strong></div>
+                <div><span>Direct cost</span><strong>{importedMoney(preview.totals.directCost, preview.currency)}</strong></div><div><span>Contribution</span><strong>{importedMoney(preview.totals.directContribution, preview.currency)}</strong></div>
               </div>
               {preview.errors.map((message) => <p className="importIssue importIssueError" key={message}>{message}</p>)}
               {preview.warnings.map((message) => <p className="importIssue" key={message}>{message}</p>)}
