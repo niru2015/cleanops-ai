@@ -2,7 +2,7 @@
 
 Purpose: agent-readable business dictionary for the current CleanOps Supabase model. Exact SQL, constraints, grants, RLS and RPC behavior are owned by `supabase/migrations/`; if this file disagrees with a migration, the migration wins.
 
-Last reviewed: 2026-09-21 against migrations through `20260921070701_site_equipment_assets`.
+Last reviewed: 2026-09-22 against migrations through `20260922034200_clean_028_finance_ledger_edits`.
 
 ## Conventions
 
@@ -10,7 +10,7 @@ Last reviewed: 2026-09-21 against migrations through `20260921070701_site_equipm
 - Site-scoped operational records also carry `site_id`.
 - Supabase Auth identifies a person; app authorization comes from `memberships` plus `member_site_access`. `operations_manager` and `organization_administrator` are organization-wide in the app layer and do not need `member_site_access` rows; all other roles do.
 - Worker eligibility is separate from app access and uses `worker_site_permissions`.
-- Financial transaction rows are append-only for browser roles in the current slice. This is enforced by grants (`select, insert` only for `authenticated`), not by a trigger; see [Finance and inventory](#finance-and-inventory).
+- Financial transaction rows can be inserted by a Director; since issue #48 a Director can also edit or delete them, with every change audited and `organization_id`/`site_id`/`id` reassignment blocked by trigger. See [Finance and inventory](#finance-and-inventory).
 - Demo rows are flagged with `is_demo` (clients, sites, workers, equipment) so they can be told apart from real data.
 - `inventory_transactions.total_cost` and `labor_cost_entries.total_cost` are database-generated.
 - External messages, media and AI output are untrusted until validated/resolved.
@@ -137,7 +137,14 @@ Access (migrations `20260921051826_casino_demo_rbac_equipment`, `20260921120000_
 
 Known UI gap (not yet filed): `getFinanceWorkspace` still queries `labor_cost_entries` for every `/finance` viewer and `finance-workspace.tsx` renders the "Labour ledger" table unconditionally. RLS returns zero rows for an Area Manager rather than an error, so the table silently shows "No labour cost entries have been recorded." — indistinguishable from an actually empty ledger. The component should hide or relabel that section when `editable` is false.
 
-Append-only is grant-based: `authenticated` holds `select, insert` on both ledgers. The later migration also created `update` and `delete` policies for Directors, but with no matching grant they have no effect for browser roles; `service_role` can still modify rows. Owner decision 2026-09-21: grant Directors update and delete deliberately (issue #48), so these policies will become active and "append-only" will no longer hold. Until that migration lands, treat them as inert.
+A `before update or delete` trigger on both ledgers (`private.log_finance_ledger_change`) enforces edit/delete integrity:
+- Rejects any update that changes `organization_id`, `site_id` or `id`.
+- Writes a row to `finance_ledger_audit_events` for every real edit/delete, with the actor, action, and before/after state as JSON.
+- Skips the audit write (but still allows the operation) when there is no authenticated actor — this is what lets `reset_hosted_demo`'s bulk deletes work without failing; every Director-driven edit/delete goes through a real session and is still audited.
+
+`finance_ledger_audit_events` is a dedicated table, not a reuse of `reporting_audit_events`: its select policy matches the ledgers' own `can_view_site_finance` rule (Director or a granted Area Manager), whereas `reporting_audit_events` uses the broader `can_manage_site`, which would have let site supervisors and operations managers read finance edit history despite having no access to the ledgers themselves.
+
+Known UI gap (issue #55, not yet fixed on this branch): `getFinanceWorkspace` still queries `labor_cost_entries` for every `/finance` viewer and `finance-workspace.tsx` renders the "Labour ledger" table unconditionally. RLS returns zero rows for an Area Manager rather than an error, so the table silently shows "No labour cost entries have been recorded." — indistinguishable from an actually empty ledger.
 
 ## Official WhatsApp outbound
 
@@ -226,6 +233,8 @@ Text columns constrained by `check`:
 | `finance_source_rows.approval_state` | pending, approved, rejected |
 | `finance_source_rows.recognition_state` | actual, estimate, committed |
 | `finance_source_rows.allocation_state` | allocated, unallocated |
+| `finance_ledger_audit_events.ledger` | inventory_transaction, labor_cost_entry |
+| `finance_ledger_audit_events.action` | update, delete |
 
 ## Database functions (RPCs)
 
@@ -253,7 +262,7 @@ Business rules that live in the database. "Browser" means callable by `authentic
 | `stage_finance_csv_import` | browser | Director-only idempotent staging by file hash and mapping version. |
 | `accept_finance_import` | browser | Director-only validation, acceptance, supersession and persisted reconciliation. |
 
-Private helpers used by RLS (schema `private`, not callable by browsers): `has_org_role`, `has_site_access`, `has_operational_site_access`, `can_manage_site`, `can_administer_org`, `can_operate_org`, `is_active_member`, `can_view_site_finance`, `can_edit_site_finance`, `can_view_supply_catalogue`, `can_edit_supply_catalogue`, `resolve_review_actor`.
+Private helpers used by RLS (schema `private`, not callable by browsers): `has_org_role`, `has_site_access`, `has_operational_site_access`, `can_manage_site`, `can_administer_org`, `can_operate_org`, `is_active_member`, `can_view_site_finance`, `can_edit_site_finance`, `can_view_supply_catalogue`, `can_edit_supply_catalogue`, `resolve_review_actor`, `log_finance_ledger_change` (a `before update or delete` trigger function on both finance ledgers, not an RLS predicate).
 
 ## Not implemented (do not assume these exist)
 

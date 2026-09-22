@@ -5,7 +5,8 @@ Status: complete. GitHub issue: #41.
 ## Outcome
 
 Give a supervisor a secure queue to confirm WhatsApp message area, task and sender, and a Finance &
-Inventory screen for supplier/item setup plus append-only inventory and labour records.
+Inventory screen for supplier/item setup plus inventory and labour records (Director-editable since
+issue #48, with an audit trail).
 
 ## Acceptance
 

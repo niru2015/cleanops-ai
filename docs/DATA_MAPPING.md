@@ -2,7 +2,7 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last reviewed: 2026-09-21 against `main` at `e6aedc5`.
+Last reviewed: 2026-09-22, includes issue #48 (finance ledger edit/delete) on top of `main` at `9efa8d3`.
 
 ## Route summary
 
@@ -174,8 +174,10 @@ The entry forms are rendered only for Directors (`editable`). RLS independently 
 | Add item | `inventory_items` | organization, SKU, name, category, unit, reorder level |
 | Record stock movement | `inventory_transactions` | organization/site, vendor optional, item, type, quantity, unit cost, time, notes |
 | Record labour | `labor_cost_entries` | organization/site, worker/task optional, date, hours, hourly cost, cost type, notes |
+| Edit/delete inventory transaction | `inventory_transactions` | `update_inventory`/`delete_inventory` actions; scoped by `id` + `siteId` |
+| Edit/delete labour entry | `labor_cost_entries` | `update_labour`/`delete_labour` actions; scoped by `id` + `siteId` |
 
-`total_cost` is database-generated. Rows cannot currently be edited or deleted by browser roles; corrections are new adjustment/labour rows. Director update/delete is decided and tracked in issue #48.
+`total_cost` is database-generated and cannot be written directly. Since issue #48 (migration `20260922034200`), a Director can also edit and delete rows on either ledger; every edit/delete is audited in `finance_ledger_audit_events` and a trigger blocks reassigning a row's `organization_id`, `site_id` or `id`.
 
 Not implemented: revenue, cost import batches, source-document references and per-site profitability (issue #33). `source_message_id` exists on both ledgers but no UI sets it.
 

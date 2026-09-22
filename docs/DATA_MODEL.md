@@ -82,7 +82,9 @@ a supervisor confirms the area, task and sender. Raw message text remains worker
 to supervisors through a site-authorized queue RPC, never a browser table grant. Every record carries
 an organization scope; site, area, task, worker and source-message links use composite tenant foreign
 keys. Generated total-cost columns prevent inconsistent labour and inventory totals. Financial entries
-are append-only for browser roles in this slice (grants allow select and insert only): a correction is a new adjustment or labour entry.
+could only be inserted, not corrected, by browser roles until issue #48 (migration `20260922034200`) granted
+Directors update/delete on both ledgers, with every change audited in `finance_ledger_audit_events` and
+`organization_id`/`site_id`/`id` reassignment blocked by trigger.
 Since `20260921051826` the ledgers are readable only by Directors and granted Area Managers and writable only by Directors.
 The same migration adds `equipment_models` and `equipment_assets` and the `is_demo` flags; `20260921070701` grants them to `authenticated` read-only.
 

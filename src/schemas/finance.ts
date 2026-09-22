@@ -43,6 +43,40 @@ export const financeActionSchema = z.discriminatedUnion("action", [
     costType: z.enum(["regular", "overtime", "contractor"]),
     notes: z.string().trim().min(1).max(1_000).optional(),
   }).strict(),
+  z.object({
+    action: z.literal("update_inventory"),
+    id: uuid,
+    siteId,
+    vendorId: uuid.optional(),
+    inventoryItemId: uuid,
+    transactionType: z.enum(["receipt", "issue", "adjustment", "count"]),
+    quantity: z.number().finite().positive().max(1_000_000),
+    unitCost: money,
+    occurredAt: z.string().datetime({ offset: true }),
+    notes: z.string().trim().min(1).max(1_000).optional(),
+  }).strict(),
+  z.object({
+    action: z.literal("delete_inventory"),
+    id: uuid,
+    siteId,
+  }).strict(),
+  z.object({
+    action: z.literal("update_labour"),
+    id: uuid,
+    siteId,
+    workerId: uuid.optional(),
+    taskRunId: uuid.optional(),
+    workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    hours: z.number().finite().positive().max(24),
+    hourlyCost: money,
+    costType: z.enum(["regular", "overtime", "contractor"]),
+    notes: z.string().trim().min(1).max(1_000).optional(),
+  }).strict(),
+  z.object({
+    action: z.literal("delete_labour"),
+    id: uuid,
+    siteId,
+  }).strict(),
 ]);
 
 export const messageResolutionSchema = z.object({
