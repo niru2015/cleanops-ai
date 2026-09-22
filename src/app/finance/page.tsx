@@ -1,6 +1,8 @@
 import { AppShell } from "@/components/app-shell";
 import { FinanceWorkspace } from "@/components/finance-workspace";
+import { MessageContextQueue } from "@/components/message-context-queue";
 import { getFinanceWorkspace, type FinanceWorkspace as FinanceWorkspaceData } from "@/integrations/finance/supabase-finance";
+import { getMessageWorkspace, type MessageWorkspace } from "@/integrations/messages/supabase-message-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext, resolveSelectedSite, type AppAccessContext, type AccessSite } from "@/services/access-context";
 
@@ -11,6 +13,7 @@ type Loaded = {
   access: AppAccessContext;
   selectedSite: AccessSite | null;
   finance: FinanceWorkspaceData | null;
+  messages: MessageWorkspace | null;
 };
 
 export default async function FinancePage({
@@ -24,18 +27,21 @@ export default async function FinancePage({
     const access = await getAppAccessContext(client);
     const params = await searchParams;
     const selectedSite = resolveSelectedSite(access, params.siteId);
-    const finance =
+    const [finance, messages] =
       access.canViewFinance && selectedSite
-        ? await getFinanceWorkspace(client, selectedSite.id, access.canEditFinance)
-        : null;
-    loaded = { access, selectedSite, finance };
+        ? await Promise.all([
+            getFinanceWorkspace(client, selectedSite.id, access.canEditFinance),
+            getMessageWorkspace(client, access.userId, selectedSite.id),
+          ])
+        : [null, null];
+    loaded = { access, selectedSite, finance, messages };
   } catch {}
 
   if (!loaded) {
     return <AppShell currentPath="/finance"><section className="accessState"><p className="eyebrow">Finance &amp; inventory</p><h1>Sign in required</h1><p>Use a Director or Area Manager demo account.</p><a className="reviewButton reviewButton-primary" href="/login">Sign in</a></section></AppShell>;
   }
 
-  const { access, selectedSite, finance } = loaded;
+  const { access, selectedSite, finance, messages } = loaded;
 
   if (!access.canViewFinance) {
     return (
@@ -49,7 +55,7 @@ export default async function FinancePage({
     );
   }
 
-  if (!selectedSite || !finance) {
+  if (!selectedSite || !finance || !messages) {
     return (
       <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
         <section className="accessState">
@@ -82,6 +88,7 @@ export default async function FinancePage({
         <span className="recordLabel">{access.canEditFinance ? "Director · edit" : "Area Manager · read only"}</span>
       </section>
       <FinanceWorkspace workspace={finance} editable={access.canEditFinance} siteId={selectedSite.id} />
+      <MessageContextQueue workspace={messages} />
     </AppShell>
   );
 }

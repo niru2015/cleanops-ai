@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { financeActionSchema, messageResolutionSchema, type FinanceActionInput, type MessageResolutionInput } from "@/schemas/finance";
 import { resolveMessageContext } from "@/integrations/messages/supabase-message-context";
-import { DEMO_ORGANIZATION_ID, getOperationsRuntime } from "@/services/operations-runtime";
+import { DEMO_ORGANIZATION_ID } from "@/services/operations-runtime";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext, isSiteAllowed } from "@/services/access-context";
 import { createHash } from "node:crypto";
@@ -128,10 +128,17 @@ export async function performMessageResolution(input: MessageResolutionInput): P
   const parsed = messageResolutionSchema.safeParse(input);
   if (!parsed.success) return failure("The message categorization request was invalid.");
   try {
-    const runtime = await getOperationsRuntime("supervisor");
-    await resolveMessageContext(runtime.demo ? runtime.writeClient : runtime.accessClient, parsed.data);
+    const client = await createSupabaseServerClient();
+    const access = await getAppAccessContext(client);
+    // Confirming message context is an operational action, not a finance write: a granted Area
+    // Manager may confirm even though they cannot edit the finance ledgers (canEditFinance is
+    // Director-only). RLS (private.can_manage_site) independently allows both roles on their sites.
+    if (!access.canViewFinance || !isSiteAllowed(access, parsed.data.siteId)) {
+      return failure("Director or Area Manager access to this casino is required to confirm message context.");
+    }
+    await resolveMessageContext(client, parsed.data);
     revalidatePath("/finance");
-    return success("Message context confirmed by a supervisor. It can now support reporting and finance attribution.");
+    return success("Message context confirmed. It can now support reporting and finance attribution.");
   } catch {
     revalidatePath("/finance");
     return failure("The message context could not be updated. Review the selected site access and try again.");

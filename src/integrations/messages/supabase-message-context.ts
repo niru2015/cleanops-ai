@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { DEMO_ORGANIZATION_ID, DEMO_SITE_ID } from "@/services/operations-runtime";
+import { DEMO_ORGANIZATION_ID } from "@/services/operations-runtime";
 import type { MessageResolutionInput } from "@/schemas/finance";
 
 const uuid = z.string().uuid();
@@ -29,11 +29,11 @@ export type MessageWorkspace = {
 
 type MessageRow = { id: string; sender_id: string; text_content: string | null; occurred_at: string };
 
-export async function getMessageWorkspace(client: SupabaseClient, actorUserId: string): Promise<MessageWorkspace> {
+export async function getMessageWorkspace(client: SupabaseClient, actorUserId: string, siteId: string): Promise<MessageWorkspace> {
   const [contexts, zones, tasks, workers] = await Promise.all([
-    row(client.from("external_message_contexts").select("id,external_message_id,site_id,zone_id,task_run_id,sender_worker_id,sender_role,resolution_status,resolution_source,updated_at").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", DEMO_SITE_ID).order("updated_at", { ascending: false }).limit(25), z.array(contextSchema)),
-    row(client.from("site_zones").select("id,name").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", DEMO_SITE_ID).order("name"), z.array(zoneSchema)),
-    row(client.from("task_runs").select("id,state,service_tasks(name)").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", DEMO_SITE_ID).order("due_at"), z.array(taskSchema)),
+    row(client.from("external_message_contexts").select("id,external_message_id,site_id,zone_id,task_run_id,sender_worker_id,sender_role,resolution_status,resolution_source,updated_at").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", siteId).order("updated_at", { ascending: false }).limit(25), z.array(contextSchema)),
+    row(client.from("site_zones").select("id,name").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", siteId).order("name"), z.array(zoneSchema)),
+    row(client.from("task_runs").select("id,state,service_tasks(name)").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", siteId).order("due_at"), z.array(taskSchema)),
     row(client.from("workers").select("id,display_name").eq("organization_id", DEMO_ORGANIZATION_ID).order("display_name"), z.array(workerSchema)),
   ]);
   const messageIds = contexts.map((context) => context.external_message_id);
@@ -41,7 +41,7 @@ export async function getMessageWorkspace(client: SupabaseClient, actorUserId: s
   let media: z.infer<typeof mediaSchema>[] = [];
   if (messageIds.length) {
     const [messageResult, mediaResult] = await Promise.all([
-      client.rpc("list_site_external_messages", { p_site_id: DEMO_SITE_ID, p_limit: 25, p_actor_user_id: actorUserId }),
+      client.rpc("list_site_external_messages", { p_site_id: siteId, p_limit: 25, p_actor_user_id: actorUserId }),
       client.from("external_message_media").select("id,external_message_id,media_kind,mime_type,ingestion_status,storage_path").in("external_message_id", messageIds),
     ]);
     if (messageResult.error || mediaResult.error) throw new Error("Message records are unavailable.");

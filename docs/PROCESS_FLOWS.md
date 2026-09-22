@@ -95,10 +95,10 @@ Rules:
 - Do not assume arbitrary existing WhatsApp group access.
 - Raw message text is exposed only through the authorized RPC path.
 
-## 5. Supervisor message context review
+## 5. Director/Area Manager message context review
 
-**Currently unreachable from the UI.** The queue component and action exist but are not rendered since the
-role-scoped finance rework (PR #43); the flow below is the data path when it is mounted again on `/finance` (issue #50).
+Fixed (issue #50): re-mounted on `/finance`, scoped to the selected casino, for Director and Area Manager (not
+Site Supervisor — the route itself is Director/Area Manager only since PR #43's role-scoped finance rework).
 
 ```text
 external_message_contexts
@@ -106,16 +106,16 @@ external_message_contexts
 + external_message_media
         |
         v
-message queue UI (unmounted; formerly /finance)
+/finance message queue
         |
         v
-supervisor confirms area/task/sender role/worker
+Director or Area Manager confirms area/task/sender role/worker
         |
         v
 external_message_contexts resolution_status=confirmed
 ```
 
-Receiving-account site is a deterministic suggestion; supervisor confirms finer context.
+Receiving-account site is a deterministic suggestion; the confirming Director/Area Manager sets the finer context.
 
 ## 6. Evidence quality review and correction
 
