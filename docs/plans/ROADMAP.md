@@ -79,10 +79,11 @@ tables or code exist but the issue's acceptance criteria are not met. No item be
 | Issue | Work |
 |---|---|
 | #48 CLEAN-028 | Grant Directors update/delete on finance ledgers (ends grant-based append-only). |
-| #49 CLEAN-029 | Narrow supplier and inventory item visibility to Directors, Area Managers and Operations Managers. |
+| #49 CLEAN-029 | Done (PR #53, merged): supplier/inventory item catalogue narrowed to Director, Area Manager, Operations Manager. |
 | #50 CLEAN-030 | Restore the message-context queue on `/finance`, scoped to the selected site. |
 | #51 CLEAN-031 | ADR 008: real casino names stay, repository stays public, supply requests approved by managers and Directors. |
 | #55 CLEAN-032 | Fix: `/finance` labour ledger shows "no records" instead of "restricted" to Area Managers, after CLEAN-020 narrowed reads to Directors. |
+| — (CLEAN-012 follow-up) | Done (migration `20260922031000`): `reset_hosted_demo` now clears `inventory_transactions` and `labor_cost_entries` for the walkthrough site; `equipment_assets` intentionally excluded (no write path exists yet). Part of #25's acceptance criteria, not the whole issue. |
 
 ## Open decisions / owners
 
