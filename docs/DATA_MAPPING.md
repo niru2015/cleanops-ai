@@ -2,7 +2,7 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last reviewed: 2026-09-22, includes issues #48 and #55 on top of `main` at `9efa8d3`.
+Last reviewed: 2026-09-22, includes issue #48 (finance ledger edit/delete) on top of `main` at `9efa8d3`.
 
 ## Route summary
 

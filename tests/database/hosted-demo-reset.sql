@@ -72,6 +72,33 @@ update public.task_runs
    set state = 'submitted', submission_revision = 2
  where id = '81000000-0000-4000-8000-000000000001';
 
+-- CLEAN-012 follow-up: a Director's finance entries against the walkthrough site
+-- must not survive a reset (previously they did, since the function predated
+-- these tables).
+do $$
+declare
+  v_vendor uuid;
+  v_item uuid;
+begin
+  select id into v_vendor from public.vendors where organization_id = '10000000-0000-4000-8000-000000000001' order by name limit 1;
+  select id into v_item from public.inventory_items where organization_id = '10000000-0000-4000-8000-000000000001' order by name limit 1;
+  insert into public.inventory_transactions (
+    id, organization_id, site_id, vendor_id, inventory_item_id, transaction_type, quantity, unit_cost, occurred_at
+  ) values (
+    'ed000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
+    v_vendor, v_item, 'receipt', 2, 7.50, now()
+  );
+  insert into public.labor_cost_entries (
+    id, organization_id, site_id, work_date, hours, hourly_cost, cost_type
+  ) values (
+    'ee000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
+    current_date, 2, 24.50, 'regular'
+  );
+end;
+$$;
+
 create temporary table reset_paths (storage_path text);
 insert into reset_paths select * from public.reset_hosted_demo();
 
@@ -91,6 +118,12 @@ begin
   end if;
   if exists (select 1 from public.shift_assignments where id = 'e9000000-0000-4000-8000-000000000001') then
     raise exception 'reset retained the candidate assignment';
+  end if;
+  if exists (select 1 from public.inventory_transactions where id = 'ed000000-0000-4000-8000-000000000001') then
+    raise exception 'reset retained a demo inventory transaction';
+  end if;
+  if exists (select 1 from public.labor_cost_entries where id = 'ee000000-0000-4000-8000-000000000001') then
+    raise exception 'reset retained a demo labour cost entry';
   end if;
   if (select state from public.task_runs where id = '81000000-0000-4000-8000-000000000001') <> 'ready'
      or (select submission_revision from public.task_runs where id = '81000000-0000-4000-8000-000000000001') <> 0 then
