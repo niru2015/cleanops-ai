@@ -8,7 +8,7 @@ All roles require active organization membership; site-scoped roles also need si
 |---|---|
 | Cleaner | Own assigned work, own uploads/reports; no peer private records or approvals |
 | Site supervisor | Granted sites; resolve evidence, review quality, manage local actions |
-| Area manager | Explicitly granted sites; same review rights and aggregate reporting; read-only finance for granted sites |
+| Area manager | Explicitly granted sites; same review rights and aggregate reporting; read-only inventory ledger and finance reconciliation totals for granted sites; no labour ledger or import detail |
 | Operations manager | Organization operations; no other tenant; no finance access |
 | Organization administrator | Membership/integration configuration and organization operations; the only role that writes finance records |
 | Client viewer | Explicit client/site grants; released, redacted reports only |

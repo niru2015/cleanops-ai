@@ -239,7 +239,7 @@ vendor + item + site + quantity + unit cost
 ```
 
 Transaction types: receipt, issue, adjustment, count. Current ledger is append-only for browser roles (grants allow
-select and insert only). Only a Director can insert; a Director or a granted Area Manager can read a site's ledger.
+select and insert only; Director update/delete is decided but not yet granted, issue #48). Only a Director can insert; a Director or a granted Area Manager can read a site's ledger.
 An order is not consumption: `issue` records stock released to a site, not proof of use (issue #30).
 
 ## 12. Finance — labour
@@ -253,9 +253,9 @@ site + work date + hours + hourly cost + type
   -> labour ledger
 ```
 
-Cost types: regular, overtime, contractor. This is operational cost capture, not payroll. Same access rules as the
-inventory ledger. No revenue or imported accounting data exists yet, so no profitability or contribution can be
-computed from these tables (issue #33).
+Cost types: regular, overtime, contractor. This is operational cost capture, not payroll. Since CLEAN-020
+(`20260921230000`), this ledger is readable by a Director only; an Area Manager sees the site's labour cost only as
+the aggregate `direct_labour` figure in a `finance_reconciliations` row (§13), never a per-worker entry.
 
 ## 13. Reconciled finance import
 

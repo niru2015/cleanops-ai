@@ -149,7 +149,7 @@ AI score never directly approves work.
 
 ## /finance — supplier, inventory, labour
 
-Access: Directors read and write; Area Managers read the ledgers of their granted casinos only; every other role sees "Finance access restricted". A `siteId` query parameter (validated against the account's sites) selects the casino; the default is the first accessible site.
+Access: Directors read and write everything below; Area Managers read the inventory ledger and the accepted-import reconciliation summary (§/finance accounting imports) for their granted casinos, but not the labour ledger or any import detail; every other role sees "Finance access restricted". A `siteId` query parameter (validated against the account's sites) selects the casino; the default is the first accessible site.
 
 ### Reads
 
@@ -160,9 +160,11 @@ Access: Directors read and write; Area Managers read the ledgers of their grante
 | Worker options | `workers` (organization scoped) |
 | Task options | selected-site `task_runs` + `service_tasks` |
 | Inventory ledger | selected-site `inventory_transactions` + item/vendor joins |
-| Labour ledger | selected-site `labor_cost_entries` + worker join |
+| Labour ledger (Director only) | selected-site `labor_cost_entries` + worker join |
 
-The entry forms are rendered only for Directors (`editable`). RLS independently limits ledger reads to `private.can_view_site_finance` and inserts to `private.can_edit_site_finance`.
+The entry forms are rendered only for Directors (`editable`). RLS independently limits `inventory_transactions` reads to `private.can_view_site_finance`, `labor_cost_entries` reads to `private.can_administer_org` (Director only, since CLEAN-020) and both inserts to `private.can_edit_site_finance`.
+
+**Known gap:** `getFinanceWorkspace` queries `labor_cost_entries` for every viewer regardless of role, and the "Labour ledger" table at the bottom of `finance-workspace.tsx` is rendered unconditionally (outside the `editable` branch). RLS silently returns zero rows to an Area Manager instead of an error, so that viewer sees "No labour cost entries have been recorded." — indistinguishable from a genuinely empty ledger. Not yet filed as an issue.
 
 ### Writes (Directors only)
 
