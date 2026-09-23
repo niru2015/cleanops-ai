@@ -108,11 +108,16 @@ export function buildScenarioPlan(input, reference) {
         ?? personas.find(persona => persona.role === "cleaner") : null;
       return { key, category, vendor, cents, paymentMethod,
         siteIndex: appPersona?.siteIndex ?? siteIndex, sourceKind,
-        date: scenario.clock.start, projectReference: key === "fuel" ? "Synthetic one-off job" : null,
+        date: scenario.clock.start, projectReference: scenario.modules.projects && key === "fuel" ? "HASTINGS-DEEP-CLEAN" : key === "fuel" ? "Synthetic one-off job" : null,
         file: `${key}-receipt.png`, approved: true };
     });
     cases.push({ ...cases[0], key: "duplicate-fuel", file: cases[0].file,
       sourceKind: "whatsapp", approved: false });
+    if (scenario.modules.projects) cases.push({ key: "project-supply", category: "supplies",
+      vendor: "Demo Project Supplies", cents: 3200 + Math.floor(rng() * 300),
+      paymentMethod: "supplier_invoice", siteIndex: 0, sourceKind: "app",
+      date: scenario.clock.start, projectReference: "HASTINGS-DEEP-CLEAN",
+      file: "project-supply-receipt.png", approved: true });
     return cases;
   })() : null;
   const expenseCents = expenseCases?.filter((item) => item.approved).reduce((sum,item) => sum+item.cents,0) ?? 0;
@@ -137,7 +142,7 @@ export function buildScenarioPlan(input, reference) {
         shiftId: swapOriginal.shiftId, reuseShift: true },
       { key: "manual_project", workerId: primary.id, siteId: sites[0].id,
         date: "2026-09-15", status: "posted", costType: "regular",
-        projectReference: "Synthetic Hastings deep clean", hours: 3 },
+        projectReference: scenario.modules.projects ? "HASTINGS-DEEP-CLEAN" : "Synthetic Hastings deep clean", hours: 3 },
     ];
   })() : null;
   const labourCents = timeCases?.filter(item => item.status === "posted").reduce((sum, item) => {
@@ -145,6 +150,12 @@ export function buildScenarioPlan(input, reference) {
     const rate = item.costType === "overtime" ? 36 : item.date >= "2026-08-01" ? 27 : 24;
     return sum + Math.round(hours * rate * 100);
   }, 0) ?? 0;
+  const projects = scenario.modules.projects ? [
+    { id: id("project/hastings"), code: "HASTINGS-DEEP-CLEAN", name: "Synthetic Hastings deep clean",
+      scope: "Synthetic one-off deep clean with approved time, fuel and supplies.", quote: 120000 + Math.floor(rng() * 5000), recognized: 80000 + Math.floor(rng() * 3000), complete: true },
+    { id: id("project/incomplete"), code: "HASTINGS-REPAIR-PENDING", name: "Synthetic Hastings follow-up",
+      scope: "Synthetic follow-up project awaiting invoices and accounting close.", quote: 45000 + Math.floor(rng() * 3000), recognized: 0, complete: false },
+  ] : null;
   const expected = {
     schemaVersion: scenario.schemaVersion,
     generatorVersion: scenario.generatorVersion,
@@ -166,11 +177,19 @@ export function buildScenarioPlan(input, reference) {
       ...(timeCases ? ["missing_checkout", "worker_swap"] : [])],
     roleSiteAccess: personas.map((persona) => ({ persona: persona.key, role: persona.role, siteIds: persona.role === "organization_administrator" || persona.role === "operations_manager" ? sites.map((site) => site.id) : [sites[persona.siteIndex].id] })),
     reconciliation: { status: "not_implemented", matched: 0, unmatched: 0 },
-    stage: timeCases ? "B/contracts+expenses+time" : expenseCases ? "B/contracts+expenses" : contract ? "B/contracts" : "A/base-only",
+    stage: projects ? "B/contracts+expenses+time+projects" : timeCases ? "B/contracts+expenses+time" : expenseCases ? "B/contracts+expenses" : contract ? "B/contracts" : "A/base-only",
   };
+  if (projects) {
+    const projectExpenses = expenseCases.filter(item => item.approved && item.projectReference === projects[0].code);
+    const directCost = 3 * 27 * 100 + projectExpenses.reduce((sum,item) => sum + item.cents,0);
+    expected.projects = projects.map(item => ({ code: item.code, quote: (item.quote/100).toFixed(2),
+      recognized: (item.recognized/100).toFixed(2), directCost: item.complete ? (directCost/100).toFixed(2) : "0.00",
+      contribution: item.complete ? ((item.recognized-directCost)/100).toFixed(2) : null,
+      completeness: item.complete ? "complete" : "incomplete" }));
+  }
   if (contract) expected.entityCounts.contracts = 1;
   if (expenseCases) expected.entityCounts.expenseCandidates=expenseCases.length;
   if (timeCases) expected.entityCounts.timeEntries=timeCases.length;
   return { scenario, runId, organization, client, sites, workers, workerPermissions, memberGrants,
-    personas, contract, expenseCases, timeCases, expected };
+    personas, contract, expenseCases, timeCases, projects, expected };
 }

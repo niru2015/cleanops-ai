@@ -2,7 +2,7 @@
 
 Purpose: agent-readable business dictionary for the current CleanOps Supabase model. Exact SQL, constraints, grants, RLS and RPC behavior are owned by `supabase/migrations/`; if this file disagrees with a migration, the migration wins.
 
-Last reviewed: 2026-09-23 against migrations through `20260923112308_clean_035_finance_intake_expenses`.
+Last reviewed: 2026-09-23 against migrations through `20260923202018_clean_037_projects_revenue`.
 
 ## Conventions
 
@@ -272,7 +272,13 @@ Private helpers used by RLS (schema `private`, not callable by browsers): `has_o
 
 `docs/DATA_MODEL.md` lists logical tables that have no migration: `ai_decisions`, `ai_usage` (superseded by `quality_decisions` and `quality_ai_runs`) and a generic `audit_events` (superseded by `evidence_audit_events`, `review_audit_events` and `reporting_audit_events`).
 
-Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), supply requests/orders/stock (#30; only the `inventory_*` ledger exists), asset inspections/checklists/repair cost lines (#31; only the read-only `equipment_assets` register exists), absence register (#32), ad-hoc jobs (#65), handover and complaints (#36). CLEAN-020 implements neutral finance imports and reconciliation; it does not implement a Sage connector, GL, payments or payroll calculation.
+Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), supply requests/orders/stock (#30; only the `inventory_*` ledger exists), asset inspections/checklists/repair cost lines (#31; only the read-only `equipment_assets` register exists), absence register (#32), handover and complaints (#36). CLEAN-020 implements neutral finance imports and reconciliation; it does not implement a Sage connector, GL, payments or payroll calculation.
+
+### One-off projects — CLEAN-037
+
+`projects` contains the tenant/site-scoped operational scope, optional parent contract, code, state, dates, currency, Director activation and cost-close flags. `project_revenue_terms` holds the approved fixed quote or hourly billing rate; `project_billable_approvals` holds Director-approved billable hours linked to approved operational time; `project_invoices` records explicit invoiced amounts and references. `project_source_links` records Director attribution of immutable expense, inventory issue and accounting allocation rows. The source ledgers also have nullable composite-FK `project_id` columns; existing text references remain unresolved until matched to a project code or explicitly linked. Site mismatches fail the composite foreign keys or RPC checks.
+
+`list_finance_projects` returns expected, invoiced and recognized revenue separately, posted labour, non-capital expense, issued supplies and direct contribution. `list_finance_project_reconciliation` returns source counts for recognized, unresolved and incomplete allocations without exposing raw accounting rows to Area Managers. Recognized contribution and margin are null until cost close and complete accepted actual revenue. Accounting direct-cost allocations are reconciliation evidence, not a second addition to operational costs. Area Manager access is site aggregate only; terms, billable approvals, invoices and worker-level ledger values remain Director-only.
 
 ## CLEAN-022 contract foundation
 

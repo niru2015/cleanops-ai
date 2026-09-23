@@ -25,7 +25,7 @@ describe("CLEAN-015 Stage A scenario plan", () => {
     expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, contracts: true } }, reference)).toThrow("contracts require generatorVersion 2");
     expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, expenses: true } }, reference)).toThrow("expenses require generatorVersion 3");
     expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, time: true } }, reference)).toThrow("time requires generatorVersion 4");
-    expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, projects: true } }, reference)).toThrow("adapter is not implemented");
+    expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, projects: true } }, reference)).toThrow("projects require generatorVersion 5 with time and expenses");
     expect(() => buildScenarioPlan(scenario, { ...reference, personas: [reference.personas[0], reference.personas[0]] })).toThrow("Invalid reference pack");
   });
 

@@ -52,7 +52,7 @@ export function TimeWorkspace({ data, director }: { data: Workspace; director: b
     </section>
     <section className="financePanel"><h2>Time review</h2>
       {!visible.length && <p>No time entries yet for this casino.</p>}
-      {visible.map(entry => <article className="reviewCard" key={entry.id}>
+      {visible.map(entry => <article className="reviewCard" key={entry.id} id={entry.id}>
         <h3>{names.get(entry.worker_id) ?? "Worker"} · {entry.work_date} · {entry.state}</h3>
         <p>{siteNames.get(entry.site_id)} · {entry.source_type.replaceAll("_", " ")} · {entry.project_reference ?? "Shift"} · {entry.hours ?? "unresolved"} hours · {entry.cost_type}</p>
         {entry.exception_code && <p role="alert">Exception: {entry.exception_code.replaceAll("_", " ")}. Confirm the actual hours and cost class before approval.</p>}
