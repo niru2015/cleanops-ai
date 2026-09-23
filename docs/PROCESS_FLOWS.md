@@ -229,6 +229,16 @@ Client visibility requires explicit release and active client-viewer site author
 ## 11. Finance — supplier and inventory
 
 ```text
+Supabase Auth user -> active membership lookup (exactly one)
+  -> trusted organizationId + role -> allowed site set
+  -> validate selected site -> finance/message repositories and actions
+  -> RLS/RPC checks + composite organization/site foreign keys
+```
+
+No finance form or import payload chooses a trusted organization. Multiple active memberships
+fail closed until an explicit validated organization selector exists.
+
+```text
 create supplier -> vendors
 create item     -> inventory_items
 

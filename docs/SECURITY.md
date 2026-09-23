@@ -3,6 +3,13 @@
 ## Authorization matrix
 
 All roles require active organization membership; site-scoped roles also need site grants.
+Generic app access now derives `organizationId` from the authenticated user's active membership.
+With zero active memberships access is denied; with multiple active memberships the app fails closed
+until an explicit organization selector is built and validated server-side. Finance services receive
+this trusted organization plus a site selected from the membership's allowed-site set. A browser
+site ID never establishes organization membership. Hosted-demo constants remain confined to demo
+capability and provisioning code. Existing finance RLS and composite foreign keys also reject
+cross-organization/site records and guessed vendor, item, worker and task references.
 
 | Role | Allowed scope |
 |---|---|
