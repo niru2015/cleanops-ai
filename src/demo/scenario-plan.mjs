@@ -90,6 +90,32 @@ export function buildScenarioPlan(input, reference) {
         amendmentDate },
     };
   })() : null;
+  const expenseCases = scenario.modules.expenses ? (() => {
+    if (!personas.some((persona) => persona.role === "organization_administrator") ||
+      !personas.some((persona) => persona.role === "cleaner"))
+      throw new Error("Expense scenario requires Director and Cleaner personas.");
+    const base = [
+      ["fuel", "fuel_travel", "Demo Fuel", 4200, "employee_personal", 0, "whatsapp"],
+      ["meal", "meals", "Demo Cafe", 1825, "company_card", 0, "app"],
+      ["supply", "supplies", "Demo Supply", 6530, "supplier_invoice", 1 % sites.length, "app"],
+      ["repair", "equipment_repair", "Demo Repair", 12000, "company_card", 1 % sites.length, "app"],
+      ["equipment", "equipment_purchase", "Demo Equipment", 29900, "company_card", 0, "app"],
+    ];
+    const cases = base.map(([key, category, vendor, baseCents, paymentMethod, siteIndex, sourceKind]) => {
+      const cents = baseCents + Math.floor(rng() * 300);
+      const appPersona=sourceKind === "app" ? personas.find(persona =>
+        ["cleaner","area_manager"].includes(persona.role) && persona.siteIndex === siteIndex)
+        ?? personas.find(persona => persona.role === "cleaner") : null;
+      return { key, category, vendor, cents, paymentMethod,
+        siteIndex: appPersona?.siteIndex ?? siteIndex, sourceKind,
+        date: scenario.clock.start, projectReference: key === "fuel" ? "Synthetic one-off job" : null,
+        file: `${key}-receipt.png`, approved: true };
+    });
+    cases.push({ ...cases[0], key: "duplicate-fuel", file: cases[0].file,
+      sourceKind: "whatsapp", approved: false });
+    return cases;
+  })() : null;
+  const expenseCents = expenseCases?.filter((item) => item.approved).reduce((sum,item) => sum+item.cents,0) ?? 0;
   const expected = {
     schemaVersion: scenario.schemaVersion,
     generatorVersion: scenario.generatorVersion,
@@ -100,13 +126,19 @@ export function buildScenarioPlan(input, reference) {
     organizationId: organization.id,
     entityCounts: { organizations: 1, clients: 1, sites: sites.length, workers: workers.length, workerPermissions: workerPermissions.length, personas: personas.length, memberGrants: memberGrants.length },
     controlTotals: { siteCount: sites.length, workerCount: workers.length,
-      finance: contract ? { contracts: 1, expectedRevenue: contract.expected.expectedRevenue,
-        currency: contract.expected.currency, currentRevenueEntries: contract.expected.currentRevenueEntries } : null },
-    expectedExceptions: [],
+      finance: contract || expenseCases ? { contracts: contract ? 1 : 0,
+        expectedRevenue: contract?.expected.expectedRevenue ?? "0.00",
+        currency: "CAD", currentRevenueEntries: contract?.expected.currentRevenueEntries ?? 0,
+        approvedExpenseCost: (expenseCents/100).toFixed(2),
+        expenseByCategory: Object.fromEntries((expenseCases??[]).filter(item=>item.approved)
+          .map(item=>[item.category,(item.cents/100).toFixed(2)])) } : null },
+    expectedExceptions: expenseCases ? ["duplicate_whatsapp_receipt"] : [],
     roleSiteAccess: personas.map((persona) => ({ persona: persona.key, role: persona.role, siteIds: persona.role === "organization_administrator" || persona.role === "operations_manager" ? sites.map((site) => site.id) : [sites[persona.siteIndex].id] })),
     reconciliation: { status: "not_implemented", matched: 0, unmatched: 0 },
-    stage: contract ? "B/contracts" : "A/base-only",
+    stage: expenseCases ? "B/contracts+expenses" : contract ? "B/contracts" : "A/base-only",
   };
   if (contract) expected.entityCounts.contracts = 1;
-  return { scenario, runId, organization, client, sites, workers, workerPermissions, personas, memberGrants, contract, expected };
+  if (expenseCases) expected.entityCounts.expenseCandidates=expenseCases.length;
+  return { scenario, runId, organization, client, sites, workers, workerPermissions, memberGrants,
+    personas, contract, expenseCases, expected };
 }

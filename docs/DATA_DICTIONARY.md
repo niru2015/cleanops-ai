@@ -2,7 +2,7 @@
 
 Purpose: agent-readable business dictionary for the current CleanOps Supabase model. Exact SQL, constraints, grants, RLS and RPC behavior are owned by `supabase/migrations/`; if this file disagrees with a migration, the migration wins.
 
-Last reviewed: 2026-09-23 against migrations through `20260923082248_clean_034_contract_document_extraction`.
+Last reviewed: 2026-09-23 against migrations through `20260923112308_clean_035_finance_intake_expenses`.
 
 ## Conventions
 
@@ -34,9 +34,9 @@ Role capabilities as implemented in `src/services/access-context.ts` and the fin
 |---|---|---|---|---|---|
 | `organization_administrator` (label "Director") | all org sites | yes | view + edit | yes | yes |
 | `operations_manager` | all org sites | yes | **no** | no | yes |
-| `area_manager` | granted sites | yes | view only, granted sites | no | yes |
-| `site_supervisor` | granted sites | yes | no | no | yes |
-| `cleaner` | granted sites | no | no | yes | no |
+| `area_manager` | granted sites | yes | view ledgers/import aggregates, submit and review expenses at granted sites; no cost posting | no | yes |
+| `site_supervisor` | granted sites | yes | no finance ledger; expense submission | no | yes |
+| `cleaner` | granted sites | no | expense submission only | yes | no |
 | `client_viewer` | granted sites | no | no | no | released client report only |
 
 ## People, work and staffing
@@ -303,6 +303,22 @@ Migration `20260923082248_clean_034_contract_document_extraction.sql` adds a pri
 | `contract_extraction_decisions` | One immutable human accept/edit/reject/unknown decision per proposal, with reviewed value, actor/time/reason and canonical draft row pointer when applied. |
 
 Direct browser grants on these tables are read-only. Directors and granted Area Managers can read source metadata/runs and all proposals for their sites; Operations Managers can read only operational proposals/decisions and cannot fetch originals or commercial values. The `review_contract_extraction_proposal` RPC checks draft state and role, applies supported accepted/edited values to the CLEAN-022 canonical draft, and records the decision in one transaction. Non-canonical reporting prose remains a review note. A version cannot be approved while a matched source proposal has no human decision. The source document and machine proposal remain separate from the canonical draft.
+
+## CLEAN-035 Finance Inbox and operational expenses
+
+Migration `20260923112308_clean_035_finance_intake_expenses.sql` owns the private `expense-receipts` bucket and these tenant-scoped records:
+
+| Table | Meaning |
+|---|---|
+| `finance_intake_items` | Durable WhatsApp/app candidate, original source pointer/text, machine proposal, site/project hint and human review state. A candidate has no cost effect. |
+| `expense_documents` | Staged or byte-verified receipt metadata and extraction provenance; ready receipts have SHA-256, size and verification time. Originals stay in private Storage. |
+| `expense_claims` | Human-reviewed category, vendor, date, payment method, currency, total, context and revision. `receipt_sha256` is unique among posted/reconciled claims per organization. Equipment purchases carry `asset_review_required`; employee-paid claims carry separate reimbursement status. |
+| `expense_items` | One classified direct-cost line for the reviewed claim; further line detail can be added by a later owner. |
+| `expense_allocations` | Positive site/project shares that must sum to the reviewed total. Project is a reference pending #65. |
+| `expense_postings` | Immutable approved cost per allocation with source claim/revision and approving Director; approval retry adds no row. |
+| `expense_audit_events` | Immutable submission review, rejection and posting history with actor and reason. |
+
+`submit_app_finance_intake` accepts an assigned-site cleaner/supervisor/Area Manager message; an `external_messages` trigger creates a WhatsApp candidate for expense terms. `resolve_finance_intake` and `reject_finance_intake` require a Director or granted Area Manager; `approve_finance_expense` requires a Director, a verified receipt, balanced allocations and resolved context. All three use server-side role/site checks; browser table access is read-only and role-scoped. CLEAN-035 postings are operational direct costs, not CLEAN-020 accounting imports or payroll/payment records.
 
 ## Agent guidance
 

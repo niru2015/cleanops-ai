@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { buildScenarioPlan } from "../src/demo/scenario-plan.mjs";
 import { contractSourceLines, hashFixture, scannedContractPng,
   simpleContractPdf } from "../src/demo/contract-document-fixtures.mjs";
+import { expenseMessage, receiptSha, syntheticReceipt } from "../src/demo/expense-fixtures.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const outputRoot = join(root, "fixtures", "generated");
@@ -56,7 +57,7 @@ function connectLocal() {
   localAuth = { url, anonKey, jwtSecret };
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
-function directorClient(userId) {
+function personaClient(userId) {
   if (!localAuth || !/^[0-9a-f-]{36}$/.test(userId)) throw new Error("Local Director persona is unavailable.");
   const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
   const header = encode({ alg: "HS256", typ: "JWT" });
@@ -85,7 +86,7 @@ function assertIdSet(actual, planned, table, allowPartial = false) {
     throw new Error(`${table} differs from the scenario registry; refusing to touch other data.`);
   }
 }
-async function assertScope(client, plan, allowPartial = false) {
+async function assertScope(client, plan, allowPartial = false, registry = null) {
   const org = await checked(client.from("organizations").select("id,slug").eq("id", plan.organization.id).maybeSingle(), "Read scenario organization");
   if (org && org.slug !== plan.organization.slug) throw new Error("Scenario organization ID belongs to a different slug.");
   if (!allowPartial && !org) throw new Error("Scenario organization is missing.");
@@ -97,6 +98,7 @@ async function assertScope(client, plan, allowPartial = false) {
   ];
   for (const [table, planned] of tables) assertIdSet(await rowsFor(client, table, plan.organization.id), planned, table, allowPartial);
   if (plan.contract) await assertContractScope(client, plan, allowPartial);
+  if (plan.expenseCases) await assertExpenseScope(client,plan,registry,allowPartial);
   return org;
 }
 const contractTables = ["contract_events", "contract_financial_terms", "contract_obligations",
@@ -170,10 +172,57 @@ async function assertContractScope(client, plan, allowPartial) {
     }
   }
 }
-async function countAttached(organizationId, hasContracts) {
+async function assertExpenseScope(client,plan,registry,allowPartial){
+  if(!registry?.expenses) {
+    if(allowPartial)return;
+    throw new Error("Expense scenario registry missing.");
+  }
+  const rows=registry.expenses.rows;
+  const checks=[
+    ["integration_accounts",[registry.expenses.accountId]],
+    ["integration_webhook_events",rows.map(row=>row.eventId).filter(Boolean)],
+    ["processing_jobs",rows.map(row=>row.jobId).filter(Boolean)],
+    ["finance_intake_items",rows.map(row=>row.intakeId)],
+    ["expense_claims",rows.map(row=>row.claimId)],
+    ["expense_documents",rows.map(row=>row.documentId)],
+    ["expense_postings",rows.flatMap(row=>row.postingIds)],
+    ["external_messages",rows.map(row=>row.messageId).filter(Boolean)],
+    ["task_evidence",rows.map(row=>row.evidenceId).filter(Boolean)],
+  ];
+  for(const [table,planned] of checks){
+    const actual=await rowsFor(client,table,plan.organization.id);
+    assertIdSet(actual,planned,table,allowPartial);
+  }
+  const linked=[
+    ["expense_items","claim_id",rows.map(row=>row.claimId)],
+    ["expense_allocations","claim_id",rows.map(row=>row.claimId)],
+    ["expense_audit_events","intake_id",rows.map(row=>row.intakeId)],
+    ["external_message_contexts","external_message_id",rows.map(row=>row.messageId).filter(Boolean)],
+    ["external_message_media","external_message_id",rows.map(row=>row.messageId).filter(Boolean)],
+  ];
+  for(const [table,key,parents] of linked){
+    const actual=await checked(client.from(table).select(key)
+      .eq("organization_id",plan.organization.id),`Read ${table} scope`);
+    if(actual.some(row=>!parents.includes(row[key])))
+      throw new Error(`${table} has records outside the scenario source scope; refusing reset.`);
+  }
+  if(!allowPartial){
+    if(rows.length!==plan.expenseCases.length)throw new Error("Expense case count differs from manifest.");
+    const postings=await checked(client.from("expense_postings").select("amount,category")
+      .eq("organization_id",plan.organization.id),"Read expense totals");
+    const cents=postings.reduce((sum,row)=>sum+Math.round(Number(row.amount)*100),0);
+    if((cents/100).toFixed(2)!==plan.expected.controlTotals.finance.approvedExpenseCost)
+      throw new Error("Approved expense cost differs from the scenario manifest.");
+  }
+}
+async function countAttached(organizationId, hasContracts, hasExpenses) {
   if (!/^[0-9a-f-]{36}$/.test(organizationId) || !localDatabaseUrl) throw new Error("Invalid local reset scope.");
   const baseTables = new Set(["clients", "sites", "workers", "worker_site_permissions", "memberships", "member_site_access"]);
   if (hasContracts) for (const table of contractTables) baseTables.add(table);
+  if (hasExpenses) for(const table of ["integration_accounts","integration_webhook_events",
+    "processing_jobs","external_messages","external_message_contexts","external_message_media",
+    "task_evidence","finance_intake_items","expense_documents","expense_claims","expense_items",
+    "expense_allocations","expense_postings","expense_audit_events"])baseTables.add(table);
   const names = execFileSync("psql", [localDatabaseUrl, "-At", "-c", "select table_name from information_schema.columns where table_schema='public' and column_name='organization_id' order by table_name"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   const tables = names.trim().split("\n").filter((table) => table && !baseTables.has(table));
   if (tables.some((table) => !/^[a-z][a-z0-9_]*$/.test(table))) throw new Error("Unexpected table name in local schema.");
@@ -201,7 +250,7 @@ async function generateContracts(client, plan, registry) {
   const directorIndex = plan.personas.indexOf(director);
   const directorId = registry.authUserIds[directorIndex];
   if (!directorId) throw new Error("Contract builder requires its generated Director persona.");
-  const actor = directorClient(directorId);
+  const actor = personaClient(directorId);
   const contract = plan.contract;
   await checked(client.from("site_zones").insert(contract.zone), "Create contract zone");
   await checked(client.from("contracts").insert({ ...contract.identity, created_by: directorId }), "Create manual contract source");
@@ -239,6 +288,127 @@ async function writeContractDocumentPack(directory, contract) {
         page: 1 }, ambiguous: "Payment terms: TBD;" },
   });
 }
+async function writeExpenseReceiptPack(directory,plan){
+  if(!plan.expenseCases)return null;
+  const files={};
+  for(const item of plan.expenseCases){
+    if(files[item.file])continue;
+    const bytes=await syntheticReceipt(item,plan.sites[item.siteIndex].name);
+    await writeFile(join(directory,item.file),bytes);
+    files[item.file]={sha256:receiptSha(bytes),bytes:bytes.length};
+  }
+  const manifest={schemaVersion:1,cases:plan.expenseCases.map(item=>({
+    key:item.key,category:item.category,site:plan.sites[item.siteIndex].name,
+    date:item.date,total:(item.cents/100).toFixed(2),currency:"CAD",file:item.file,
+    sourceText:expenseMessage(item,plan.sites[item.siteIndex].name),approved:item.approved,
+  })),files,approvedExpenseCost:plan.expected.controlTotals.finance.approvedExpenseCost,
+    duplicate:"duplicate-fuel uses fuel-receipt.png and must not create another posting"};
+  await atomicJson(join(directory,"expense-receipts.json"),manifest);
+  return manifest;
+}
+async function generateExpenses(client,plan,registry,directory){
+  if(!plan.expenseCases)return;
+  const director=plan.personas.find(persona=>persona.role==="organization_administrator");
+  const directorId=registry.authUserIds[plan.personas.indexOf(director)];
+  const directorActor=personaClient(directorId);
+  const account={id:sqlId(`expense-account:${plan.runId}`),organization_id:plan.organization.id,
+    site_id:plan.sites[0].id,provider:"mock_legacy_whatsapp_group",
+    external_account_id:`scenario-${plan.scenario.scenarioId}-expense`,display_name:"Synthetic Expense Inbox"};
+  await checked(client.from("integration_accounts").insert(account),"Create scenario message account");
+  registry.expenses={accountId:account.id,rows:[]};
+  await atomicJson(join(directory,"registry.json"),registry);
+  for(const item of plan.expenseCases){
+    const site=plan.sites[item.siteIndex];
+    const sourceText=expenseMessage(item,site.name);
+    let intakeId;
+    let messageId=null;
+    let eventId=null;
+    let jobId=null;
+    let evidenceId=null;
+    if(item.sourceKind==="whatsapp"){
+      const payload={source:"synthetic-demo",key:item.key};
+      const accepted=await checked(client.rpc("accept_mock_ingress_event",{
+        p_external_account_id:account.external_account_id,p_provider_event_id:`scenario-${item.key}`,
+        p_dedupe_key:`${plan.runId}-${item.key}`,p_payload:payload,
+        p_payload_sha256:receiptSha(Buffer.from(JSON.stringify(payload))),
+      }),`Accept ${item.key} WhatsApp event`);
+      eventId=accepted[0].event_id;jobId=accepted[0].job_id;
+      const claimed=await checked(client.rpc("claim_processing_job",{
+        p_worker_id:`scenario-${plan.runId}`,p_lease_seconds:60}),`Claim ${item.key} message job`);
+      if(claimed?.[0]?.job_id!==jobId)throw new Error(`Scenario message queue selected another job for ${item.key}.`);
+      await checked(client.rpc("complete_processing_job",{
+        p_job_id:jobId,p_worker_id:`scenario-${plan.runId}`,
+        p_messages:[{externalMessageId:`scenario-${plan.runId}-${item.key}`,
+          externalThreadId:"expense-demo",senderId:"synthetic-worker",
+          occurredAt:`${item.date}T12:00:00Z`,text:sourceText,
+          mediaRefs:[{externalId:`receipt-${item.key}`,contentType:"image/png"}]}],
+      }),`Normalize ${item.key} message`);
+      const message=await checked(client.from("external_messages").select("id")
+        .eq("integration_account_id",account.id)
+        .eq("external_message_id",`scenario-${plan.runId}-${item.key}`).single(),
+      `Find ${item.key} message`);
+      messageId=message.id;
+      const intake=await checked(client.from("finance_intake_items").select("id")
+        .eq("source_message_id",messageId).single(),`Find ${item.key} candidate`);
+      intakeId=intake.id;
+    }else{
+      const persona=plan.personas.find(p=>["cleaner","area_manager"].includes(p.role)
+        &&p.siteIndex===item.siteIndex);
+      if(!persona)throw new Error(`No app expense persona for ${item.key}.`);
+      const userId=registry.authUserIds[plan.personas.indexOf(persona)];
+      intakeId=await checked(personaClient(userId).rpc("submit_app_finance_intake",
+        {p_site_id:site.id,p_text:sourceText}),`Submit ${item.key} app expense`);
+    }
+    const bytes=await readFile(join(directory,item.file));
+    const sha256=receiptSha(bytes);
+    const storageBucket=item.sourceKind==="whatsapp"?"operational-evidence":"expense-receipts";
+    const storagePath=`${plan.organization.id}/expense-scenario/${plan.runId}/${item.key}.png`;
+    await checked(client.storage.from(storageBucket).upload(storagePath,bytes,
+      {contentType:"image/png",upsert:false}),`Store ${item.key} receipt`);
+    let documentId;
+    if(messageId){
+      const evidence=await checked(client.from("task_evidence").insert({
+        organization_id:plan.organization.id,integration_account_id:account.id,
+        external_message_id:messageId,media_external_id:`receipt-${item.key}`,
+        processing_status:"ready",linkage_status:"unresolved",storage_path:storagePath,
+        content_type:"image/png",byte_size:bytes.length,sha256,received_at:`${item.date}T12:01:00Z`,
+      }).select("id").single(),`Link ${item.key} receipt media`);
+      evidenceId=evidence.id;
+      const document=await checked(client.from("expense_documents").select("id")
+        .eq("source_evidence_id",evidenceId).single(),`Find ${item.key} expense document`);
+      documentId=document.id;
+    }else{
+      const document=await checked(client.from("expense_documents").insert({
+        organization_id:plan.organization.id,intake_id:intakeId,storage_bucket:storageBucket,
+        storage_path:storagePath,declared_mime:"image/png",detected_mime:"image/png",
+        claimed_byte_size:bytes.length,byte_size:bytes.length,
+        claimed_sha256:sha256,sha256,status:"ready",verified_at:new Date().toISOString(),
+      }).select("id").single(),`Link ${item.key} app receipt`);
+      documentId=document.id;
+    }
+    const resolved=await checked(directorActor.rpc("resolve_finance_intake",{
+      p_intake_id:intakeId,p_site_id:site.id,p_category:item.category,p_vendor:item.vendor,
+      p_expense_date:item.date,p_payment_method:item.paymentMethod,p_currency:"CAD",
+      p_subtotal:null,p_tax:null,p_total:item.cents/100,
+      p_description:`Synthetic ${item.category.replaceAll("_"," ")} receipt`,
+      p_project_reference:item.projectReference,p_reason:"Synthetic source reviewed",
+    }),`Review ${item.key} expense`);
+    let postingIds=[];
+    if(item.approved){
+      await checked(directorActor.rpc("approve_finance_expense",{p_claim_id:resolved}),
+        `Approve ${item.key} expense`);
+      postingIds=ids(await checked(client.from("expense_postings").select("id")
+        .eq("claim_id",resolved),`Read ${item.key} postings`));
+    }else{
+      const duplicate=await directorActor.rpc("approve_finance_expense",{p_claim_id:resolved});
+      if(!duplicate.error||!duplicate.error.message.includes("Duplicate receipt"))
+        throw new Error("Duplicate receipt unexpectedly posted.");
+    }
+    registry.expenses.rows.push({key:item.key,intakeId,claimId:resolved,documentId,messageId,
+      eventId,jobId,evidenceId,storageBucket,storagePath,postingIds});
+    await atomicJson(join(directory,"registry.json"),registry);
+  }
+}
 async function generate(name, seed) {
   const plan = await loadPlan(name, seed); // Validate before any writes.
   const directory = join(outputRoot, name);
@@ -253,6 +423,7 @@ async function generate(name, seed) {
   await atomicJson(join(directory, "expected.json"), plan.expected);
   try {
     await writeContractDocumentPack(directory, plan.contract);
+    await writeExpenseReceiptPack(directory,plan);
     await checked(client.from("organizations").insert(plan.organization), "Create scenario organization");
     await checked(client.from("clients").insert(plan.client), "Create scenario client");
     await checked(client.from("sites").insert(plan.sites), "Create scenario sites");
@@ -272,10 +443,11 @@ async function generate(name, seed) {
     }
     if (plan.memberGrants.length) await checked(client.from("member_site_access").insert(plan.memberGrants), "Grant persona sites");
     await generateContracts(client, plan, registry);
-    await assertScope(client, plan);
+    await generateExpenses(client,plan,registry,directory);
+    await assertScope(client, plan, false,registry);
     registry.status = "ready";
     await atomicJson(registryPath, registry);
-    console.log(`Generated ${name} (seed ${plan.scenario.seed}): ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? ", one approved contract and future amendment" : ""}.`);
+  console.log(`Generated ${name} (seed ${plan.scenario.seed}): ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? ", one approved contract and future amendment" : ""}${plan.expenseCases ? `, ${plan.expenseCases.length} expense sources` : ""}.`);
   } catch (error) {
     registry.status = "partial";
     await atomicJson(registryPath, registry);
@@ -296,7 +468,7 @@ async function assertScenario(name) {
   const { directory, registry, plan } = await loadRegistry(name);
   if (registry.status !== "ready") throw new Error(`Scenario ${name} is ${registry.status}; reset and regenerate.`);
   const client = connectLocal();
-  await assertScope(client, plan);
+  await assertScope(client, plan, false,registry);
   const users = await listScenarioUsers(client, plan);
   if (users.length !== plan.personas.length) throw new Error("Scenario Auth persona count differs from expected.");
   if (plan.contract) {
@@ -307,15 +479,50 @@ async function assertScenario(name) {
         throw new Error(`Synthetic contract document ${file} differs from its manifest.`);
     }
   }
-  console.log(`Scenario ${name} matches its manifest: ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? `, ${plan.contract.expected.expectedRevenue} CAD current expected revenue` : ""}.`);
+  if(plan.expenseCases){
+    const pack=await json(join(directory,"expense-receipts.json"));
+    for(const [file,expected] of Object.entries(pack.files)){
+      const bytes=await readFile(join(directory,file));
+      if(receiptSha(bytes)!==expected.sha256||bytes.length!==expected.bytes)
+        throw new Error(`Synthetic receipt ${file} differs from the manifest.`);
+    }
+  }
+  console.log(`Scenario ${name} matches its manifest: ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? `, ${plan.contract.expected.expectedRevenue} CAD current expected revenue` : ""}${plan.expenseCases ? `, ${plan.expected.controlTotals.finance.approvedExpenseCost} CAD approved expense cost` : ""}.`);
 }
 async function reset(name) {
   const { directory, registry, plan } = await loadRegistry(name);
   const client = connectLocal();
-  const org = await assertScope(client, plan, true);
-  if (org) await countAttached(plan.organization.id, Boolean(plan.contract));
+  const org = await assertScope(client, plan, true,registry);
+  if (org) await countAttached(plan.organization.id, Boolean(plan.contract),Boolean(plan.expenseCases));
   registry.status = "resetting";
   await atomicJson(join(directory, "registry.json"), registry);
+  if(plan.expenseCases){
+    for(const row of registry.expenses?.rows??[]){
+      await checked(client.storage.from(row.storageBucket).remove([row.storagePath]),
+        `Remove ${row.key} receipt`);
+    }
+    // The local-only factory removes its preflight-verified organization in one
+    // transaction. Normal service/browser writes can never bypass immutability.
+    const scopedOrg=plan.organization.id;
+    if(!/^[0-9a-f-]{36}$/.test(scopedOrg))throw new Error("Invalid scenario organization ID.");
+    const localCleanup=`begin;
+      alter table public.expense_postings disable trigger expense_postings_immutable;
+      alter table public.expense_audit_events disable trigger expense_audit_immutable;
+      delete from public.expense_postings where organization_id='${scopedOrg}';
+      delete from public.expense_audit_events where organization_id='${scopedOrg}';
+      alter table public.expense_postings enable trigger expense_postings_immutable;
+      alter table public.expense_audit_events enable trigger expense_audit_immutable;
+      commit;`;
+    execFileSync("psql",[localDatabaseUrl,"-v","ON_ERROR_STOP=1","-c",localCleanup],
+      {encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+    for(const table of ["expense_allocations",
+      "expense_items","expense_claims","expense_documents","finance_intake_items",
+      "task_evidence","external_message_media","external_message_contexts","external_messages",
+      "processing_jobs","integration_webhook_events","integration_accounts"]){
+      await checked(client.from(table).delete().eq("organization_id",plan.organization.id),
+        `Delete ${table}`);
+    }
+  }
   if (plan.contract) {
     for (const table of ["contract_events", "contract_revenue_expectations", "sla_definitions",
       "shift_coverage_requirements", "shifts", "task_schedules", "service_tasks",
@@ -340,18 +547,24 @@ async function presenter(name) {
   const { registry, plan } = await loadRegistry(name);
   if (registry.status !== "ready") throw new Error(`Scenario ${name} is not ready.`);
   const lines = [
-    `# ${name} presenter guide (Stage A base only)`, "",
+    `# ${name} presenter guide (${plan.expected.stage})`, "",
     "All names and records are synthetic demo references; no customer relationship or measured performance is implied.", "",
     `Seed: ${plan.scenario.seed}. Sites: ${plan.sites.map((site) => site.name).join(", ")}.`,
     "Run npm run demo:assert -- " + name + " before presenting.",
     "Persona Auth records have no password until a protected provisioning step sets one.",
     plan.contract
-      ? `Contract ${plan.contract.identity.code}: fixed monthly source ${plan.contract.terms[0].amount} CAD, future amendment ${plan.contract.terms[1].amount} CAD from ${plan.contract.expected.amendmentDate}. Expected current revenue ${plan.contract.expected.expectedRevenue} CAD; inspect /finance/contracts. Expenses, time, projects and reconciliation remain pending.`
+      ? `Contract ${plan.contract.identity.code}: fixed monthly source ${plan.contract.terms[0].amount} CAD, future amendment ${plan.contract.terms[1].amount} CAD from ${plan.contract.expected.amendmentDate}. Expected current revenue ${plan.contract.expected.expectedRevenue} CAD; inspect /finance/contracts. Time, projects and reconciliation remain pending.`
       : "Finance, contracts, expenses, time, projects and reconciliation journeys are not generated by Stage A.",
     ...(plan.contract ? [
       `Document files: fixtures/generated/${name}/contract-source.pdf, contract-amendment.pdf and contract-scan.png.`,
       "For upload review, create a new manual draft at the generated site, upload contract-source.pdf, run extraction, and inspect source page 1 for fee, staffing and recurring work. Payment terms is deliberately TBD and must remain unresolved until a human decision.",
       "The amendment PDF is a separate synthetic changed source. No file contains real staff, patron or customer data.",
+    ] : []),
+    ...(plan.expenseCases ? [
+      `Expense sources: fixtures/generated/${name}/expense-receipts.json and the named synthetic PNG receipts. Approved direct expense cost ${plan.expected.controlTotals.finance.approvedExpenseCost} CAD.`,
+      "Open /finance/inbox. Fuel and duplicate-fuel are separate normalized WhatsApp messages with the same receipt bytes; only fuel posts. Meal, supplies, repair and equipment purchase use app submissions.",
+      "Open /finance/expenses for source text, receipt, human review, Director approval and allocated site/project posting. Equipment purchase is flagged for accounting/asset review.",
+      ...plan.expenseCases.map(item => `Message ${item.key}: ${expenseMessage(item,plan.sites[item.siteIndex].name)} Attach ${item.file}. Expected ${item.approved ? "approved cost" : "duplicate warning, no cost"}.`),
     ] : []),
   ];
   const output = `${lines.join("\n")}\n`;

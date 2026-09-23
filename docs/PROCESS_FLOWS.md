@@ -327,7 +327,15 @@ Extraction reads native PDF/DOCX text first, runs bounded English OCR only on im
 
 The review screen shows the source span and machine proposal separately. Accept/edit/reject/unknown invokes `review_contract_extraction_proposal`, which writes a human decision and any supported canonical draft value transactionally. Operations Managers may review only operational snippets and do not apply canonical rows. Director approval is blocked while any matched proposal remains undecided; CLEAN-022 still checks canonical effective dates, priced terms and obligation zones. Extraction and review never activate a version. Original files remain private, including after amendment supersession.
 
-## 18. Agent change checklist
+## 18. Finance Inbox to approved direct cost (CLEAN-035)
+
+1. An assigned-site app user submits text through `submit_app_finance_intake`, or durable normalized WhatsApp ingress creates a keyword-classified candidate. Both retain the original source and have zero cost effect. Evidence-linked media is recorded separately.
+2. An app receipt is uploaded directly into the private bucket under a scoped ticket. Finalization reloads and verifies bytes/MIME/size/hash. A source document remains linked to its intake; failed or missing media stays visible for review.
+3. Deterministic text/OCR parsing stores a validated proposal with provenance. It never changes canonical claim values. A Director or granted Area Manager checks source, site, category, vendor, date, payment method, amount and allocation, then calls the resolution RPC. Corrections/rejection are audited.
+4. Only the Director posts a submitted claim. The approval transaction locks the claim, verifies the receipt and totals, serializes by organization plus receipt hash, and creates one immutable posting per balanced allocation. A retry returns the posted claim; another source with the same receipt hash is rejected.
+5. The expense view drills back to the source and receipt. Employee-paid status does not create a payment. An equipment purchase is marked for later asset review. Accounting reconciliation remains a later #66 action.
+
+## 19. Agent change checklist
 
 Before changing a flow:
 

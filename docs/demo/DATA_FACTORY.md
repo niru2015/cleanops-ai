@@ -1,6 +1,6 @@
 # Deterministic demo scenarios (CLEAN-015 Stage A + CLEAN-022 contracts)
 
-Stage A creates base organizations, clients, sites, workers, memberships and site grants in **local Supabase only**. CLEAN-022 adds the first Stage B adapter: `finance-showcase` and `contract-smoke` now create a synthetic manual fixed-monthly contract and future amendment, replay Director approval/activation through production RPCs, and reconcile expected revenue. Expenses, time, projects, accounting reconciliation, equipment events, messages and reports remain ungenerated. `operations-showcase` and `edge-cases` still produce only the base layer. No dashboard total is inserted to make a demo look complete.
+Stage A creates base organizations, clients, sites, workers, memberships and site grants in **local Supabase only**. CLEAN-022 adds the first Stage B adapter: `finance-showcase` and `contract-smoke` create a synthetic manual fixed-monthly contract and future amendment, replay Director approval/activation through production RPCs, and reconcile expected revenue. CLEAN-035 adds Finance Inbox app/WhatsApp expense cases, verified synthetic receipts and approved direct-cost postings to `finance-showcase`. Time, canonical projects, accounting reconciliation, equipment events and reports remain ungenerated. `operations-showcase` and `edge-cases` still produce only the base layer. No dashboard total is inserted to make a demo look complete.
 
 ## Commands
 
@@ -15,6 +15,10 @@ npm run demo:generate -- stage-a-smoke --seed 20260923
 npm run demo:generate -- contract-smoke
 npm run demo:assert -- contract-smoke
 npm run demo:reset -- contract-smoke
+npm run demo:generate -- finance-showcase
+npm run demo:assert -- finance-showcase
+npm run demo:presenter -- finance-showcase
+npm run demo:reset -- finance-showcase
 ```
 
 The CLI obtains a local service key and database URL from `supabase status` and rejects non-local endpoints. `psql` is required for reset's read-only check across organization-scoped tables. It does not read a hosted project's secret from `.env.local`. The generated Auth personas have no password; a protected provisioning step must set one before sign-in. No browser reset endpoint exists.
@@ -22,7 +26,7 @@ The CLI obtains a local service key and database URL from `supabase status` and 
 ## Add a scenario
 
 1. Add `fixtures/scenarios/<name>/scenario.json`; its `scenarioId` must match the folder name. Copy `stage-a-smoke` and choose a seed, clock, site/worker counts, and `referencePack`.
-2. `modules.contracts: true` requires `generatorVersion: 2` and generates the CLEAN-022 contract slice. Other unsupported modules still fail validation before any database write. `cases` describe planned journey coverage and do not themselves create business facts.
+2. `modules.contracts: true` requires `generatorVersion: 2`; `modules.expenses: true` requires `generatorVersion: 3`. Other unsupported modules still fail validation before any database write. `cases` describe planned journey coverage and do not themselves create business facts.
 3. Run generate, assert, presenter, reset and regenerate locally. Add an assertion for each new module's source-backed totals when its adapter lands.
 4. Bump `schemaVersion` or `generatorVersion` when changing the meaning of IDs or generated facts. Do not make application code read `fixtures/generated`.
 
@@ -32,7 +36,7 @@ Zod validates the manifest and reference pack. SHA-256-derived UUIDv5-shaped IDs
 
 `fixtures/generated/<scenario-id>/registry.json` is a local, ignored service-tooling registry. It records the run, seed, generator version, organization ID, status and created Auth IDs. The scenario plan contains every base entity ID; the registry is written before database insertion and marked `partial` on failure. A partial run can be reset and regenerated. Reset checks the organization slug and planned base IDs, refuses deletion when the generated organization has unrelated operational/finance records, deletes only scenario-owned records, and removes only Auth users tagged with the scenario ID. Other tenant and legacy seed IDs are untouched. The contract adapter scopes source and generated rows by deterministic IDs or generated version links, reconciles current expected revenue, and deletes those rows in dependency order. Later adapters must extend the same preflight before writing more entities.
 
-`expected.json` contains the scenario version, seed, clock, source-backed entity counts, role/site matrix and explicit control totals. For a contract pack it includes current expected revenue, excluding superseded future expectations; accounting reconciliation remains not implemented. It is for assertions and demos only. The app never imports it. `demo:assert` queries the local database and fails if generated records or totals differ. `presenter-tests.md` is generated from the same plan and states which later journeys are not available.
+`expected.json` contains the scenario version, seed, clock, source-backed entity counts, role/site matrix and explicit control totals. For `finance-showcase` it includes current expected contract revenue and approved operational expense cost, excluding a deliberate duplicate receipt. Accounting reconciliation remains unimplemented. It is for assertions and demos only. The app never imports it. `demo:assert` queries the local database and fails if generated records or totals differ. `presenter-tests.md` is generated from the same plan and states which later journeys are not available.
 
 ## Reference names and privacy
 
@@ -42,4 +46,4 @@ The fourth finance-showcase site currently uses a fictional fallback until the o
 
 ## Stage B boundary
 
-Contract manual setup/activation (#35) is the first attached adapter. CLEAN-034 adds `contract-source.pdf`, `contract-amendment.pdf`, `contract-scan.png` and `contract-documents.json` to a generated contract scenario. The manifest records expected amount, staffing, recurring work, source page and the deliberately ambiguous `Payment terms: TBD` clause; `demo:assert` checks file hashes and the local scenario test parses both PDFs. `demo:presenter` names the exact files and an upload path through a new manual draft. These files are synthetic and are not silently attached to the already active scenario version. Expenses (#63), time/labour (#64), projects (#65), reconciliation (#66), supplies (#30), equipment (#31) and other adapters follow their owning schemas/services. The contract adapter uses local-only signed persona requests for real approval and activation RPCs; a direct source-row insert alone is not considered workflow verification. The full 10–15 minute finance showcase remains incomplete.
+Contract manual setup/activation (#35) is the first attached adapter. CLEAN-034 adds synthetic `contract-source.pdf`, `contract-amendment.pdf`, `contract-scan.png` and `contract-documents.json` with exact source expectations. CLEAN-035 adds `expense-receipts.json`, synthetic PNG receipts and presenter copy/paste messages to `finance-showcase`; it replays app/normalized WhatsApp intake, human resolution and Director approval through production RPCs. The deliberate duplicate reuses a receipt hash and must not add cost. `demo:assert` checks source hashes, posted count and total. These files are synthetic and are not silently attached to an existing active version. Time/labour (#64), projects (#65), reconciliation (#66), supplies (#30), equipment (#31) and other adapters follow their owning schemas/services. The full 10–15 minute finance showcase remains incomplete.

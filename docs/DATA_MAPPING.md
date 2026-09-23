@@ -2,7 +2,7 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last updated: 2026-09-23 for issue #62 on top of `main` at `fab8888`.
+Last updated: 2026-09-23 for issue #63.
 
 ## Route summary
 
@@ -13,8 +13,11 @@ Roles per route come from `src/config/navigation.ts` and the page guards; RLS/RP
 | `/login` | anonymous | `src/app/login`, hosted-demo services | Supabase Auth with a named demo persona selector. |
 | `/operations` | supervisor, area manager, operations manager, director | site-portfolio + operations Supabase integrations + actions | Portfolio of every accessible site; staffing, replacements, zones, review/correction/SLA risk for the walkthrough site. |
 | `/mobile` | cleaner, director | operations integration + mobile actions | Cleaner task context and before/after photo capture. |
+| `/mobile/expenses` | cleaner, site supervisor, area manager | expense submission and receipt actions | Assigned-site expense message and private receipt upload. |
 | `/review` | supervisor, area manager, operations manager, director | review Supabase integration + actions | Evidence pair, AI suggestion, findings, corrections, approval. |
 | `/finance` | area manager (read only), director (read + write) | finance integration + actions | Site-scoped supplier/item setup, inventory and labour ledgers. The WhatsApp context queue is **not mounted** (see below). |
+| `/finance/inbox` | granted area manager, director | expense integration + review actions | Candidate, source/receipt link, deterministic proposal and human resolution. |
+| `/finance/expenses` | granted area manager, director | expense integration + Director approval action | Reviewed claims, source drill-through, allocations and posted cost. |
 | `/incidents` | supervisor, area manager, operations manager, director | reporting integration + incident actions | Incident and equipment intake/correction. |
 | `/reports` | client viewer, supervisor, area manager, operations manager, director | reporting integration + report actions | SLA snapshot preparation and release. |
 | `/reports/client` | client viewer (and directors for inspection) | reporting integration | Released-only redacted client report. |
@@ -263,6 +266,20 @@ No repair completion is invented.
 5. Return redacted fields only.
 
 Client view does not expose raw evidence, private worker statements, raw messages or internal audit tables.
+
+## /mobile/expenses, /finance/inbox and /finance/expenses
+
+| UI/action | Source and effect |
+|---|---|
+| Assigned-site submission | `submit_app_finance_intake` writes `finance_intake_items` with authenticated submitter. The normalized WhatsApp `external_messages` trigger writes the other intake source. |
+| Receipt upload | A short scoped upload ticket permits direct private Storage upload. Server finalization reloads bytes, checks MIME signature, size and SHA-256, then marks `expense_documents` ready. |
+| Candidate/source | `src/integrations/finance/supabase-expenses.ts` reads role/site-scoped intake, document and claim rows. A signed download URL is issued only after the same read authorization. |
+| Suggestion | `suggestExpense` parses source text and bounded receipt text/OCR deterministically; validated proposed fields and extraction provenance are stored separately from the claim. |
+| Review/rejection | `resolve_finance_intake` or `reject_finance_intake` checks the active Director or granted Area Manager and records a human action in `expense_audit_events`. A review creates/updates a submitted claim, item and balanced allocation; it does not post cost. |
+| Approval | `approve_finance_expense` checks Director authorization, resolved site, verified receipt, item/total and allocations, and duplicate posted receipt hash. It atomically writes immutable `expense_postings` and audit; retry returns the existing claim. |
+| Posted expense | `/finance/expenses` shows source message, original receipt, site/project allocation, approval actor and direct cost. Employee reimbursement is a separate pending state; equipment purchase is flagged for asset review. |
+
+These postings do not mutate CLEAN-020 `finance_reconciliations`; #66 owns accounting reconciliation and period close.
 
 ## /finance accounting imports
 

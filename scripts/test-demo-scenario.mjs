@@ -28,6 +28,7 @@ function assert(value, message) { if (!value) throw new Error(message); }
 
 let created = false;
 let contractCreated = false;
+let financeCreated = false;
 try {
   const before = await Promise.all(seededOrganizations.map((id) => count("sites", id)));
   run("generate", scenarioName);
@@ -97,12 +98,36 @@ try {
   run("assert", "contract-smoke");
   run("reset", "contract-smoke");
   contractCreated = false;
-  console.log("Scenario CLI integration passed: base and contract recovery, approval, activation, revenue assertion, reset and tenant isolation.");
+  run("generate", "finance-showcase");
+  financeCreated = true;
+  run("assert", "finance-showcase");
+  const financeExpected = JSON.parse(await readFile("fixtures/generated/finance-showcase/expected.json", "utf8"));
+  const financeReceipts = JSON.parse(await readFile("fixtures/generated/finance-showcase/expense-receipts.json", "utf8"));
+  const financeSource = JSON.parse(await readFile("fixtures/scenarios/finance-showcase/scenario.json", "utf8"));
+  const financeReference = JSON.parse(await readFile("fixtures/reference/tornado-v1.json", "utf8"));
+  const financePlan = buildScenarioPlan(financeSource, financeReference);
+  const posted = await client.from("expense_postings").select("amount,category")
+    .eq("organization_id", financePlan.organization.id);
+  if (posted.error) throw posted.error;
+  const cents = posted.data.reduce((sum, row) => sum + Math.round(Number(row.amount) * 100), 0);
+  assert((cents / 100).toFixed(2) === financeExpected.controlTotals.finance.approvedExpenseCost,
+    "Expense postings do not reconcile to generated source costs.");
+  assert(posted.data.length === 5, "Duplicate WhatsApp receipt created an extra cost.");
+  assert(financeReceipts.cases.find((item) => item.key === "duplicate-fuel")?.file === "fuel-receipt.png",
+    "Duplicate case must reuse exact receipt bytes.");
+  run("reset", "finance-showcase");
+  financeCreated = false;
+  assert(await count("sites", financePlan.organization.id) === 0,
+    "Finance scenario tenant remained after reset.");
+  console.log("Scenario CLI integration passed: base, contracts, expenses, duplicate receipt, source totals, reset and tenant isolation.");
 } finally {
   if (created) {
     try { run("reset", scenarioName); } catch { console.error(`Manual cleanup may be needed: npm run demo:reset -- ${scenarioName}`); }
   }
   if (contractCreated) {
     try { run("reset", "contract-smoke"); } catch { console.error("Manual cleanup may be needed: npm run demo:reset -- contract-smoke"); }
+  }
+  if (financeCreated) {
+    try { run("reset", "finance-showcase"); } catch { console.error("Manual cleanup may be needed: npm run demo:reset -- finance-showcase"); }
   }
 }

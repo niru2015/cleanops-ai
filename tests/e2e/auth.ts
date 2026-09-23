@@ -12,5 +12,5 @@ export async function signInAs(page: Page, email: string | undefined) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Demo password").fill(password);
   await page.getByRole("button", { name: "Open demo workspace" }).click();
-  await page.waitForURL("**/operations");
+  await page.waitForURL(/\/(operations|mobile)$/);
 }
