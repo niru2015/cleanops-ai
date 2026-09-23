@@ -2,7 +2,7 @@
 
 > **Current priority (owner decision 2026-09-22): Finance is the highest-priority Tornado delivery track.**
 > Use GitHub issue **#61 (CLEAN-033 Finance Epic)** as the canonical finance implementation plan and **#28** as the canonical demo-data/scenario-factory plan.
-> For finance work, the current sequence is: **#55/#50 → #67 → #35 → #62 → #63 → #64 → #65 → #66 → #34 → #30/#31 → #37/#38**.
+> PR #60 / commit `121de26c` completed #50 and carried the #55 fix into `main`. For finance work, the current sequence is: **#67 → #28 Stage A → #35 → #62 → #63 → #64 → #65 → #66 → #34 → #30/#31 → #37/#38**. #28 Stage A may run in parallel with #67 on a separate branch/agent.
 > #28 Stage A (scenario framework) may proceed in parallel after the current finance-route fixes and must be extended by each owning finance issue as schemas land.
 > The older historical phase tables below describe how the repository reached its current state; they do **not** override #61/#28 for new Finance MVP work.
 
