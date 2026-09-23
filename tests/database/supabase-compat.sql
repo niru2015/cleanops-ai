@@ -7,6 +7,7 @@ create role service_role nologin bypassrls;
 
 create schema auth authorization postgres;
 create schema storage authorization postgres;
+create schema extensions authorization postgres;
 
 create table auth.users (
   id uuid primary key,

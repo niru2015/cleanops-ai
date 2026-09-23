@@ -101,6 +101,7 @@ async function assertScope(client, plan, allowPartial = false, registry = null) 
   if (plan.expenseCases) await assertExpenseScope(client,plan,registry,allowPartial);
   if (plan.timeCases) await assertTimeScope(client,plan,registry,allowPartial);
   if (plan.projects) await assertProjectScope(client,plan,registry,allowPartial);
+  if (plan.scenario.modules.reconciliation) await assertReconciliationScope(client,plan,registry,allowPartial);
   return org;
 }
 const contractTables = ["contract_events", "contract_financial_terms", "contract_obligations",
@@ -274,7 +275,7 @@ async function assertProjectScope(client,plan,registry,allowPartial){
   }
   for(const table of ["finance_import_batches","finance_source_rows","finance_source_allocations"]){
     const actual=await rowsFor(client,table,plan.organization.id);
-    const planned=registry.projects?.accounting?.[table]??[];
+    const planned=[...(registry.projects?.accounting?.[table]??[]),...(registry.reconciliation?.accounting?.[table]??[])];
     assertIdSet(actual,planned,table,allowPartial);
   }
   if(allowPartial)return;
@@ -297,7 +298,8 @@ async function assertProjectScope(client,plan,registry,allowPartial){
   const actualSiteCents=sitePostings.reduce((sum,item)=>sum+Math.round(Number(item.amount)*100),0);
   if(actualSiteCents!==plannedSiteCents)throw new Error("Project expense was added again to the site cost.");
   const allocation=await checked(client.from("finance_source_allocations").select("id,amount,project_id")
-    .eq("organization_id",plan.organization.id).eq("site_id",plan.sites[0].id),"Read project accounting allocation");
+    .eq("organization_id",plan.organization.id).eq("site_id",plan.sites[0].id)
+    .eq("source_row_id",registry.projects.accounting.finance_source_rows[0]),"Read project accounting allocation");
   if(allocation.length!==1||allocation[0].project_id!==plan.projects[0].id||
     Math.round(Number(allocation[0].amount)*100)!==plan.projects[0].recognized)
     throw new Error("Project accounting revenue does not equal its single site allocation.");
@@ -316,6 +318,8 @@ async function countAttached(organizationId, hasContracts, hasExpenses, hasTime,
   if(hasProjects)for(const table of ["projects","project_revenue_terms","project_invoices","project_source_links",
     "project_billable_approvals","finance_import_batches","finance_source_rows",
     "finance_source_allocations"])baseTables.add(table);
+  if(hasProjects)for(const table of ["finance_periods","finance_period_events",
+    "finance_reconciliation_links","finance_reconciliation_events"])baseTables.add(table);
   const names = execFileSync("psql", [localDatabaseUrl, "-At", "-c", "select table_name from information_schema.columns where table_schema='public' and column_name='organization_id' order by table_name"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   const tables = names.trim().split("\n").filter((table) => table && !baseTables.has(table));
   if (tables.some((table) => !/^[a-z][a-z0-9_]*$/.test(table))) throw new Error("Unexpected table name in local schema.");
@@ -647,6 +651,96 @@ async function completeProjectScenario(client,plan,registry,directory){
     "Close synthetic project costs");
   await atomicJson(join(directory,"registry.json"),registry);
 }
+async function generateReconciliationScenario(client,plan,registry,directory){
+  if(!plan.scenario.modules.reconciliation)return;
+  const director=plan.personas.find(persona=>persona.role==="organization_administrator");
+  const actor=personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
+  const directorId=registry.authUserIds[plan.personas.indexOf(director)];
+  const fuel=registry.expenses.rows.find(row=>row.key==="fuel").postingIds[0];
+  const repair=registry.expenses.rows.find(row=>row.key==="repair").postingIds[0];
+  const postingRows=await checked(client.from("expense_postings").select("id,amount,site_id,project_id,category")
+    .eq("organization_id",plan.organization.id).in("id",[fuel,repair]),"Read reconciliation posting sources");
+  const byId=new Map(postingRows.map(row=>[row.id,row]));
+  const batchId=sqlId(`reconciliation-june-batch:${plan.runId}`);
+  const lateBatchId=sqlId(`reconciliation-late-batch:${plan.runId}`);
+  const accounting={finance_import_batches:[batchId,lateBatchId],finance_source_rows:[],finance_source_allocations:[]};
+  const makeRow=(key,number,post,amount,reference)=>({
+    id:sqlId(`reconciliation-row-${key}:${plan.runId}`),organization_id:plan.organization.id,
+    import_batch_id:batchId,source_row_number:number,source_document_id:`SYN-${key}-${plan.runId}`,
+    source_line_id:"1",site_id:post.site_id,service_period:"2026-06-01",accounting_period:"2026-06-30",
+    currency:"CAD",category:post.category==="equipment_repair"?"repairs":post.category==="supplies"?"supplies":"other_direct_cost",
+    amount,approval_state:"approved",recognition_state:"actual",allocation_state:"allocated",
+    raw_row:reference?{synthetic:true,operational_id:reference}:{synthetic:true},
+  });
+  const rows=[makeRow("fuel-a",1,byId.get(fuel),byId.get(fuel).amount,fuel),
+    makeRow("fuel-b",2,byId.get(fuel),byId.get(fuel).amount,fuel),
+    makeRow("repair",3,byId.get(repair),byId.get(repair).amount,repair),
+    makeRow("unmatched",4,byId.get(repair),9.99,null)];
+  const lateRowId=sqlId(`reconciliation-late-row:${plan.runId}`);
+  const lateAllocation=sqlId(`reconciliation-late-allocation:${plan.runId}`);
+  accounting.finance_source_rows.push(...rows.map(row=>row.id),lateRowId);
+  accounting.finance_source_allocations.push(...rows.map((_,index)=>
+    sqlId(`reconciliation-allocation-${index}:${plan.runId}`)),lateAllocation);
+  registry.reconciliation={juneId:null,julyId:null,linkIds:[],accounting};
+  await atomicJson(join(directory,"registry.json"),registry);
+  await checked(client.from("finance_import_batches").insert({id:batchId,organization_id:plan.organization.id,
+    source_system:"scenario_csv",source_file_name:"synthetic-reconciliation-june.csv",
+    source_file_hash:createHash("sha256").update(`reconciliation:${plan.runId}`).digest("hex"),
+    mapping_version:"clean-038-v1",currency:"CAD",service_period_start:"2026-06-01",service_period_end:"2026-06-30",
+    state:"accepted",completeness:"complete",accepted_by:directorId,accepted_at:new Date().toISOString()}),
+  "Create reconciliation accounting batch");
+  await checked(client.from("finance_source_rows").insert(rows),"Create reconciliation source rows");
+  const allocations=rows.map((row,index)=>({id:sqlId(`reconciliation-allocation-${index}:${plan.runId}`),
+    organization_id:plan.organization.id,source_row_id:row.id,site_id:row.site_id,
+    amount:row.amount,project_id:index<2?byId.get(fuel).project_id:index===2?byId.get(repair).project_id:null}));
+  await checked(client.from("finance_source_allocations").insert(allocations),"Allocate reconciliation source rows");
+  const juneId=await checked(actor.rpc("open_finance_period",{p_organization_id:plan.organization.id,
+    p_period_start:"2026-06-01"}),"Open June reconciliation");
+  registry.reconciliation.juneId=juneId;
+  await atomicJson(join(directory,"registry.json"),registry);
+  const matched=await checked(actor.rpc("run_finance_auto_match",{p_period_id:juneId}),"Auto match unique source");
+  if(matched!==1)throw new Error(`Expected one unique June match, received ${matched}.`);
+  registry.reconciliation.linkIds=ids(await checked(client.from("finance_reconciliation_links")
+    .select("id").eq("organization_id",plan.organization.id),"Record synthetic match IDs"));
+  await atomicJson(join(directory,"registry.json"),registry);
+  const julyId=await checked(actor.rpc("open_finance_period",{p_organization_id:plan.organization.id,
+    p_period_start:"2026-07-01"}),"Open July close period");
+  registry.reconciliation.julyId=julyId;
+  await atomicJson(join(directory,"registry.json"),registry);
+  await checked(actor.rpc("review_finance_period",{p_period_id:julyId}),"Review July period");
+  await checked(actor.rpc("close_finance_period",{p_period_id:julyId}),"Close July period");
+  const lateRow={...makeRow("late-july",1,byId.get(repair),12.34,null),
+    id:lateRowId,import_batch_id:lateBatchId,
+    service_period:"2026-07-01",accounting_period:"2026-07-31",category:"revenue"};
+  await checked(client.from("finance_import_batches").insert({id:lateBatchId,organization_id:plan.organization.id,
+    source_system:"scenario_csv",source_file_name:"synthetic-late-july.csv",
+    source_file_hash:createHash("sha256").update(`reconciliation-late:${plan.runId}`).digest("hex"),
+    mapping_version:"clean-038-v1",currency:"CAD",service_period_start:"2026-07-01",service_period_end:"2026-07-31",
+    state:"accepted",completeness:"complete",accepted_by:directorId,accepted_at:new Date().toISOString()}),
+  "Create late accounting batch");
+  await checked(client.from("finance_source_rows").insert(lateRow),"Create late accounting row");
+  await checked(client.from("finance_source_allocations").insert({id:lateAllocation,organization_id:plan.organization.id,
+    source_row_id:lateRow.id,site_id:lateRow.site_id,amount:lateRow.amount}),"Allocate late accounting row");
+  await atomicJson(join(directory,"registry.json"),registry);
+}
+async function assertReconciliationScope(client,plan,registry,allowPartial){
+  const planned=registry.reconciliation;
+  for(const table of ["finance_periods","finance_reconciliation_links"]){
+    const actual=await rowsFor(client,table,plan.organization.id);
+    const expected=table==="finance_periods"?[planned?.juneId,planned?.julyId].filter(Boolean):
+      planned?.linkIds??[];
+    assertIdSet(actual,expected,table,allowPartial);
+  }
+  if(allowPartial||!planned)return;
+  if(planned.linkIds.length!==1)throw new Error("Expected one unique reconciliation match.");
+  const director=plan.personas.find(persona=>persona.role==="organization_administrator");
+  const actor=personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
+  const june=await checked(actor.rpc("list_finance_match_candidates",{p_period_id:planned.juneId}),"Read June proposals");
+  if(june.filter(row=>row.ambiguous).length!==2)throw new Error("Expected two ambiguous duplicate-source proposals.");
+  const periods=await checked(actor.rpc("list_finance_period_status"),"Read period status");
+  const july=periods.find(row=>row.period_id===planned.julyId);
+  if(july?.state!=="closed"||!july.stale)throw new Error("Late July batch must make the closed snapshot stale.");
+}
 async function generate(name, seed) {
   const plan = await loadPlan(name, seed); // Validate before any writes.
   const directory = join(outputRoot, name);
@@ -685,6 +779,7 @@ async function generate(name, seed) {
     await generateExpenses(client,plan,registry,directory);
     await generateTime(client,plan,registry,directory);
     await completeProjectScenario(client,plan,registry,directory);
+    await generateReconciliationScenario(client,plan,registry,directory);
     await assertScope(client, plan, false,registry);
     registry.status = "ready";
     await atomicJson(registryPath, registry);
@@ -743,6 +838,12 @@ async function reset(name) {
   if (org) await countAttached(plan.organization.id, Boolean(plan.contract),Boolean(plan.expenseCases),Boolean(plan.timeCases),Boolean(plan.projects));
   registry.status = "resetting";
   await atomicJson(join(directory, "registry.json"), registry);
+  if(plan.scenario.modules.reconciliation){
+    for(const table of ["finance_reconciliation_events","finance_reconciliation_links",
+      "finance_period_events","finance_periods"])
+      await checked(client.from(table).delete().eq("organization_id",plan.organization.id),
+        `Delete scenario ${table}`);
+  }
   if(plan.projects){
     const scopedOrg=plan.organization.id;
     if(!/^[0-9a-f-]{36}$/.test(scopedOrg))throw new Error("Invalid project scenario organization ID.");
@@ -855,6 +956,10 @@ async function presenter(name) {
       `Time cases: fixtures/generated/${name}/time-cases.json. Approved labour cost ${plan.expected.controlTotals.finance.approvedLabourCost} CAD.`,
       "Open /finance/time for normal, missing-checkout, overtime, worker-swap and manual project entries. Two exceptions remain unposted.",
       "Open /finance/rates as Director for the confidential midyear effective rate change. Area Managers cannot read rate payloads.",
+    ] : []),
+    ...(plan.scenario.modules.reconciliation ? [
+      "Open /finance/reconciliation as Director. June has one unique exact repair match, two ambiguous fuel proposals and an unmatched accounting row; it must remain open.",
+      "July is closed but stale after a late accepted synthetic import. Reopen with a reason before correction. Area Managers see only assigned-site aggregate status.",
     ] : []),
   ];
   const output = `${lines.join("\n")}\n`;

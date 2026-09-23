@@ -132,6 +132,10 @@ Live OpenAI code exists but production execution remains gated by config, budget
 | `finance_source_rows` | Immutable imported line, one per source document line. Director-only. | batch, source document/line ID, optional site/contract/job/asset reference, optional link to a supply or repair record, service/accounting period, currency, category, amount, tax, approval/recognition/allocation state, raw row JSON. |
 | `finance_source_allocations` | Site (and optional job) share of one source row's amount. Director-only. | source row, site, job reference, amount. |
 | `finance_reconciliations` | Accepted, approved-actual site totals for a period; the only imported-finance surface open to Area Managers. | batch, site, period, currency, recognized revenue, direct labour/supplies/repairs/other direct cost, generated `direct_contribution`, completeness, `is_current`. |
+| `finance_periods` | Director-controlled organization-wide calendar month review and close. | period boundaries, CAD currency, open/review/closed/reopened state, close version, frozen metric snapshot, close actor/time. |
+| `finance_period_events` | Append-only period transition and correction history. | period, event kind, close version, snapshot, reopen reason, actor/time. |
+| `finance_reconciliation_links` | Audited positive amount from one accepted direct-cost allocation to one posted operational cost. Both sides may be split across different records up to their remaining balance. | period, site, source row/allocation, operational type/id, CAD amount, deterministic/manual rule, rationale, active/voided state. |
+| `finance_reconciliation_events` | Append-only match creation and void history. | link, actor/time, rule, amount or correction reason. |
 | `finance_ledger_audit_events` | Append-only edit/delete history for both ledgers above. | organization/site, `ledger` (inventory_transaction/labor_cost_entry), `record_id`, actor, action (update/delete), `before`/`after` JSON, time. |
 
 Access (migrations `20260921051826_casino_demo_rbac_equipment`, `20260921120000_clean_029_supply_catalogue_rbac`, `20260921230000_clean_020_reconciled_finance_imports`, `20260922034200_clean_028_finance_ledger_edits`): `inventory_transactions` is readable by a Director or an Area Manager with a grant to that site (`private.can_view_site_finance`); `labor_cost_entries` is readable by a Director only (`private.can_administer_org`), narrowed by CLEAN-020 so individual payroll/labour detail never reaches Area Managers — they see only the aggregate `direct_labour` figure in `finance_reconciliations`. Since issue #48, a Director may also update and delete rows on either ledger (`private.can_edit_site_finance`); Area Managers and every other role remain read-only or have no access at all. `vendors` and `inventory_items` are readable only by Directors, Area Managers and Operations Managers (`private.can_view_supply_catalogue`) and writable only by Directors (`private.can_edit_supply_catalogue`), matching the current `/finance` UI.
@@ -260,6 +264,9 @@ Business rules that live in the database. "Browser" means callable by `authentic
 | `reset_hosted_demo` | service | Site-scoped synthetic demo reset. |
 | `stage_finance_csv_import` | browser | Director-only idempotent staging by file hash and mapping version. |
 | `accept_finance_import` | browser | Director-only validation, acceptance, supersession and persisted reconciliation. |
+| `open_finance_period`, `review_finance_period`, `close_finance_period`, `reopen_finance_period` | browser | Director-only month lifecycle; close checks accepted full-month coverage, source/operational balance, ambiguity and invalid rows/links. |
+| `list_finance_match_candidates`, `list_finance_operational_rows`, `run_finance_auto_match`, `match_finance_allocation`, `void_finance_match` | browser | Director-only deterministic proposals and audited matching/correction. |
+| `list_finance_period_status`, `list_finance_period_site_status` | browser | Director full close metrics; Director/assigned Area Manager site aggregate without raw labour or accounting rows. |
 | `create_manual_contract` | browser | Resolve site/client/organization server-side and create a manual contract plus draft version atomically. |
 | `submit_contract_version` | browser | Area Manager or Director sends a draft for review. |
 | `approve_contract_version` | browser | Director validates and freezes complete source terms. |
@@ -273,6 +280,10 @@ Private helpers used by RLS (schema `private`, not callable by browsers): `has_o
 `docs/DATA_MODEL.md` lists logical tables that have no migration: `ai_decisions`, `ai_usage` (superseded by `quality_decisions` and `quality_ai_runs`) and a generic `audit_events` (superseded by `evidence_audit_events`, `review_audit_events` and `reporting_audit_events`).
 
 Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), supply requests/orders/stock (#30; only the `inventory_*` ledger exists), asset inspections/checklists/repair cost lines (#31; only the read-only `equipment_assets` register exists), absence register (#32), handover and complaints (#36). CLEAN-020 implements neutral finance imports and reconciliation; it does not implement a Sage connector, GL, payments or payroll calculation.
+
+### Accounting reconciliation and period close — CLEAN-038
+
+`private.finance_operational_records` normalizes approved expense postings except equipment purchases, posted labour cost, and inventory issues into cost candidates. Historical labour and inventory rows are CAD-only. Accounting import rows remain authoritative and are never added to operational totals a second time. Exact source ID, document reference and amount/date/context rules create candidate proposals; only a unique best proposal may auto-match. A Director may manually link a positive cent-precision amount within both remaining balances. Ambiguous, unmatched, invalid and incomplete rows remain visible as exceptions. Closed periods reject match changes; reopen records a reason and preserves the prior snapshot. A changed accepted import or operational amount makes the closed snapshot stale. No direct browser table writes are granted for periods or links.
 
 ### One-off projects — CLEAN-037
 

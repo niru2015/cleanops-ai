@@ -176,8 +176,8 @@ export function buildScenarioPlan(input, reference) {
     expectedExceptions: [...(expenseCases ? ["duplicate_whatsapp_receipt"] : []),
       ...(timeCases ? ["missing_checkout", "worker_swap"] : [])],
     roleSiteAccess: personas.map((persona) => ({ persona: persona.key, role: persona.role, siteIds: persona.role === "organization_administrator" || persona.role === "operations_manager" ? sites.map((site) => site.id) : [sites[persona.siteIndex].id] })),
-    reconciliation: { status: "not_implemented", matched: 0, unmatched: 0 },
-    stage: projects ? "B/contracts+expenses+time+projects" : timeCases ? "B/contracts+expenses+time" : expenseCases ? "B/contracts+expenses" : contract ? "B/contracts" : "A/base-only",
+    reconciliation: scenario.modules.reconciliation ? { status: "review_required", exact: 1, ambiguous: 2, unmatched: 1, closedMonth: "2026-07-01", staleAfterLateImport: true } : { status: "not_implemented", matched: 0, unmatched: 0 },
+    stage: scenario.modules.reconciliation ? "B/contracts+expenses+time+projects+reconciliation" : projects ? "B/contracts+expenses+time+projects" : timeCases ? "B/contracts+expenses+time" : expenseCases ? "B/contracts+expenses" : contract ? "B/contracts" : "A/base-only",
   };
   if (projects) {
     const projectExpenses = expenseCases.filter(item => item.approved && item.projectReference === projects[0].code);
