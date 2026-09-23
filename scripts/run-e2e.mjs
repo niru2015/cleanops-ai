@@ -66,7 +66,7 @@ if (membership.error) throw membership.error;
 
 for (const persona of [
   { email: environment.CLEANOPS_E2E_AREA_EMAIL, name: "E2E Area Manager", membershipId: "20000000-0000-4000-8000-000000000003", role: "area_manager" },
-  { email: environment.CLEANOPS_E2E_SUPERVISOR_EMAIL, name: "E2E Supervisor", membershipId: "20000000-0000-4000-8000-000000000002", role: "site_supervisor" },
+  { email: environment.CLEANOPS_E2E_SUPERVISOR_EMAIL, name: "E2E Supervisor", membershipId: "20000000-0000-4000-8000-000000000008", role: "site_supervisor" },
   { email: environment.CLEANOPS_E2E_OPERATIONS_EMAIL, name: "E2E Operations Manager", membershipId: "20000000-0000-4000-8000-000000000007", role: "operations_manager" },
   { email: environment.CLEANOPS_E2E_CLEANER_EMAIL, name: "E2E Cleaner", membershipId: "20000000-0000-4000-8000-000000000004", role: "cleaner" },
 ]) {
@@ -82,7 +82,7 @@ for (const persona of [
     if (created.error || !created.data.user) throw created.error ?? new Error("Could not create the E2E persona.");
     person = created.data.user;
   }
-  if (persona.role === "area_manager" || persona.role === "site_supervisor" || persona.role === "cleaner") {
+  if (persona.role === "area_manager" || persona.role === "cleaner") {
     const update = await admin.from("memberships").update({ user_id: person.id }).eq("id", persona.membershipId);
     if (update.error) throw update.error;
   } else {
@@ -92,6 +92,15 @@ for (const persona of [
     if (upsert.error) throw upsert.error;
   }
 }
+
+const supervisorSiteAccess = await admin.from("member_site_access").upsert({
+  id: "41000000-0000-4000-8000-000000000008",
+  organization_id: "10000000-0000-4000-8000-000000000001",
+  membership_id: "20000000-0000-4000-8000-000000000008",
+  site_id: "40000000-0000-4000-8000-000000000001",
+  starts_at: "2026-01-01T00:00:00Z",
+}, { onConflict: "id" });
+if (supervisorSiteAccess.error) throw supervisorSiteAccess.error;
 
 const run = spawnSync(command, ["playwright", "test", "--project=chromium", ...process.argv.slice(2)], {
   stdio: "inherit",
