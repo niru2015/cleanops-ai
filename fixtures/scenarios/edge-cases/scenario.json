@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": 1,
+  "scenarioId": "edge-cases",
+  "seed": 20260924,
+  "clock": {"start":"2026-09-01","end":"2026-09-30","timezone":"America/Vancouver"},
+  "organization": {"name":"Edge Case Showcase","siteCount":2,"workerCount":8},
+  "referencePack": "fictional-v1",
+  "modules": {"base":true},
+  "cases": ["duplicate_message","unknown_sender","cross_tenant_attempt","missing_checkout"]
+}

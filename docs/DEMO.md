@@ -1,5 +1,9 @@
 # Golden demo: Sunday Casino Night Shift
 
+The new deterministic scenario factory is documented in [DATA_FACTORY](demo/DATA_FACTORY.md).
+Its Stage A packs generate base sites, workers and personas locally; they do not yet replace this
+legacy night-shift seed or create finance outcomes.
+
 Synthetic organization “Demo Nightshift Services” (`supabase/seed.sql`); fictional client “Aurora Casino Demo”,
 site “Aurora Downtown Demo”, Restroom B and Slot Bank 14. Never imply a real Tornado deployment or real measured
 performance. Second tenant “Demo Harbour Facilities” exists for isolation tests, not as a demo customer. The hosted
