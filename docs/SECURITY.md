@@ -104,6 +104,8 @@ Area Manager that the labour ledger is off-limits rather than showing a misleadi
 
 CLEAN-020 keeps imported batches, source rows, raw CSV values, allocations and the worker-level labour ledger Director-only. This prevents Area Managers from reading individual labour/payroll detail. `finance_reconciliations` contains only approved actual aggregate totals and is readable by Directors or an Area Manager with an active site grant. Supervisors, Operations Managers, cleaners and clients cannot read imported finance totals; clients never receive margins. Staging and acceptance RPCs independently require Director authorization and derive the acceptance actor from `auth.uid()`.
 
+CLEAN-022 contract tables use organization/site composite foreign keys and RLS. Directors read/write drafts at all organization sites, approve, preview and activate. Area Managers can create and edit drafts only at granted sites and read their proposed commercial terms, but cannot approve or activate. Operations Managers read organization-wide contract identity and operational obligations/staffing/SLA terms, but have no grant or policy for commercial terms or expected revenue. Supervisors, cleaners and clients have no contract administration access. Approval and activation are `security definer` RPCs with explicit `auth.uid()`-backed Director checks; `PUBLIC` and `anon` execution is revoked. A trigger blocks browser edits to generated contract provenance and identity. Approved child rows are immutable through browser RLS. Contract documents and AI extraction are not part of this issue.
+
 ## Evidence privacy and pilot decisions
 
 Use synthetic people and media in demos; real casino names are allowed only as reference data under ADR 008. Casino images may contain patrons, staff,

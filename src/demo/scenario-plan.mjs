@@ -44,6 +44,52 @@ export function buildScenarioPlan(input, reference) {
     membership_id: persona.membershipId, site_id: sites[persona.siteIndex].id,
     starts_at: `${scenario.clock.start}T00:00:00Z`,
   }));
+  const contract = scenario.modules.contracts ? (() => {
+    if (!scenario.clock.start.endsWith("-01")) throw new Error("Contract scenario clock must start on a month boundary.");
+    if (!personas.some((persona) => persona.role === "organization_administrator")) throw new Error("Contract scenario requires a Director persona.");
+    const addMonths = (date, months) => {
+      const value = new Date(`${date}T00:00:00Z`);
+      value.setUTCMonth(value.getUTCMonth() + months);
+      return value.toISOString().slice(0, 10);
+    };
+    const baseCents = 150000 + Math.floor(rng() * 50000);
+    const amendedCents = Math.round(baseCents * 1.1);
+    const amendmentDate = addMonths(scenario.clock.start, 4);
+    return {
+      zone: { id: id("contract/zone"), organization_id: organization.id, site_id: sites[0].id,
+        name: "Synthetic contract service zone" },
+      identity: { id: id("contract"), organization_id: organization.id, site_id: sites[0].id,
+        client_id: client.id, code: `DEMO-${scenario.scenarioId.toUpperCase()}`, name: "Synthetic recurring cleaning agreement" },
+      versions: [0, 1].map((index) => ({
+        id: id(`contract/version/${index}`), organization_id: organization.id, site_id: sites[0].id,
+        contract_id: id("contract"), version_number: index + 1,
+        source_type: index ? "amendment" : "manual",
+        effective_from: index ? amendmentDate : scenario.clock.start,
+        supply_responsibility: "included", equipment_responsibility: "reimbursable",
+        repair_responsibility: "unknown",
+      })),
+      terms: [baseCents, amendedCents].map((cents, index) => ({
+        id: id(`contract/term/${index}`), organization_id: organization.id, site_id: sites[0].id,
+        contract_version_id: id(`contract/version/${index}`), basis: "fixed_monthly",
+        amount: (cents / 100).toFixed(2), currency: "CAD",
+        effective_from: index ? amendmentDate : scenario.clock.start,
+      })),
+      obligations: [0, 1].map((index) => ({
+        id: id(`contract/obligation/${index}`), organization_id: organization.id, site_id: sites[0].id,
+        contract_version_id: id(`contract/version/${index}`), zone_id: id("contract/zone"),
+        name: "Synthetic quarterly deep clean", recurrence: "quarterly", work_type: "specialist", due_window_minutes: 1440,
+        evidence_required: true, inspection_required: true,
+      })),
+      staffing: [2, 3].map((positions, index) => ({
+        id: id(`contract/staffing/${index}`), organization_id: organization.id, site_id: sites[0].id,
+        contract_version_id: id(`contract/version/${index}`), weekday: 1,
+        local_start: "08:00:00", local_end: "16:00:00", required_positions: positions,
+      })),
+      expected: { versionCount: 2, currentRevenueEntries: 16,
+        expectedRevenue: ((baseCents * 4 + amendedCents * 12) / 100).toFixed(2), currency: "CAD",
+        amendmentDate },
+    };
+  })() : null;
   const expected = {
     schemaVersion: scenario.schemaVersion,
     generatorVersion: scenario.generatorVersion,
@@ -53,11 +99,14 @@ export function buildScenarioPlan(input, reference) {
     clock: scenario.clock,
     organizationId: organization.id,
     entityCounts: { organizations: 1, clients: 1, sites: sites.length, workers: workers.length, workerPermissions: workerPermissions.length, personas: personas.length, memberGrants: memberGrants.length },
-    controlTotals: { siteCount: sites.length, workerCount: workers.length, finance: null },
+    controlTotals: { siteCount: sites.length, workerCount: workers.length,
+      finance: contract ? { contracts: 1, expectedRevenue: contract.expected.expectedRevenue,
+        currency: contract.expected.currency, currentRevenueEntries: contract.expected.currentRevenueEntries } : null },
     expectedExceptions: [],
     roleSiteAccess: personas.map((persona) => ({ persona: persona.key, role: persona.role, siteIds: persona.role === "organization_administrator" || persona.role === "operations_manager" ? sites.map((site) => site.id) : [sites[persona.siteIndex].id] })),
     reconciliation: { status: "not_implemented", matched: 0, unmatched: 0 },
-    stage: "A/base-only",
+    stage: contract ? "B/contracts" : "A/base-only",
   };
-  return { scenario, runId, organization, client, sites, workers, workerPermissions, personas, memberGrants, expected };
+  if (contract) expected.entityCounts.contracts = 1;
+  return { scenario, runId, organization, client, sites, workers, workerPermissions, personas, memberGrants, contract, expected };
 }

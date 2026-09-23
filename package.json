@@ -30,7 +30,8 @@
     "demo:reset": "node scripts/demo-scenario.mjs reset",
     "demo:assert": "node scripts/demo-scenario.mjs assert",
     "demo:presenter": "node scripts/demo-scenario.mjs presenter",
-    "test:scenario": "node scripts/test-demo-scenario.mjs"
+    "test:scenario": "node scripts/test-demo-scenario.mjs",
+    "test:contract-concurrency": "node scripts/test-contract-concurrency.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

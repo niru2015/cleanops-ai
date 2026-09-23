@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": 2,
+  "scenarioId": "contract-smoke",
+  "seed": 20260923,
+  "clock": {"start":"2026-10-01","end":"2027-01-31","timezone":"America/Vancouver"},
+  "organization": {"name":"Synthetic Contract Smoke","siteCount":2,"workerCount":4},
+  "referencePack": "fictional-v1",
+  "modules": {"base":true,"contracts":true},
+  "cases": ["healthy_contract","contract_amendment"]
+}

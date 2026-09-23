@@ -1,7 +1,10 @@
 import type { Page } from "@playwright/test";
 
 export async function signInAsDirector(page: Page) {
-  const email = process.env.CLEANOPS_E2E_EMAIL;
+  await signInAs(page, process.env.CLEANOPS_E2E_EMAIL);
+}
+
+export async function signInAs(page: Page, email: string | undefined) {
   const password = process.env.CLEANOPS_DEMO_PASSWORD;
   if (!email || !password) throw new Error("The authenticated browser-test credentials are required.");
 

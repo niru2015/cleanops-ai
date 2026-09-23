@@ -311,7 +311,15 @@ for a demo to mutate there — add reset coverage only once a write path exists.
 preparation/correction helper (`submitSyntheticPair`) still depends on the local simulator flag, which production
 forces off, so preparing the walkthrough on a production build is currently blocked (issue #25).
 
-## 16. Agent change checklist
+## 16. Contract draft and activation (CLEAN-022)
+
+Manual create resolves organization/client from the selected authorized site in `create_manual_contract`, then saves a draft version. The wizard persists dates, billing terms, staffing, obligations, SLA rules and responsibility flags as normalized draft rows. Area Managers may draft for their assigned sites; Operations Managers can review operational terms only. Submission records an event. Director approval checks dates, priced terms and obligation zones, stamps the actor/time, and freezes browser edits.
+
+`preview_contract_activation` counts the approved version's tasks/schedules, first 28 effective days of staffing coverage, SLA definitions and up to 12 fixed-fee billing periods. Its token identifies the frozen approved version. `activate_contract_version` checks that token, locks the contract/version, shortens an overlapping prior active version's future window, marks replaced future revenue expectations non-current, and atomically creates version-linked service tasks, schedules, shifts/coverage, expected revenue and SLA definitions. Quarterly work is one schedule with quarterly recurrence. A retry against the already active version fails without duplicate rows. Existing task runs and prior-period expectations are preserved.
+
+`contract_revenue_expectations` represent expected billing only. CLEAN-020 imported accounting rows remain distinct recognized actuals; #66 will reconcile them. Task runs created from a contract schedule inherit its version ID; an amendment leaves existing task-run provenance and requirements snapshots unchanged. The scenario factory's contracts adapter builds synthetic source terms and replays approval/activation through the same RPCs, then queries current expectations against the generated manifest. Its local reset refuses other attached operational records before deleting scenario-owned contract rows.
+
+## 17. Agent change checklist
 
 Before changing a flow:
 

@@ -13,6 +13,8 @@ const client = createClient(url, key, { auth: { persistSession: false, autoRefre
 const source = JSON.parse(await readFile(`fixtures/scenarios/${scenarioName}/scenario.json`, "utf8"));
 const reference = JSON.parse(await readFile("fixtures/reference/fictional-v1.json", "utf8"));
 const plan = buildScenarioPlan(source, reference);
+const contractSource = JSON.parse(await readFile("fixtures/scenarios/contract-smoke/scenario.json", "utf8"));
+const contractPlan = buildScenarioPlan(contractSource, reference);
 const registryPath = `fixtures/generated/${scenarioName}/registry.json`;
 const seededOrganizations = ["10000000-0000-4000-8000-000000000001", "10000000-0000-4000-8000-000000000002"];
 
@@ -24,6 +26,7 @@ async function count(table, organizationId) {
 function assert(value, message) { if (!value) throw new Error(message); }
 
 let created = false;
+let contractCreated = false;
 try {
   const before = await Promise.all(seededOrganizations.map((id) => count("sites", id)));
   run("generate", scenarioName);
@@ -55,9 +58,34 @@ try {
   assert(remaining.data.length === 0, "Scenario organization remained after reset.");
   const after = await Promise.all(seededOrganizations.map((id) => count("sites", id)));
   assert(JSON.stringify(before) === JSON.stringify(after), "Reset changed a seeded tenant.");
-  console.log("Scenario CLI integration passed: generate, query, manifest, partial recovery, regenerate and tenant isolation.");
+  run("generate", "contract-smoke");
+  contractCreated = true;
+  run("assert", "contract-smoke");
+  const contractExpected = JSON.parse(await readFile("fixtures/generated/contract-smoke/expected.json", "utf8"));
+  assert(contractExpected.controlTotals.finance.currentRevenueEntries === 16,
+    "Contract manifest lost its amendment reconciliation control.");
+  const revenue = await client.from("contract_revenue_expectations").select("id")
+    .eq("organization_id", contractPlan.organization.id).limit(1).single();
+  if (revenue.error) throw revenue.error;
+  const missingRevenue = await client.from("contract_revenue_expectations").delete()
+    .eq("id", revenue.data.id).eq("organization_id", contractPlan.organization.id);
+  if (missingRevenue.error) throw missingRevenue.error;
+  let contractAssertionFailed = false;
+  try { run("assert", "contract-smoke"); } catch { contractAssertionFailed = true; }
+  assert(contractAssertionFailed, "Scenario assertion did not catch missing contract revenue.");
+  run("reset", "contract-smoke");
+  contractCreated = false;
+  run("generate", "contract-smoke");
+  contractCreated = true;
+  run("assert", "contract-smoke");
+  run("reset", "contract-smoke");
+  contractCreated = false;
+  console.log("Scenario CLI integration passed: base and contract recovery, approval, activation, revenue assertion, reset and tenant isolation.");
 } finally {
   if (created) {
     try { run("reset", scenarioName); } catch { console.error(`Manual cleanup may be needed: npm run demo:reset -- ${scenarioName}`); }
+  }
+  if (contractCreated) {
+    try { run("reset", "contract-smoke"); } catch { console.error("Manual cleanup may be needed: npm run demo:reset -- contract-smoke"); }
   }
 }

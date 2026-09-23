@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import Link from "next/link";
 import { FinanceWorkspace } from "@/components/finance-workspace";
 import { MessageContextQueue } from "@/components/message-context-queue";
 import { getFinanceWorkspace, type FinanceWorkspace as FinanceWorkspaceData } from "@/integrations/finance/supabase-finance";
@@ -93,6 +94,7 @@ export default async function FinancePage({
         </form>
         <span className="recordLabel">{access.canEditFinance ? "Director · edit" : "Area Manager · read only"}</span>
       </section>
+      <p><Link href="/finance/contracts">Open contract register</Link></p>
       <FinanceWorkspace workspace={finance} editable={access.canEditFinance} siteId={selectedSite.id} />
       <MessageContextQueue workspace={messages} />
     </AppShell>

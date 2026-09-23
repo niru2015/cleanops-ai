@@ -260,6 +260,11 @@ Business rules that live in the database. "Browser" means callable by `authentic
 | `reset_hosted_demo` | service | Site-scoped synthetic demo reset. |
 | `stage_finance_csv_import` | browser | Director-only idempotent staging by file hash and mapping version. |
 | `accept_finance_import` | browser | Director-only validation, acceptance, supersession and persisted reconciliation. |
+| `create_manual_contract` | browser | Resolve site/client/organization server-side and create a manual contract plus draft version atomically. |
+| `submit_contract_version` | browser | Area Manager or Director sends a draft for review. |
+| `approve_contract_version` | browser | Director validates and freezes complete source terms. |
+| `preview_contract_activation` | browser | Director-only counts, first expected-revenue period and stale-preview token from approved rows. |
+| `activate_contract_version` | browser | Director-only transactional activation of tasks, schedules, coverage, expected revenue and SLA definitions. |
 
 Private helpers used by RLS (schema `private`, not callable by browsers): `has_org_role`, `has_site_access`, `has_operational_site_access`, `can_manage_site`, `can_administer_org`, `can_operate_org`, `is_active_member`, `can_view_site_finance`, `can_edit_site_finance`, `can_view_supply_catalogue`, `can_edit_supply_catalogue`, `resolve_review_actor`, `log_finance_ledger_change` (a `before update or delete` trigger function on both finance ledgers, not an RLS predicate).
 
@@ -267,7 +272,24 @@ Private helpers used by RLS (schema `private`, not callable by browsers): `has_o
 
 `docs/DATA_MODEL.md` lists logical tables that have no migration: `ai_decisions`, `ai_usage` (superseded by `quality_decisions` and `quality_ai_runs`) and a generic `audit_events` (superseded by `evidence_audit_events`, `review_audit_events` and `reporting_audit_events`).
 
-Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), supply requests/orders/stock (#30; only the `inventory_*` ledger exists), asset inspections/checklists/repair cost lines (#31; only the read-only `equipment_assets` register exists), absence register (#32), contract obligations and ad-hoc jobs (#35), handover and complaints (#36). CLEAN-020 implements neutral finance imports and reconciliation; it does not implement a Sage connector, GL, payments or payroll calculation.
+Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), supply requests/orders/stock (#30; only the `inventory_*` ledger exists), asset inspections/checklists/repair cost lines (#31; only the read-only `equipment_assets` register exists), absence register (#32), ad-hoc jobs (#65), handover and complaints (#36). CLEAN-020 implements neutral finance imports and reconciliation; it does not implement a Sage connector, GL, payments or payroll calculation.
+
+## CLEAN-022 contract foundation
+
+Migration `20260923064804_clean_022_contract_foundation.sql` owns the following organization and site scoped records:
+
+| Table | Business meaning |
+|---|---|
+| `contracts` | Client/site identity, organization-unique code, draft/active/archived register state and creator. |
+| `contract_versions` | Manual/document/amendment source, effective dates, lifecycle, approval/activation actor and time, renewal notes and supply/equipment/repair responsibility. Approved terms cannot be edited through browser policies. Active effective periods may not overlap. |
+| `contract_financial_terms` | Repeatable basis, amount, currency, term dates and source reference; custom and variable-rate terms do not invent fixed revenue. |
+| `contract_obligations` | Versioned routine or specialist task, zone, recurrence, due window, evidence/inspection and source reference. |
+| `contract_staffing_requirements` | Versioned weekday, local start/end time and required positions. Initial activation materializes the first 28 effective days as canonical shifts and coverage rows. |
+| `contract_sla_terms` | Versioned numerator, denominator and exclusion rules that activate into `sla_definitions`. |
+| `contract_revenue_expectations` | Traceable fixed monthly/annual expected billing periods and amounts, with `is_current` for future supersession. These are neither accounting recognition nor collected cash. |
+| `contract_events` | Actor-attributed submitted, approved, activated and superseded events. |
+
+Generated `service_tasks`, `task_schedules`, `shifts`, `shift_coverage_requirements`, `sla_definitions` and later `task_runs` have nullable `contract_version_id` provenance. A task-run insert inherits its schedule's version via `private.bind_task_run_contract_version`; updates cannot change it. Generated tasks, shifts and SLA definitions also point to their source obligation, staffing rule or SLA term. Existing non-contract rows retain null provenance. Task schedule `recurrence` stores the source frequency and effective window; quarterly work is represented as one versioned schedule, not pre-created task runs. Fixed-fee expectations cover up to 12 months from the version start; hourly/per-shift/project/custom terms await approved billable activity or manual resolution.
 
 ## Agent guidance
 
