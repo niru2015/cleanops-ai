@@ -103,7 +103,7 @@ const contractTables = ["contract_events", "contract_financial_terms", "contract
   "shift_coverage_requirements", "sla_definitions", "site_zones"];
 function sqlId(input) {
   const hex = createHash("md5").update(input).digest("hex");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20)}`;
 }
 function contractGeneratedIds(contract) {
   const rows = {

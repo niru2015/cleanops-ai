@@ -454,6 +454,15 @@ language sql stable security definer set search_path = '' as $$
     and (version.effective_to is null or day.work_date < version.effective_to);
 $$;
 
+-- Stable generated IDs must also be RFC 4122 shaped: downstream Zod UUID validation
+-- rejects a raw MD5 cast when its version/variant nibbles happen to be arbitrary.
+create function private.contract_stable_uuid(p_key text)
+returns uuid language sql immutable strict set search_path = '' as $$
+  select (substr(md5(p_key), 1, 8) || '-' || substr(md5(p_key), 9, 4) ||
+    '-5' || substr(md5(p_key), 14, 3) || '-8' || substr(md5(p_key), 18, 3) ||
+    '-' || substr(md5(p_key), 21, 12))::uuid;
+$$;
+
 create function public.submit_contract_version(p_contract_version_id uuid)
 returns void language plpgsql security definer set search_path = '' as $$
 declare v public.contract_versions%rowtype;
@@ -464,7 +473,7 @@ begin
   end if;
   update public.contract_versions set state = 'in_review', updated_at = now() where id = v.id;
   insert into public.contract_events(id, organization_id, site_id, contract_version_id, actor_id, event_type)
-    values (md5('contract-event:' || v.id::text || ':submitted')::uuid,
+    values (private.contract_stable_uuid('contract-event:' || v.id::text || ':submitted'),
       v.organization_id, v.site_id, v.id, auth.uid(), 'submitted');
 end;
 $$;
@@ -497,7 +506,7 @@ begin
   update public.contract_versions set state = 'approved', approved_by = auth.uid(),
     approved_at = clock_timestamp(), updated_at = now() where id = v.id;
   insert into public.contract_events(id, organization_id, site_id, contract_version_id, actor_id, event_type)
-    values (md5('contract-event:' || v.id::text || ':approved')::uuid,
+    values (private.contract_stable_uuid('contract-event:' || v.id::text || ':approved'),
       v.organization_id, v.site_id, v.id, auth.uid(), 'approved');
 end;
 $$;
@@ -573,20 +582,20 @@ begin
     update public.shifts set state = 'cancelled'
       where contract_version_id = prior.id and starts_at >= v.effective_from::timestamptz and state = 'planned';
     insert into public.contract_events(id, organization_id, site_id, contract_version_id, actor_id, event_type,
-      details) values (md5('contract-event:' || prior.id::text || ':superseded-by:' || v.id::text)::uuid,
+      details) values (private.contract_stable_uuid('contract-event:' || prior.id::text || ':superseded-by:' || v.id::text),
       v.organization_id, v.site_id, prior.id, auth.uid(), 'superseded',
       jsonb_build_object('byVersionId', v.id, 'effectiveFrom', v.effective_from));
   end if;
   for obligation in select * from public.contract_obligations where contract_version_id = v.id loop
     insert into public.service_tasks(id, organization_id, site_id, name, evidence_required,
       contract_version_id, contract_obligation_id)
-      values (md5('contract-task:' || obligation.id::text)::uuid, v.organization_id, v.site_id,
+      values (private.contract_stable_uuid('contract-task:' || obligation.id::text), v.organization_id, v.site_id,
         left(obligation.name || ' [' || contract_row.code || ' v' || v.version_number || ' ' || left(obligation.id::text,8) || ']', 160),
         obligation.evidence_required, v.id, obligation.id)
       returning id into task_id;
     insert into public.task_schedules(id, organization_id, site_id, task_id, zone_id, recurrence,
       contract_version_id)
-      values (md5('contract-schedule:' || obligation.id::text)::uuid,
+      values (private.contract_stable_uuid('contract-schedule:' || obligation.id::text),
         v.organization_id, v.site_id, task_id, obligation.zone_id,
         jsonb_build_object('kind', obligation.recurrence, 'effective_from', v.effective_from,
           'effective_to', v.effective_to, 'due_window_minutes', obligation.due_window_minutes,
@@ -595,18 +604,18 @@ begin
   for staffing in select * from private.contract_staffing_plan(v.id) loop
     insert into public.shifts(id, organization_id, site_id, starts_at, ends_at, contract_version_id,
       contract_staffing_requirement_id)
-      values (md5('contract-shift:' || staffing.requirement_id::text || ':' || staffing.work_date::text)::uuid,
+      values (private.contract_stable_uuid('contract-shift:' || staffing.requirement_id::text || ':' || staffing.work_date::text),
         v.organization_id, v.site_id, staffing.starts_at, staffing.ends_at, v.id,
         staffing.requirement_id) returning id into shift_id;
     insert into public.shift_coverage_requirements(id, organization_id, site_id, shift_id,
       required_positions, contract_version_id)
-      values (md5('contract-coverage:' || staffing.requirement_id::text || ':' || staffing.work_date::text)::uuid,
+      values (private.contract_stable_uuid('contract-coverage:' || staffing.requirement_id::text || ':' || staffing.work_date::text),
         v.organization_id, v.site_id, shift_id, staffing.required_positions, v.id);
   end loop;
   for revenue in select * from private.contract_revenue_plan(v.id) loop
     insert into public.contract_revenue_expectations(id, organization_id, site_id, contract_version_id,
       financial_term_id, service_period, amount, currency)
-      values (md5('contract-revenue:' || revenue.financial_term_id::text || ':' || revenue.service_period::text)::uuid,
+      values (private.contract_stable_uuid('contract-revenue:' || revenue.financial_term_id::text || ':' || revenue.service_period::text),
         v.organization_id, v.site_id, v.id, revenue.financial_term_id,
         revenue.service_period, revenue.amount, revenue.currency);
   end loop;
@@ -614,7 +623,7 @@ begin
     insert into public.sla_definitions(id, organization_id, site_id, name, version, window_start,
       window_end, numerator_rule, denominator_rule, exclusion_rule, contract_version_id,
       contract_sla_term_id)
-      values (md5('contract-sla:' || sla.id::text)::uuid,
+      values (private.contract_stable_uuid('contract-sla:' || sla.id::text),
         v.organization_id, v.site_id, left(sla.name || ' [' || contract_row.code || ']',160),
         v.version_number, v.effective_from::timestamptz,
         coalesce(v.effective_to::timestamptz, (v.effective_from + interval '12 months')::timestamptz),
@@ -624,7 +633,7 @@ begin
     activated_at = clock_timestamp(), updated_at = now() where id = v.id;
   update public.contracts set state = 'active', updated_at = now() where id = contract_row.id;
   insert into public.contract_events(id, organization_id, site_id, contract_version_id, actor_id, event_type,
-    details) values (md5('contract-event:' || v.id::text || ':activated')::uuid,
+    details) values (private.contract_stable_uuid('contract-event:' || v.id::text || ':activated'),
     v.organization_id, v.site_id, v.id, auth.uid(), 'activated', impact);
   return impact;
 end;

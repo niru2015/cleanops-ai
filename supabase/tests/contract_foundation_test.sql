@@ -1,6 +1,6 @@
 begin;
 set local search_path = public, extensions;
-select plan(44);
+select plan(46);
 
 select results_eq(
   $$ select relrowsecurity from pg_class where oid = 'public.contract_financial_terms'::regclass $$,
@@ -73,6 +73,12 @@ select is((select state from public.contract_versions where id=(select id from n
   'active','Director activates approved version');
 select is((select count(*) from public.task_schedules where contract_version_id=(select id from new_version)),
   1::bigint,'quarterly obligation creates one canonical schedule');
+select is((select substr(id::text, 15, 1) from public.service_tasks
+  where contract_version_id=(select id from new_version)), '5',
+  'generated task ID has a valid deterministic UUID version');
+select is((select substr(id::text, 20, 1) from public.service_tasks
+  where contract_version_id=(select id from new_version)), '8',
+  'generated task ID has a valid UUID variant');
 select is((select recurrence->>'kind' from public.task_schedules where contract_version_id=(select id from new_version)),
   'quarterly','schedule retains quarterly recurrence');
 select is((select count(*) from public.shift_coverage_requirements where contract_version_id=(select id from new_version)),
