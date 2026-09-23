@@ -2,7 +2,7 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last reviewed: 2026-09-22, includes issue #48 (finance ledger edit/delete) on top of `main` at `9efa8d3`.
+Last reviewed: 2026-09-22, includes issues #48 and #55 on top of `main` at `9efa8d3`.
 
 ## Route summary
 
@@ -164,7 +164,7 @@ Access: Directors read and write everything below; Area Managers read the invent
 
 The entry forms are rendered only for Directors (`editable`). RLS independently limits `inventory_transactions` reads to `private.can_view_site_finance`, `labor_cost_entries` reads to `private.can_administer_org` (Director only, since CLEAN-020) and both inserts to `private.can_edit_site_finance`.
 
-**Known gap:** `getFinanceWorkspace` queries `labor_cost_entries` for every viewer regardless of role, and the "Labour ledger" table at the bottom of `finance-workspace.tsx` is rendered unconditionally (outside the `editable` branch). RLS silently returns zero rows to an Area Manager instead of an error, so that viewer sees "No labour cost entries have been recorded." — indistinguishable from a genuinely empty ledger. Not yet filed as an issue.
+Fixed (issue #55): `getFinanceWorkspace` now takes a `canReadLabour` flag and skips the `labor_cost_entries` query entirely when the caller cannot read it, returning `labourRestricted: true` instead of an empty array. `FinanceWorkspace` shows an explicit "restricted to Directors" message for the labour ledger in that case, distinct from the genuine "No labour cost entries have been recorded." empty state a Director still sees.
 
 ### Writes (Directors only)
 
@@ -181,11 +181,17 @@ The entry forms are rendered only for Directors (`editable`). RLS independently 
 
 Not implemented: revenue, cost import batches, source-document references and per-site profitability (issue #33). `source_message_id` exists on both ledgers but no UI sets it.
 
-## /finance — WhatsApp context queue (currently unmounted)
+## /finance — WhatsApp context queue
 
-**Status:** the database, RPC, integration (`src/integrations/messages/supabase-message-context.ts`), component (`src/components/message-context-queue.tsx`) and server action (`performMessageResolution` in `src/app/finance/actions.ts`) exist, but nothing renders `MessageContextQueue` or calls `getMessageWorkspace`. The role-scoped finance rework (PR #43) removed it from `/finance`, and supervisors can no longer reach `/finance`. There is therefore no UI path today to confirm message context. The integration also targets the fixed `DEMO_SITE_ID` rather than a selected site. Owner decision 2026-09-21: the queue stays on `/finance`, scoped to the selected site (issue #50). The generic resolution inbox in issue #27 is separate.
-
-What the data path does when mounted:
+Fixed (issue #50): `MessageContextQueue` is rendered on `/finance` below the ledgers, for both Director and Area
+Manager, scoped to the selected casino. `getMessageWorkspace` and `list_site_external_messages` now take the
+selected `siteId` instead of the fixed `DEMO_SITE_ID`. `performMessageResolution` was rewired onto the same
+`createSupabaseServerClient`/`getAppAccessContext` pattern as every other finance action (it previously used the
+hosted-demo `getOperationsRuntime("supervisor")` runtime, a leftover from before the role-scoped finance rework in
+PR #43 removed supervisors from `/finance`). Confirming context is treated as an operational action, not a finance
+write: an Area Manager may confirm even though `canEditFinance` (Director-only) governs the ledgers — RLS
+(`private.can_manage_site`) already permitted this and is unchanged. The generic resolution inbox proposed in issue
+#27 is a separate, larger piece of work.
 
 ### Reads
 

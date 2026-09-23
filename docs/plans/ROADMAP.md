@@ -55,8 +55,8 @@ Work one issue at a time; use its focused Read list rather than loading the whol
 - CLEAN-026: [Make WhatsApp persistence implemented](completed/CLEAN-026.md), a token-scoped endpoint that
   reuses durable ingestion; existing-group capture remains unproven and gated (ADR 002, issue #37).
 - CLEAN-027: [normalized messages and finance implemented](completed/CLEAN-027.md): context/media tables, supplier and
-  item catalogues, append-only inventory and labour capture, and a site-authorized RPC for untrusted message text.
-  Its supervisor queue UI is currently unmounted; see the plan's status update.
+  item catalogues, inventory and labour capture (Director-editable since issue #48), and a site-authorized RPC for
+  untrusted message text. Its Director/Area Manager queue UI was re-mounted on `/finance` by issue #50.
 
 ## Tornado Phase 2 backlog (parent #24) — implementation status
 
@@ -67,7 +67,7 @@ tables or code exist but the issue's acceptance criteria are not met. No item be
 |---|---|---|
 | #25 CLEAN-012 | Production-mode hosted prep/reset | Not started. `submitSyntheticPair` in `src/app/review/actions.ts` still requires the simulator flag, which is forced off in production. |
 | #26 CLEAN-013 | Connected evidence, real photo review, correction | Not started. CLEAN-011 upload is merged; review still shows placeholder evidence and fixed task IDs. |
-| #27 CLEAN-014 | Canonical intake API + resolution inbox | Foundation: durable ingestion, Make Cloud adapter (CLEAN-026), context tables/RPC (CLEAN-027). No generic `/api/integrations/events`; existing queue UI unmounted (re-mount on `/finance` tracked in #50). |
+| #27 CLEAN-014 | Canonical intake API + resolution inbox | Foundation: durable ingestion, Make Cloud adapter (CLEAN-026), context tables/RPC (CLEAN-027). No generic `/api/integrations/events`. The existing queue UI is re-mounted on `/finance` (issue #50); a standalone, multi-type resolution inbox is still open. |
 | #28 CLEAN-015 | Deterministic multi-site fixtures | Not started. `supabase/seed.sql` has the Aurora fixture, "Copper Peak East" and, in the isolation tenant, "Northstar Harbour"; no Harbour/Cedar sites, no June-August data. |
 | #29 CLEAN-016 | Announcements + acknowledgements | Not started. |
 | #30 CLEAN-017 | Supply requests, approval, stock history | Foundation: `vendors`, `inventory_items`, append-only `inventory_transactions`. No requests, approvals or conversions. |
@@ -86,7 +86,7 @@ tables or code exist but the issue's acceptance criteria are not met. No item be
 |---|---|
 | #48 CLEAN-028 | Grant Directors update/delete on finance ledgers (ends grant-based append-only). |
 | #49 CLEAN-029 | Done (PR #53, merged): supplier/inventory item catalogue narrowed to Director, Area Manager, Operations Manager. |
-| #50 CLEAN-030 | Restore the message-context queue on `/finance`, scoped to the selected site. |
+| #50 CLEAN-030 | Done: message-context queue re-mounted on `/finance`, scoped to the selected site; Director and Area Manager can both confirm. |
 | #51 CLEAN-031 | ADR 008: real casino names stay, repository stays public, supply requests approved by managers and Directors. |
 | #55 CLEAN-032 | Fix: `/finance` labour ledger shows "no records" instead of "restricted" to Area Managers, after CLEAN-020 narrowed reads to Directors. |
 | — (CLEAN-012 follow-up) | Done (migration `20260922031000`): `reset_hosted_demo` now clears `inventory_transactions` and `labor_cost_entries` for the walkthrough site; `equipment_assets` intentionally excluded (no write path exists yet). Part of #25's acceptance criteria, not the whole issue. |

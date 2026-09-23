@@ -95,10 +95,10 @@ Rules:
 - Do not assume arbitrary existing WhatsApp group access.
 - Raw message text is exposed only through the authorized RPC path.
 
-## 5. Supervisor message context review
+## 5. Director/Area Manager message context review
 
-**Currently unreachable from the UI.** The queue component and action exist but are not rendered since the
-role-scoped finance rework (PR #43); the flow below is the data path when it is mounted again on `/finance` (issue #50).
+Fixed (issue #50): re-mounted on `/finance`, scoped to the selected casino, for Director and Area Manager (not
+Site Supervisor — the route itself is Director/Area Manager only since PR #43's role-scoped finance rework).
 
 ```text
 external_message_contexts
@@ -106,16 +106,16 @@ external_message_contexts
 + external_message_media
         |
         v
-message queue UI (unmounted; formerly /finance)
+/finance message queue
         |
         v
-supervisor confirms area/task/sender role/worker
+Director or Area Manager confirms area/task/sender role/worker
         |
         v
 external_message_contexts resolution_status=confirmed
 ```
 
-Receiving-account site is a deterministic suggestion; supervisor confirms finer context.
+Receiving-account site is a deterministic suggestion; the confirming Director/Area Manager sets the finer context.
 
 ## 6. Evidence quality review and correction
 
@@ -238,8 +238,9 @@ vendor + item + site + quantity + unit cost
   -> inventory ledger
 ```
 
-Transaction types: receipt, issue, adjustment, count. Current ledger is append-only for browser roles (grants allow
-select and insert only; Director update/delete is decided but not yet granted, issue #48). Only a Director can insert; a Director or a granted Area Manager can read a site's ledger.
+Transaction types: receipt, issue, adjustment, count. A Director can insert, edit and delete rows (issue #48); a
+granted Area Manager can read but not write. Every edit/delete is recorded in `finance_ledger_audit_events` with the
+actor, before/after state and action; a trigger rejects reassigning `organization_id`, `site_id` or `id`.
 An order is not consumption: `issue` records stock released to a site, not proof of use (issue #30).
 
 ## 12. Finance — labour
@@ -254,8 +255,9 @@ site + work date + hours + hourly cost + type
 ```
 
 Cost types: regular, overtime, contractor. This is operational cost capture, not payroll. Since CLEAN-020
-(`20260921230000`), this ledger is readable by a Director only; an Area Manager sees the site's labour cost only as
-the aggregate `direct_labour` figure in a `finance_reconciliations` row (§13), never a per-worker entry.
+(`20260921230000`), this ledger is readable and writable by a Director only (issue #48 added edit/delete on top of
+the existing insert); an Area Manager sees the site's labour cost only as the aggregate `direct_labour` figure in a
+`finance_reconciliations` row (§13), never a per-worker entry.
 
 ## 13. Reconciled finance import
 

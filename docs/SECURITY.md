@@ -92,7 +92,8 @@ Supplier and inventory item catalogues are readable only by Directors, Area Mana
 (`private.can_view_supply_catalogue`) and writable only by Directors (`private.can_edit_supply_catalogue`).
 `equipment_models` is readable by every active member and writable by administrators; `equipment_assets` is readable
 with operational site access. Both are select-only for browser roles. Raw `external_messages` remain service-only
-and reach supervisors only through `list_site_external_messages`.
+and reach supervisors only through `list_site_external_messages`. Since issue #55, `/finance` tells a restricted
+Area Manager that the labour ledger is off-limits rather than showing a misleading empty state.
 
 CLEAN-020 keeps imported batches, source rows, raw CSV values, allocations and the worker-level labour ledger Director-only. This prevents Area Managers from reading individual labour/payroll detail. `finance_reconciliations` contains only approved actual aggregate totals and is readable by Directors or an Area Manager with an active site grant. Supervisors, Operations Managers, cleaners and clients cannot read imported finance totals; clients never receive margins. Staging and acceptance RPCs independently require Director authorization and derive the acceptance actor from `auth.uid()`.
 

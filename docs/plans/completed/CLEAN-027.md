@@ -29,7 +29,7 @@ issue #48, with an audit trail).
 - Role-scoped finance (PR #43, migration `20260921051826_casino_demo_rbac_equipment`) replaced the acceptance rule
   "supervisors can insert finance records": ledgers are now readable by Directors and granted Area Managers only and
   writable by Directors only. Site supervisors no longer reach `/finance`.
-- The supervisor message-context queue built here (`MessageContextQueue`, `getMessageWorkspace`,
-  `performMessageResolution`) is no longer rendered anywhere, so the "confirm area, task and sender" acceptance item
-  has no reachable UI. The database, RPC and RLS parts remain and are covered by `tests/database/normalized-finance.sql`.
-  Re-mounting the queue on `/finance` is tracked in issue #50.
+- The message-context queue built here (`MessageContextQueue`, `getMessageWorkspace`, `performMessageResolution`)
+  was re-mounted on `/finance`, scoped to the selected casino, by issue #50: Director and Area Manager can both
+  confirm context (RLS `private.can_manage_site` already allowed it); Site Supervisor still cannot, since the route
+  itself is Director/Area Manager only. Covered by `supabase/tests/message_context_review_test.sql`.
