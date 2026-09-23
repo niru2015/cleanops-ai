@@ -1,5 +1,7 @@
 # CleanOps agent map
 
+> **Current Tornado priority:** Finance MVP. If assigned a finance/demo-data task, read **#61** first for the finance execution contract and **#28** for scenario-data rules. The assigned issue remains the bounded implementation contract; older roadmap prose must not override newer explicit issue decisions.
+
 CleanOps AI structures cleaning operations for casinos and other 24/7 facilities.
 The repo includes the hosted role demo, mobile/evidence/review/reporting workflows, official WhatsApp/OpenAI adapters, and the CLEAN-027 normalized message + finance/inventory slice.
 
