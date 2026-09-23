@@ -115,11 +115,21 @@ try {
   assert(posted.data.length === 5, "Duplicate WhatsApp receipt created an extra cost.");
   assert(financeReceipts.cases.find((item) => item.key === "duplicate-fuel")?.file === "fuel-receipt.png",
     "Duplicate case must reuse exact receipt bytes.");
+  const timePack = JSON.parse(await readFile("fixtures/generated/finance-showcase/time-cases.json", "utf8"));
+  assert(timePack.approvedLabourCost === financeExpected.controlTotals.finance.approvedLabourCost,
+    "Time case source pack lost its labour cost total.");
+  const labour = await client.from("labor_cost_entries").select("total_cost")
+    .eq("organization_id", financePlan.organization.id);
+  if (labour.error) throw labour.error;
+  assert((labour.data.reduce((sum, row) => sum + Math.round(Number(row.total_cost) * 100), 0) / 100).toFixed(2)
+    === financeExpected.controlTotals.finance.approvedLabourCost,
+  "Approved time postings do not reconcile to generated source hours and rates.");
+  assert(labour.data.length === 4, "Time exceptions created an unapproved labour cost.");
   run("reset", "finance-showcase");
   financeCreated = false;
   assert(await count("sites", financePlan.organization.id) === 0,
     "Finance scenario tenant remained after reset.");
-  console.log("Scenario CLI integration passed: base, contracts, expenses, duplicate receipt, source totals, reset and tenant isolation.");
+  console.log("Scenario CLI integration passed: base, contracts, expenses, time, source totals, reset and tenant isolation.");
 } finally {
   if (created) {
     try { run("reset", scenarioName); } catch { console.error(`Manual cleanup may be needed: npm run demo:reset -- ${scenarioName}`); }

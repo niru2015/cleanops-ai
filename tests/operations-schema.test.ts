@@ -23,7 +23,8 @@ describe("operations input contracts", () => {
 
   it("accepts bounded finance capture and supervisor message resolution", () => {
     expect(financeActionSchema.safeParse({ action: "record_inventory", siteId: "40000000-0000-4000-8000-000000000001", inventoryItemId: "60000000-0000-4000-8000-000000000001", transactionType: "receipt", quantity: 2, unitCost: 7.5, occurredAt: "2026-09-21T02:00:00.000Z" }).success).toBe(true);
-    expect(financeActionSchema.safeParse({ action: "record_labour", siteId: "40000000-0000-4000-8000-000000000001", workDate: "2026-09-21", hours: 2, hourlyCost: 24.5, costType: "regular" }).success).toBe(true);
+    expect(financeActionSchema.safeParse({ action: "record_labour", siteId: "40000000-0000-4000-8000-000000000001", workDate: "2026-09-21", hours: 2, hourlyCost: 24.5, costType: "regular", notes: "Imported contractor adjustment" }).success).toBe(true);
+    expect(financeActionSchema.safeParse({ action: "record_labour", siteId: "40000000-0000-4000-8000-000000000001", workDate: "2026-09-21", hours: 2, hourlyCost: 24.5, costType: "regular" }).success).toBe(false);
     expect(messageResolutionSchema.safeParse({ contextId: "60000000-0000-4000-8000-000000000001", siteId: "40000000-0000-4000-8000-000000000001", senderRole: "supervisor" }).success).toBe(true);
     expect(financeActionSchema.safeParse({ action: "record_inventory", siteId: "40000000-0000-4000-8000-000000000001", inventoryItemId: "bad", transactionType: "receipt", quantity: -1, unitCost: 7.5, occurredAt: "not-a-date", extra: true }).success).toBe(false);
   });

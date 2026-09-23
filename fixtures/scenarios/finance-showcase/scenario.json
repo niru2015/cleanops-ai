@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatorVersion": 3,
+  "generatorVersion": 4,
   "scenarioId": "finance-showcase",
   "seed": 20260922,
   "clock": {"start":"2026-06-01","end":"2026-09-30","timezone":"America/Vancouver"},
   "organization": {"name":"Tornado Finance Showcase","siteCount":4,"workerCount":80},
   "referencePack": "tornado-v1",
-  "modules": {"base":true,"contracts":true,"expenses":true},
-  "cases": ["healthy_contract","supply_cost_exception","repair_cost_exception","duplicate_whatsapp_receipt","missing_checkout","contract_amendment","one_off_project"]
+  "modules": {"base":true,"contracts":true,"expenses":true,"time":true},
+  "cases": ["healthy_contract","supply_cost_exception","repair_cost_exception","duplicate_whatsapp_receipt","normal_shift","missing_checkout","overtime","worker_swap","rate_change","contract_amendment","one_off_project"]
 }

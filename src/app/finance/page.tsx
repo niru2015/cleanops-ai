@@ -94,7 +94,7 @@ export default async function FinancePage({
         </form>
         <span className="recordLabel">{access.canEditFinance ? "Director · edit" : "Area Manager · read only"}</span>
       </section>
-      <p><Link href="/finance/contracts">Open contract register</Link> · <Link href="/finance/inbox">Finance Inbox</Link> · <Link href="/finance/expenses">Expenses and direct costs</Link></p>
+      <p><Link href="/finance/contracts">Open contract register</Link> · <Link href="/finance/inbox">Finance Inbox</Link> · <Link href="/finance/expenses">Expenses and direct costs</Link> · <Link href="/finance/time">Approved time and labour</Link>{access.canEditFinance && <> · <Link href="/finance/rates">Worker cost rates</Link></>}</p>
       <FinanceWorkspace workspace={finance} editable={access.canEditFinance} siteId={selectedSite.id} />
       <MessageContextQueue workspace={messages} />
     </AppShell>

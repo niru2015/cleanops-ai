@@ -116,6 +116,35 @@ export function buildScenarioPlan(input, reference) {
     return cases;
   })() : null;
   const expenseCents = expenseCases?.filter((item) => item.approved).reduce((sum,item) => sum+item.cents,0) ?? 0;
+  const timeCases = scenario.modules.time ? (() => {
+    const siteWorkers = workers.filter(worker => worker.siteIndex === 0);
+    if (siteWorkers.length < 2 || !personas.some(persona => persona.role === "organization_administrator"))
+      throw new Error("Time scenario requires two site-zero workers and a Director persona.");
+    const [primary, replacement] = siteWorkers;
+    const make = (key, worker, date, startHour, endHour, status, costType = "regular") => ({
+      key, workerId: worker.id, siteId: sites[0].id, shiftId: id(`time/${key}/shift`),
+      assignmentId: id(`time/${key}/assignment`), date, start: `${date}T${startHour}:00:00Z`,
+      end: endHour ? `${date}T${endHour}:00:00Z` : null, status, costType,
+    });
+    const swapOriginal = make("worker_swap_original", primary, "2026-06-13", "08", null, "exception");
+    return [
+      { ...make("normal_shift", primary, "2026-06-01", "08", "16", "posted"),
+        shiftId: null, start: null, end: null, hours: 8, useContractShift: true },
+      make("missing_checkout", primary, "2026-06-11", "08", null, "exception"),
+      make("overtime", primary, "2026-06-12", "08", "17", "posted", "overtime"),
+      swapOriginal,
+      { ...make("worker_swap_replacement", replacement, "2026-06-13", "08", "16", "posted"),
+        shiftId: swapOriginal.shiftId, reuseShift: true },
+      { key: "manual_project", workerId: primary.id, siteId: sites[0].id,
+        date: "2026-09-15", status: "posted", costType: "regular",
+        projectReference: "Synthetic Hastings deep clean", hours: 3 },
+    ];
+  })() : null;
+  const labourCents = timeCases?.filter(item => item.status === "posted").reduce((sum, item) => {
+    const hours = item.hours ?? (new Date(item.end) - new Date(item.start)) / 3600000;
+    const rate = item.costType === "overtime" ? 36 : item.date >= "2026-08-01" ? 27 : 24;
+    return sum + Math.round(hours * rate * 100);
+  }, 0) ?? 0;
   const expected = {
     schemaVersion: scenario.schemaVersion,
     generatorVersion: scenario.generatorVersion,
@@ -130,15 +159,18 @@ export function buildScenarioPlan(input, reference) {
         expectedRevenue: contract?.expected.expectedRevenue ?? "0.00",
         currency: "CAD", currentRevenueEntries: contract?.expected.currentRevenueEntries ?? 0,
         approvedExpenseCost: (expenseCents/100).toFixed(2),
+        approvedLabourCost: (labourCents/100).toFixed(2),
         expenseByCategory: Object.fromEntries((expenseCases??[]).filter(item=>item.approved)
           .map(item=>[item.category,(item.cents/100).toFixed(2)])) } : null },
-    expectedExceptions: expenseCases ? ["duplicate_whatsapp_receipt"] : [],
+    expectedExceptions: [...(expenseCases ? ["duplicate_whatsapp_receipt"] : []),
+      ...(timeCases ? ["missing_checkout", "worker_swap"] : [])],
     roleSiteAccess: personas.map((persona) => ({ persona: persona.key, role: persona.role, siteIds: persona.role === "organization_administrator" || persona.role === "operations_manager" ? sites.map((site) => site.id) : [sites[persona.siteIndex].id] })),
     reconciliation: { status: "not_implemented", matched: 0, unmatched: 0 },
-    stage: expenseCases ? "B/contracts+expenses" : contract ? "B/contracts" : "A/base-only",
+    stage: timeCases ? "B/contracts+expenses+time" : expenseCases ? "B/contracts+expenses" : contract ? "B/contracts" : "A/base-only",
   };
   if (contract) expected.entityCounts.contracts = 1;
   if (expenseCases) expected.entityCounts.expenseCandidates=expenseCases.length;
+  if (timeCases) expected.entityCounts.timeEntries=timeCases.length;
   return { scenario, runId, organization, client, sites, workers, workerPermissions, memberGrants,
-    personas, contract, expenseCases, expected };
+    personas, contract, expenseCases, timeCases, expected };
 }

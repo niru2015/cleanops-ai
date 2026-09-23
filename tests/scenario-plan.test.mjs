@@ -24,7 +24,8 @@ describe("CLEAN-015 Stage A scenario plan", () => {
     expect(() => buildScenarioPlan({ ...scenario, organization: { ...scenario.organization, siteCount: 0 } }, reference)).toThrow("Invalid scenario");
     expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, contracts: true } }, reference)).toThrow("contracts require generatorVersion 2");
     expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, expenses: true } }, reference)).toThrow("expenses require generatorVersion 3");
-    expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, time: true } }, reference)).toThrow("adapter is not implemented");
+    expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, time: true } }, reference)).toThrow("time requires generatorVersion 4");
+    expect(() => buildScenarioPlan({ ...scenario, modules: { base: true, projects: true } }, reference)).toThrow("adapter is not implemented");
     expect(() => buildScenarioPlan(scenario, { ...reference, personas: [reference.personas[0], reference.personas[0]] })).toThrow("Invalid reference pack");
   });
 
@@ -33,6 +34,20 @@ describe("CLEAN-015 Stage A scenario plan", () => {
     const sites = new Set(plan.sites.map((site) => site.id));
     expect(plan.memberGrants.every((grant) => sites.has(grant.site_id))).toBe(true);
     expect(plan.expected.controlTotals).toEqual({ siteCount: 2, workerCount: 4, finance: null });
+  });
+});
+
+describe("CLEAN-036 time scenario contribution", () => {
+  const timeScenario = JSON.parse(readFileSync("fixtures/scenarios/finance-showcase/scenario.json", "utf8"));
+  const timeReference = JSON.parse(readFileSync("fixtures/reference/tornado-v1.json", "utf8"));
+  it("defines repeatable time exceptions and a source-backed labour total", () => {
+    const plan = buildScenarioPlan(timeScenario, timeReference);
+    expect(plan.timeCases.map(item => item.key)).toEqual([
+      "normal_shift", "missing_checkout", "overtime", "worker_swap_original",
+      "worker_swap_replacement", "manual_project",
+    ]);
+    expect(plan.expected.controlTotals.finance.approvedLabourCost).toBe("789.00");
+    expect(JSON.stringify(plan)).toBe(JSON.stringify(buildScenarioPlan(timeScenario, timeReference)));
   });
 });
 

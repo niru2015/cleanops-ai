@@ -127,3 +127,5 @@ anonymous access. Exercise reads/inserts/updates/deletes, guessed IDs, reassignm
 views/RPCs, exports and live subscriptions. Verify membership revocation and pending signed
 URL exposure window. Test forged webhooks, replay, malicious text, rejected media and stale
 approval race. Production remains gated until applicable tests and privacy decisions pass.
+
+CLEAN-036 separates operational hours from confidential worker cost rates. Site supervisors, Operations Managers and granted Area Managers may derive and review `time_entries` only at their authorized sites. They cannot read `worker_cost_rates`, `worker_cost_rate_events` or Director-only `labor_cost_entries`; the time page queries worker names only through site permissions. Directors alone create rates and post approved hours. Public/anon execution of the security-definer RPCs is revoked, and each RPC checks `auth.uid()` plus organization/site authority. Time/rate tables have read-only browser grants and RLS; audit rows and time-linked ledger cost are immutable. The operational time payload contains no rate or per-worker cost amount.
