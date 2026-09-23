@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "kind": "fictional",
+  "city": "Vancouver",
+  "siteNames": ["Aurora Demo Casino", "Copper Peak Demo Casino", "Northstar Demo Casino", "Harbour Demo Casino"],
+  "workerNames": ["Cleaner One", "Cleaner Two", "Cleaner Three"],
+  "equipmentNames": ["RS-800 Demo Scrubber", "WB-420 Demo Scrubber", "CE-220 Demo Extractor"],
+  "personas": [
+    {"key":"director","displayName":"Demo Director","role":"organization_administrator"},
+    {"key":"area","displayName":"Demo Area Manager","role":"area_manager"},
+    {"key":"supervisor","displayName":"Demo Supervisor","role":"site_supervisor"},
+    {"key":"cleaner","displayName":"Demo Cleaner","role":"cleaner"}
+  ]
+}

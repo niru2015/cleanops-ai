@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": 1,
+  "scenarioId": "operations-showcase",
+  "seed": 20260923,
+  "clock": {"start":"2026-09-01","end":"2026-09-30","timezone":"America/Vancouver"},
+  "organization": {"name":"Operations Showcase","siteCount":3,"workerCount":24},
+  "referencePack": "fictional-v1",
+  "modules": {"base":true},
+  "cases": ["staffing_gap","evidence_correction","incident"]
+}

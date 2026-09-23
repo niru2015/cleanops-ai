@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": 1,
+  "scenarioId": "stage-a-smoke",
+  "seed": 20260922,
+  "clock": {"start":"2026-06-01","end":"2026-09-30","timezone":"America/Vancouver"},
+  "organization": {"name":"Smoke Scenario","siteCount":2,"workerCount":4},
+  "referencePack": "fictional-v1",
+  "modules": {"base":true},
+  "cases": []
+}

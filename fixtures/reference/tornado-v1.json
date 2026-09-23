@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "kind": "reference-only",
+  "disclaimer": "Reference display identities only. No customer relationship, employment claim, actual contract or measured performance is implied. All generated business records are synthetic.",
+  "city": "Vancouver",
+  "siteNames": ["Grand Villa Casino", "River Rock Casino Resort", "Parq Casino Vancouver"],
+  "workerNames": ["Paul", "Sheila", "Nikhil", "Javid", "Pradosh", "Mandeep", "Manuel", "Susanna", "Ricky"],
+  "equipmentNames": ["RS-800", "WB-420", "CE-220"],
+  "personas": [
+    {"key":"darrel-director","displayName":"Darrel","role":"organization_administrator"},
+    {"key":"shayana-director","displayName":"Shayana","role":"organization_administrator"},
+    {"key":"darrel-area","displayName":"Darrel","role":"area_manager"},
+    {"key":"shayana-area","displayName":"Shayana","role":"area_manager"},
+    {"key":"hardeep","displayName":"Hardeep","role":"site_supervisor"},
+    {"key":"danny","displayName":"Danny","role":"site_supervisor"},
+    {"key":"rj","displayName":"RJ","role":"site_supervisor"},
+    {"key":"ambani","displayName":"Ambani","role":"site_supervisor"},
+    {"key":"paul","displayName":"Paul","role":"cleaner"},
+    {"key":"sheila","displayName":"Sheila","role":"cleaner"},
+    {"key":"nikhil","displayName":"Nikhil","role":"cleaner"},
+    {"key":"javid","displayName":"Javid","role":"cleaner"},
+    {"key":"pradosh","displayName":"Pradosh","role":"cleaner"},
+    {"key":"mandeep","displayName":"Mandeep","role":"cleaner"},
+    {"key":"manuel","displayName":"Manuel","role":"cleaner"},
+    {"key":"susanna","displayName":"Susanna","role":"cleaner"},
+    {"key":"ricky","displayName":"Ricky","role":"cleaner"}
+  ]
+}
