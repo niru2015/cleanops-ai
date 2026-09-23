@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash, createHmac } from "node:crypto";
 import { readFile, mkdir, writeFile, rename, access, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
@@ -8,6 +9,7 @@ const root = resolve(import.meta.dirname, "..");
 const outputRoot = join(root, "fixtures", "generated");
 const safeName = /^[a-z][a-z0-9-]{2,63}$/;
 let localDatabaseUrl;
+let localAuth;
 
 function parseArgs() {
   const [operation, name, ...flags] = process.argv.slice(2);
@@ -42,11 +44,28 @@ function connectLocal() {
   const url = status.API_URL ?? status.api_url;
   const key = status.SERVICE_ROLE_KEY ?? status.service_role_key;
   const dbUrl = status.DB_URL ?? status.db_url;
+  const anonKey = status.ANON_KEY ?? status.anon_key;
+  const jwtSecret = status.JWT_SECRET ?? status.jwt_secret;
   if (typeof url !== "string" || !/^http:\/\/(?:127\.0\.0\.1|localhost):\d+$/.test(url) || typeof key !== "string" || typeof dbUrl !== "string" || !["127.0.0.1", "localhost"].includes(new URL(dbUrl).hostname)) {
     throw new Error("A running local Supabase instance is required. This Stage A CLI never targets a hosted project.");
   }
   localDatabaseUrl = dbUrl;
+  if (typeof anonKey !== "string" || typeof jwtSecret !== "string") throw new Error("Local Auth signing information is unavailable.");
+  localAuth = { url, anonKey, jwtSecret };
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+function directorClient(userId) {
+  if (!localAuth || !/^[0-9a-f-]{36}$/.test(userId)) throw new Error("Local Director persona is unavailable.");
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const header = encode({ alg: "HS256", typ: "JWT" });
+  const now = Math.floor(Date.now() / 1000);
+  const payload = encode({ sub: userId, role: "authenticated", aud: "authenticated", iss: "supabase", iat: now, exp: now + 600 });
+  const body = `${header}.${payload}`;
+  const signature = createHmac("sha256", localAuth.jwtSecret).update(body).digest("base64url");
+  return createClient(localAuth.url, localAuth.anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${body}.${signature}` } },
+  });
 }
 async function checked(promise, label) {
   const result = await promise;
@@ -75,11 +94,84 @@ async function assertScope(client, plan, allowPartial = false) {
     ["member_site_access", ids(plan.memberGrants)],
   ];
   for (const [table, planned] of tables) assertIdSet(await rowsFor(client, table, plan.organization.id), planned, table, allowPartial);
+  if (plan.contract) await assertContractScope(client, plan, allowPartial);
   return org;
 }
-async function countAttached(organizationId) {
+const contractTables = ["contract_events", "contract_financial_terms", "contract_obligations",
+  "contract_revenue_expectations", "contract_sla_terms", "contract_staffing_requirements",
+  "contract_versions", "contracts", "service_tasks", "task_schedules", "shifts",
+  "shift_coverage_requirements", "sla_definitions", "site_zones"];
+function sqlId(input) {
+  const hex = createHash("md5").update(input).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20)}`;
+}
+function contractGeneratedIds(contract) {
+  const rows = {
+    contract_events: [
+      ...contract.versions.flatMap((version) => [sqlId(`contract-event:${version.id}:approved`),
+        sqlId(`contract-event:${version.id}:activated`)]),
+      sqlId(`contract-event:${contract.versions[0].id}:superseded-by:${contract.versions[1].id}`),
+    ],
+    service_tasks: contract.obligations.map((item) => sqlId(`contract-task:${item.id}`)),
+    task_schedules: contract.obligations.map((item) => sqlId(`contract-schedule:${item.id}`)),
+    shifts: [], shift_coverage_requirements: [], contract_revenue_expectations: [],
+    sla_definitions: [],
+  };
+  for (const requirement of contract.staffing) {
+    const version = contract.versions.find((item) => item.id === requirement.contract_version_id);
+    const start = new Date(`${version.effective_from}T00:00:00Z`);
+    for (let day = 0; day < 28; day += 1) {
+      const date = new Date(start);
+      date.setUTCDate(date.getUTCDate() + day);
+      if (date.getUTCDay() !== requirement.weekday) continue;
+      const workDate = date.toISOString().slice(0, 10);
+      rows.shifts.push(sqlId(`contract-shift:${requirement.id}:${workDate}`));
+      rows.shift_coverage_requirements.push(sqlId(`contract-coverage:${requirement.id}:${workDate}`));
+    }
+  }
+  for (const term of contract.terms) {
+    const start = new Date(`${term.effective_from}T00:00:00Z`);
+    for (let month = 0; month < 12; month += 1) {
+      const date = new Date(start);
+      date.setUTCMonth(date.getUTCMonth() + month);
+      rows.contract_revenue_expectations.push(sqlId(`contract-revenue:${term.id}:${date.toISOString().slice(0, 10)}`));
+    }
+  }
+  return rows;
+}
+async function assertContractScope(client, plan, allowPartial) {
+  const contract = plan.contract;
+  for (const [table, planned] of [
+    ["site_zones", [contract.zone.id]], ["contracts", [contract.identity.id]],
+    ["contract_versions", ids(contract.versions)], ["contract_financial_terms", ids(contract.terms)],
+    ["contract_obligations", ids(contract.obligations)],
+    ["contract_staffing_requirements", ids(contract.staffing)], ["contract_sla_terms", []],
+  ]) assertIdSet(await rowsFor(client, table, plan.organization.id), planned, table, allowPartial);
+  const versionIds = new Set(ids(contract.versions));
+  for (const [table, planned] of Object.entries(contractGeneratedIds(contract))) {
+    const entries = await checked(client.from(table).select("id,contract_version_id")
+      .eq("organization_id", plan.organization.id), `Read ${table}`);
+    if (entries.some((entry) => !versionIds.has(entry.contract_version_id)) ||
+      entries.some((entry) => !planned.includes(entry.id)) ||
+      (!allowPartial && entries.length !== planned.length)) {
+      throw new Error(`${table} differs from the contract scenario scope; refusing reset.`);
+    }
+  }
+  if (!allowPartial) {
+    const entries = await checked(client.from("contract_revenue_expectations")
+      .select("amount,is_current").eq("organization_id", plan.organization.id), "Read expected revenue");
+    const current = entries.filter((entry) => entry.is_current);
+    const cents = current.reduce((sum, entry) => sum + Math.round(Number(entry.amount) * 100), 0);
+    if (current.length !== contract.expected.currentRevenueEntries ||
+      (cents / 100).toFixed(2) !== contract.expected.expectedRevenue) {
+      throw new Error("Contract expected revenue does not reconcile to the scenario manifest.");
+    }
+  }
+}
+async function countAttached(organizationId, hasContracts) {
   if (!/^[0-9a-f-]{36}$/.test(organizationId) || !localDatabaseUrl) throw new Error("Invalid local reset scope.");
   const baseTables = new Set(["clients", "sites", "workers", "worker_site_permissions", "memberships", "member_site_access"]);
+  if (hasContracts) for (const table of contractTables) baseTables.add(table);
   const names = execFileSync("psql", [localDatabaseUrl, "-At", "-c", "select table_name from information_schema.columns where table_schema='public' and column_name='organization_id' order by table_name"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   const tables = names.trim().split("\n").filter((table) => table && !baseTables.has(table));
   if (tables.some((table) => !/^[a-z][a-z0-9_]*$/.test(table))) throw new Error("Unexpected table name in local schema.");
@@ -101,6 +193,28 @@ async function listScenarioUsers(client, plan) {
   }
   return found;
 }
+async function generateContracts(client, plan, registry) {
+  if (!plan.contract) return;
+  const director = plan.personas.find((persona) => persona.role === "organization_administrator");
+  const directorIndex = plan.personas.indexOf(director);
+  const directorId = registry.authUserIds[directorIndex];
+  if (!directorId) throw new Error("Contract builder requires its generated Director persona.");
+  const actor = directorClient(directorId);
+  const contract = plan.contract;
+  await checked(client.from("site_zones").insert(contract.zone), "Create contract zone");
+  await checked(client.from("contracts").insert({ ...contract.identity, created_by: directorId }), "Create manual contract source");
+  for (let index = 0; index < contract.versions.length; index += 1) {
+    const version = contract.versions[index];
+    await checked(client.from("contract_versions").insert({ ...version, created_by: directorId }), `Create contract version ${index + 1}`);
+    await checked(client.from("contract_financial_terms").insert(contract.terms[index]), `Create commercial term ${index + 1}`);
+    await checked(client.from("contract_obligations").insert(contract.obligations[index]), `Create service obligation ${index + 1}`);
+    await checked(client.from("contract_staffing_requirements").insert(contract.staffing[index]), `Create staffing rule ${index + 1}`);
+    await checked(actor.rpc("approve_contract_version", { p_contract_version_id: version.id }), `Director approval ${index + 1}`);
+    const preview = await checked(actor.rpc("preview_contract_activation", { p_contract_version_id: version.id }), `Contract preview ${index + 1}`);
+    if (typeof preview?.token !== "string") throw new Error("Contract preview omitted its token.");
+    await checked(actor.rpc("activate_contract_version", { p_contract_version_id: version.id, p_preview_token: preview.token }), `Director activation ${index + 1}`);
+  }
+}
 async function generate(name, seed) {
   const plan = await loadPlan(name, seed); // Validate before any writes.
   const directory = join(outputRoot, name);
@@ -110,7 +224,7 @@ async function generate(name, seed) {
   const existing = await checked(client.from("organizations").select("id").eq("id", plan.organization.id).maybeSingle(), "Check scenario ID");
   if (existing) throw new Error("Scenario organization ID already exists without a registry; refusing to adopt it.");
   await mkdir(directory, { recursive: true });
-  const registry = { scenarioId: name, runId: plan.runId, seed: plan.scenario.seed, generatorVersion: 1, organizationId: plan.organization.id, status: "generating", createdAt: new Date().toISOString(), authUserIds: [] };
+  const registry = { scenarioId: name, runId: plan.runId, seed: plan.scenario.seed, generatorVersion: plan.scenario.generatorVersion, organizationId: plan.organization.id, status: "generating", createdAt: new Date().toISOString(), authUserIds: [] };
   await atomicJson(registryPath, registry);
   await atomicJson(join(directory, "expected.json"), plan.expected);
   try {
@@ -132,10 +246,11 @@ async function generate(name, seed) {
       if (persona.workerId) await checked(client.from("workers").update({ auth_user_id: userId }).eq("id", persona.workerId).eq("organization_id", plan.organization.id), `Link worker ${persona.key}`);
     }
     if (plan.memberGrants.length) await checked(client.from("member_site_access").insert(plan.memberGrants), "Grant persona sites");
+    await generateContracts(client, plan, registry);
     await assertScope(client, plan);
     registry.status = "ready";
     await atomicJson(registryPath, registry);
-    console.log(`Generated ${name} (seed ${plan.scenario.seed}): ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas. Finance adapters are not yet installed.`);
+    console.log(`Generated ${name} (seed ${plan.scenario.seed}): ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? ", one approved contract and future amendment" : ""}.`);
   } catch (error) {
     registry.status = "partial";
     await atomicJson(registryPath, registry);
@@ -159,15 +274,23 @@ async function assertScenario(name) {
   await assertScope(client, plan);
   const users = await listScenarioUsers(client, plan);
   if (users.length !== plan.personas.length) throw new Error("Scenario Auth persona count differs from expected.");
-  console.log(`Scenario ${name} matches its Stage A manifest: ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas.`);
+  console.log(`Scenario ${name} matches its manifest: ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? `, ${plan.contract.expected.expectedRevenue} CAD current expected revenue` : ""}.`);
 }
 async function reset(name) {
   const { directory, registry, plan } = await loadRegistry(name);
   const client = connectLocal();
   const org = await assertScope(client, plan, true);
-  if (org) await countAttached(plan.organization.id);
+  if (org) await countAttached(plan.organization.id, Boolean(plan.contract));
   registry.status = "resetting";
   await atomicJson(join(directory, "registry.json"), registry);
+  if (plan.contract) {
+    for (const table of ["contract_events", "contract_revenue_expectations", "sla_definitions",
+      "shift_coverage_requirements", "shifts", "task_schedules", "service_tasks",
+      "contract_sla_terms", "contract_staffing_requirements", "contract_obligations",
+      "contract_financial_terms", "contract_versions", "contracts", "site_zones"]) {
+      await checked(client.from(table).delete().eq("organization_id", plan.organization.id), `Delete ${table}`);
+    }
+  }
   for (const [table, planned] of [
     ["member_site_access", ids(plan.memberGrants)], ["memberships", plan.personas.map((persona) => persona.membershipId)],
     ["worker_site_permissions", ids(plan.workerPermissions)], ["workers", ids(plan.workers)],
@@ -189,7 +312,9 @@ async function presenter(name) {
     `Seed: ${plan.scenario.seed}. Sites: ${plan.sites.map((site) => site.name).join(", ")}.`,
     "Run npm run demo:assert -- " + name + " before presenting.",
     "Persona Auth records have no password until a protected provisioning step sets one.",
-    "Finance, contracts, expenses, time, projects and reconciliation journeys are not generated by Stage A.",
+    plan.contract
+      ? `Contract ${plan.contract.identity.code}: fixed monthly source ${plan.contract.terms[0].amount} CAD, future amendment ${plan.contract.terms[1].amount} CAD from ${plan.contract.expected.amendmentDate}. Expected current revenue ${plan.contract.expected.expectedRevenue} CAD; inspect /finance/contracts. Expenses, time, projects and reconciliation remain pending.`
+      : "Finance, contracts, expenses, time, projects and reconciliation journeys are not generated by Stage A.",
   ];
   const output = `${lines.join("\n")}\n`;
   await writeFile(join(outputRoot, name, "presenter-tests.md"), output);

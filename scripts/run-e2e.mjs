@@ -24,6 +24,8 @@ const environment = {
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publishableKey,
   SUPABASE_SECRET_KEY: secretKey,
   CLEANOPS_E2E_EMAIL: demoEmail,
+  CLEANOPS_E2E_AREA_EMAIL: "area.e2e@cleanops.example.com",
+  CLEANOPS_E2E_OPERATIONS_EMAIL: "operations.e2e@cleanops.example.com",
   CLEANOPS_DEMO_PASSWORD: demoPassword,
   CLEANOPS_HOSTED_DEMO_ENABLED: "true",
   CLEANOPS_DEMO_INGRESS_ENABLED: "true",
@@ -59,6 +61,33 @@ const membership = await admin
   .update({ user_id: user.id })
   .eq("id", "20000000-0000-4000-8000-000000000001");
 if (membership.error) throw membership.error;
+
+for (const persona of [
+  { email: environment.CLEANOPS_E2E_AREA_EMAIL, name: "E2E Area Manager", membershipId: "20000000-0000-4000-8000-000000000003", role: "area_manager" },
+  { email: environment.CLEANOPS_E2E_OPERATIONS_EMAIL, name: "E2E Operations Manager", membershipId: "20000000-0000-4000-8000-000000000007", role: "operations_manager" },
+]) {
+  const users = await admin.auth.admin.listUsers({ page: 1, perPage: 100 });
+  if (users.error) throw users.error;
+  let person = users.data.users.find((candidate) => candidate.email === persona.email);
+  if (person) {
+    const updated = await admin.auth.admin.updateUserById(person.id, { password: demoPassword, email_confirm: true });
+    if (updated.error) throw updated.error;
+  } else {
+    const created = await admin.auth.admin.createUser({ email: persona.email, password: demoPassword,
+      email_confirm: true, user_metadata: { cleanops_demo: true, display_name: persona.name } });
+    if (created.error || !created.data.user) throw created.error ?? new Error("Could not create the E2E persona.");
+    person = created.data.user;
+  }
+  if (persona.role === "area_manager") {
+    const update = await admin.from("memberships").update({ user_id: person.id }).eq("id", persona.membershipId);
+    if (update.error) throw update.error;
+  } else {
+    const upsert = await admin.from("memberships").upsert({ id: persona.membershipId,
+      organization_id: "10000000-0000-4000-8000-000000000001", user_id: person.id,
+      role: persona.role }, { onConflict: "id" });
+    if (upsert.error) throw upsert.error;
+  }
+}
 
 const run = spawnSync(command, ["playwright", "test", "--project=chromium", ...process.argv.slice(2)], {
   stdio: "inherit",

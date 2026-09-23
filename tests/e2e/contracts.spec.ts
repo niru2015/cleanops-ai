@@ -1,0 +1,77 @@
+import { expect, test } from "@playwright/test";
+import { signInAs, signInAsDirector } from "./auth";
+
+test("Director saves, reviews and activates a manual fixed monthly contract", async ({ page }) => {
+  await signInAsDirector(page);
+  await page.goto("/finance/contracts");
+  await expect(page.getByRole("heading", { name: "Contract register" })).toBeVisible();
+  await page.getByRole("link", { name: "Create manual contract" }).click();
+  const code = `E2E-C22-${Date.now()}`;
+  await page.getByLabel("Contract code").fill(code);
+  await page.getByLabel("Contract name").fill("Synthetic monthly casino service");
+  await page.getByRole("button", { name: "Create draft and continue" }).click();
+  await expect(page).toHaveURL(/step=2/);
+  await page.getByRole("link", { name: "Identity", exact: true }).click();
+  await page.getByLabel("Contract name").fill("Synthetic monthly casino agreement");
+  await page.getByRole("button", { name: "Save identity" }).click();
+  await expect(page).toHaveURL(/step=2/);
+  const first = new Date();
+  first.setUTCMonth(first.getUTCMonth() + 1, 1);
+  const effectiveFrom = first.toISOString().slice(0, 10);
+  await page.getByLabel("Effective from").fill(effectiveFrom);
+  await page.getByRole("button", { name: "Save dates" }).click();
+  await expect(page).toHaveURL(/step=3/);
+  await page.reload();
+  await expect(page.getByText("Saved terms: 0")).toBeVisible();
+  await page.getByLabel("Amount").fill("1234.56");
+  await page.getByRole("button", { name: "Save billing terms" }).click();
+  await expect(page.getByText("Saved terms: 1")).toBeVisible();
+  await page.getByLabel("Amount").fill("20.00");
+  await page.getByRole("button", { name: "Save billing terms" }).click();
+  await expect(page.getByText("Saved terms: 2")).toBeVisible();
+  await page.getByRole("button", { name: /Remove fixed_monthly: 20/ }).click();
+  await expect(page.getByText("Saved terms: 1")).toBeVisible();
+  await page.getByRole("link", { name: "Continue to staffing" }).click();
+  await page.getByLabel("Start").fill("08:00");
+  await page.getByLabel("End").fill("16:00");
+  await page.getByLabel("Required positions").fill("2");
+  await page.getByRole("button", { name: "Save staffing" }).click();
+  await expect(page.getByText("Saved staffing rules: 1")).toBeVisible();
+  await page.getByRole("link", { name: "Continue to recurring work" }).click();
+  await page.getByLabel("Service task").fill("Quarterly deep clean");
+  await page.getByLabel("Frequency").selectOption("quarterly");
+  await page.getByRole("button", { name: "Save recurring work" }).click();
+  await expect(page.getByText("Saved routine obligations: 1")).toBeVisible();
+  await page.getByRole("link", { name: "Review saved draft" }).click();
+  await expect(page.getByText("fixed monthly: 1234.56 CAD")).toBeVisible();
+  await page.getByRole("button", { name: "Approve this version" }).click();
+  await expect(page.getByRole("heading", { name: "Activation impact preview" })).toBeVisible();
+  await expect(page.getByText(/Create 1 tasks, 1 schedules/)).toBeVisible();
+  await page.getByRole("button", { name: "Activate approved version" }).click();
+  await expect(page.getByText(/version 1 · active/)).toBeVisible();
+});
+
+test("Area Manager drafts only an assigned site and cannot approve", async ({ page }) => {
+  await signInAs(page, process.env.CLEANOPS_E2E_AREA_EMAIL);
+  await page.goto("/finance/contracts/new");
+  await expect(page.locator('select[name="siteId"] option')).toHaveCount(1);
+  await expect(page.locator('select[name="siteId"]')).toHaveValue("40000000-0000-4000-8000-000000000002");
+  await page.getByLabel("Contract code").fill(`AREA-E2E-${Date.now()}`);
+  await page.getByLabel("Contract name").fill("Synthetic assigned site proposal");
+  await page.getByRole("button", { name: "Create draft and continue" }).click();
+  await expect(page).toHaveURL(/step=2/);
+  await page.reload();
+  await page.getByRole("link", { name: "Review saved draft" }).click();
+  await expect(page.getByRole("button", { name: "Approve this version" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Activate approved version" })).toHaveCount(0);
+});
+
+test("Operations Manager reviews obligations without commercial prices", async ({ page }) => {
+  await signInAs(page, process.env.CLEANOPS_E2E_OPERATIONS_EMAIL);
+  await page.goto("/finance/contracts");
+  await expect(page.getByRole("link", { name: "Create manual contract" })).toHaveCount(0);
+  await page.getByRole("link", { name: /E2E-C22-/ }).first().click();
+  await expect(page.getByRole("heading", { name: "Service obligations" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Commercial terms" })).toHaveCount(0);
+  await expect(page.getByText("1234.56")).toHaveCount(0);
+});

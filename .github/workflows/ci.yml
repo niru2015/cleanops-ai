@@ -45,6 +45,7 @@ jobs:
       - run: npm run test:storage
       - run: npm run test:db
       - run: npm run test:scenario
+      - run: npm run test:contract-concurrency
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v7

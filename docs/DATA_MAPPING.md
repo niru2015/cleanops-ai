@@ -274,6 +274,20 @@ Client view does not expose raw evidence, private worker statements, raw message
 
 `previewFinanceImport` validates source IDs, periods, currency, category, amount, site mapping, approval and recognition. `acceptFinanceImport` hashes the unchanged CSV, calls `stage_finance_csv_import`, then `accept_finance_import`. The hash plus mapping version is the idempotency key. Raw rows and individual labour detail never feed the Area Manager query. Direct contribution is recognized revenue minus direct labour, supplies, repairs and other direct costs; zero revenue produces an N/A margin in the UI.
 
+## /finance/contracts — manual contract setup and review
+
+`/finance/contracts` lists only contracts at sites in `getAppAccessContext`. Director and assigned Area Manager can open `/finance/contracts/new`; Operations Manager sees the operational register/review but never queries `contract_financial_terms` or expected revenue. `create_manual_contract` derives client and organization from the authorized site. Each wizard section writes its normalized draft row before moving on; reload reads the saved version and children. `/finance/contracts/[id]/review` reads the latest version with organization/site filters, displays unresolved terms, and calls the Director-only preview RPC immediately before activation.
+
+| UI/action | Source or write |
+|---|---|
+| Contract register | `contracts` + `contract_versions` by authorized organization/site |
+| Identity create | `create_manual_contract` RPC |
+| Dates/responsibilities | Draft `contract_versions` update |
+| Billing, staffing, recurring/specialist work, SLA | `contract_financial_terms`, `contract_staffing_requirements`, `contract_obligations`, `contract_sla_terms` draft inserts and scoped removal for correction |
+| Submit/approve/preview/activate | Dedicated RPCs; activation writes canonical operational rows and `contract_revenue_expectations` transactionally |
+
+Expected revenue is a contract projection and does not enter CLEAN-020 `finance_reconciliations` as recognized revenue. The manager finance overview remains issue #34.
+
 ## Backend/provider mappings
 
 ### Official WhatsApp inbound
