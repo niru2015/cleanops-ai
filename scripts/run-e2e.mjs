@@ -25,6 +25,7 @@ const environment = {
   SUPABASE_SECRET_KEY: secretKey,
   CLEANOPS_E2E_EMAIL: demoEmail,
   CLEANOPS_E2E_AREA_EMAIL: "area.e2e@cleanops.example.com",
+  CLEANOPS_E2E_SUPERVISOR_EMAIL: "supervisor.e2e@cleanops.example.com",
   CLEANOPS_E2E_OPERATIONS_EMAIL: "operations.e2e@cleanops.example.com",
   CLEANOPS_E2E_CLEANER_EMAIL: "cleaner.e2e@cleanops.example.com",
   CLEANOPS_DEMO_PASSWORD: demoPassword,
@@ -65,6 +66,7 @@ if (membership.error) throw membership.error;
 
 for (const persona of [
   { email: environment.CLEANOPS_E2E_AREA_EMAIL, name: "E2E Area Manager", membershipId: "20000000-0000-4000-8000-000000000003", role: "area_manager" },
+  { email: environment.CLEANOPS_E2E_SUPERVISOR_EMAIL, name: "E2E Supervisor", membershipId: "20000000-0000-4000-8000-000000000002", role: "site_supervisor" },
   { email: environment.CLEANOPS_E2E_OPERATIONS_EMAIL, name: "E2E Operations Manager", membershipId: "20000000-0000-4000-8000-000000000007", role: "operations_manager" },
   { email: environment.CLEANOPS_E2E_CLEANER_EMAIL, name: "E2E Cleaner", membershipId: "20000000-0000-4000-8000-000000000004", role: "cleaner" },
 ]) {
@@ -80,7 +82,7 @@ for (const persona of [
     if (created.error || !created.data.user) throw created.error ?? new Error("Could not create the E2E persona.");
     person = created.data.user;
   }
-  if (persona.role === "area_manager" || persona.role === "cleaner") {
+  if (persona.role === "area_manager" || persona.role === "site_supervisor" || persona.role === "cleaner") {
     const update = await admin.from("memberships").update({ user_id: person.id }).eq("id", persona.membershipId);
     if (update.error) throw update.error;
   } else {

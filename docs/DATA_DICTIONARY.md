@@ -127,7 +127,7 @@ Live OpenAI code exists but production execution remains gated by config, budget
 | `vendors` | Organization supplier catalogue. | vendor code, name, contact reference, active. |
 | `inventory_items` | Cleaning supply catalogue. | SKU, name, category, unit of measure, reorder level, active. |
 | `inventory_transactions` | Site stock movement/cost; Director-editable, audited. | site, optional vendor, item, optional source message, type receipt/issue/adjustment/count, quantity (> 0), unit cost, generated total cost (`round(quantity * unit_cost, 2)`), occurrence time, notes. |
-| `labor_cost_entries` | Site labour cost; Director-only read and write, audited. | site, optional worker/task/source message, work date, hours (> 0, <= 24), hourly cost, generated total cost (`round(hours * hourly_cost, 2)`), type regular/overtime/contractor, notes. |
+| `labor_cost_entries` | Site labour cost; Director-only read and write, audited. Time-linked postings are immutable snapshots; unlinked rows remain administrative adjustments/import references. | site, optional worker/task/source message/time entry/contract version/project reference, work date, hours (> 0, <= 24), hourly cost, generated total cost (`round(hours * hourly_cost, 2)`), type regular/overtime/contractor, notes. |
 | `finance_import_batches` | Immutable record of one accepted/rejected CSV import. Director-only. | organization, source file name/hash, mapping version, currency, service period, state (preview/accepted/superseded/rejected), completeness, accepted_by/at, supersedes_batch_id. |
 | `finance_source_rows` | Immutable imported line, one per source document line. Director-only. | batch, source document/line ID, optional site/contract/job/asset reference, optional link to a supply or repair record, service/accounting period, currency, category, amount, tax, approval/recognition/allocation state, raw row JSON. |
 | `finance_source_allocations` | Site (and optional job) share of one source row's amount. Director-only. | source row, site, job reference, amount. |
@@ -325,3 +325,17 @@ Migration `20260923112308_clean_035_finance_intake_expenses.sql` owns the privat
 - For page-to-source details, read [DATA_MAPPING.md](DATA_MAPPING.md).
 - For state transitions and multi-step effects, read [PROCESS_FLOWS.md](PROCESS_FLOWS.md).
 - Before changing columns, RLS, constraints or RPCs, inspect the owning migration and database tests.
+
+## CLEAN-036 approved time and effective labour cost
+
+Migration `20260923165223_clean_036_time_and_labour_costing.sql` adds:
+
+| Record | Meaning | Key fields and invariant |
+|---|---|---|
+| `worker_cost_rates` | Confidential Director-owned cost rate for one worker and regular/overtime/contractor class. | Organization + worker, CAD hourly cost (four decimals), effective `[from,to)` interval, active/superseded state, source reference and reason. Active intervals cannot overlap for a worker/class. Posted entries retain their original rate snapshot after a change. |
+| `worker_cost_rate_events` | Immutable rate creation, interval close and supersession history. | Before/after, actor, reason and time; Director-only read. |
+| `time_entries` | Operational source hours before cost. | Organization/site/worker, optional assignment/shift/task/contract/project provenance, site-local work date, timestamps, up to 24 hours, cost class, draft/exception/approved/rejected/posted state, reviewer, revision and optional posted ledger pointer. One derived row per shift assignment. Missing checkout and cancelled assignment remain exceptions until human review. |
+| `time_entry_events` | Immutable derivation, source refresh, manual entry, review and posting history. | Organization/site/time entry, before/after, reason and actor. Contains no hourly rate. |
+| `labor_cost_entries.time_entry_id` | One approved cost posting per time entry. | Director-only hourly cost snapshot and generated total; posted time-linked rows cannot be edited or deleted. `contract_version_id` and `project_reference` carry source attribution for later #65/#66 work. |
+
+`derive_shift_time_entry`, `create_manual_time_entry`, and `review_time_entry` require an active operational reviewer with site access. `set_worker_cost_rate` and `post_approved_time_cost` require a Director. Browser roles have no direct write grants on time, rate, or their audit tables. The posting RPC completes both foreign-key links in one transaction. Six-decimal hours are a technical representation of elapsed time, not an overtime or payroll policy; manual input with finer precision is rejected. No statutory deductions, wage calculation or currency conversion is implied.

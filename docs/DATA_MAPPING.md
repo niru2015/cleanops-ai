@@ -15,7 +15,7 @@ Roles per route come from `src/config/navigation.ts` and the page guards; RLS/RP
 | `/mobile` | cleaner, director | operations integration + mobile actions | Cleaner task context and before/after photo capture. |
 | `/mobile/expenses` | cleaner, site supervisor, area manager | expense submission and receipt actions | Assigned-site expense message and private receipt upload. |
 | `/review` | supervisor, area manager, operations manager, director | review Supabase integration + actions | Evidence pair, AI suggestion, findings, corrections, approval. |
-| `/finance` | area manager (read only), director (read + write) | finance integration + actions | Site-scoped supplier/item setup, inventory and labour ledgers. The WhatsApp context queue is **not mounted** (see below). |
+| `/finance` | area manager (read only), director (read + write) | finance integration + actions | Site-scoped supplier/item setup, inventory and labour ledgers, accepted accounting summaries, and the message context queue. Missing accounting import tables show a partial availability notice. |
 | `/finance/inbox` | granted area manager, director | expense integration + review actions | Candidate, source/receipt link, deterministic proposal and human resolution. |
 | `/finance/expenses` | granted area manager, director | expense integration + Director approval action | Reviewed claims, source drill-through, allocations and posted cost. |
 | `/incidents` | supervisor, area manager, operations manager, director | reporting integration + incident actions | Incident and equipment intake/correction. |
@@ -335,3 +335,13 @@ Budget in `quality_ai_budgets`; provider/cost/cache provenance in `quality_ai_ru
 - Keep provider delivery status separate from task completion.
 - For schema detail, read [DATA_DICTIONARY.md](DATA_DICTIONARY.md).
 - For multi-step effects, read [PROCESS_FLOWS.md](PROCESS_FLOWS.md).
+
+## /finance/time and /finance/rates — CLEAN-036
+
+| Surface | Read path | Write path |
+|---|---|---|
+| `/finance/time` | `supabase-time.ts` loads site-filtered `time_entries`, `shift_assignments`, `worker_site_permissions`, worker labels and site labels. The browser receives no worker rate or ledger amount. | `performTimeAction` validates Zod input and current site membership, then calls `derive_shift_time_entry`, `create_manual_time_entry`, `review_time_entry` or Director-only `post_approved_time_cost`. SQL repeats role/site checks and records audit. |
+| `/finance/rates` | Director guard precedes the `worker_cost_rates` query; Area Managers receive no rate payload. | `saveWorkerCostRate` validates CAD, date, amount and reason, then calls Director-only `set_worker_cost_rate`; overlap prevention and audit are database-owned. |
+| `/finance` | The finance repository treats only `PGRST205`/`42P01` missing accounting/time tables as unavailable optional sections. Other finance records and the message queue continue loading; the UI names the missing schema. | Normal labour cost uses `/finance/time`; the older direct ledger form is labelled administrative adjustment and requires a reason or import reference. |
+
+Elapsed attendance time is derived from the check-in/out instants and assigned to the site's local start date. A reviewer explicitly chooses regular, overtime or contractor class; the system does not infer overtime from duration. The Director posting RPC selects the one active rate covering that date and snapshots it into `labor_cost_entries`; its generated amount is rounded to cents. Accounting reconciliation remains owned by #66.

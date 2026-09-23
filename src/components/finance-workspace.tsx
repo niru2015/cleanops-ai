@@ -49,6 +49,8 @@ export function FinanceWorkspace({
 
       {notice ? <div className={`reviewNotice ${notice.ok ? "reviewNoticeSuccess" : "reviewNoticeError"}`} role="status">{notice.message}</div> : null}
       {pending ? <div className="reviewProgress" role="status">Saving financial record…</div> : null}
+      {!workspace.accountingAvailable && <p className="reviewNotice reviewNoticeError" role="status">Accounting imports are unavailable because this database has not received the finance import schema. The other finance records remain available.</p>}
+      {!workspace.timeAvailable && <p className="reviewNotice reviewNoticeError" role="status">Approved time is unavailable because this database has not received the time and labour schema.</p>}
 
       <section className="financePanel financeReconciliation" aria-labelledby="reconciliation-title">
         <div className="panelHeading"><div><p className="eyebrow">Approved actuals</p><h2 id="reconciliation-title">Site contribution</h2></div></div>
@@ -67,7 +69,7 @@ export function FinanceWorkspace({
 
       {editable ? (
         <>
-          <section className="financePanel" aria-labelledby="finance-import-title">
+          {workspace.accountingAvailable && <section className="financePanel" aria-labelledby="finance-import-title">
             <div className="panelHeading"><div><p className="eyebrow">Director-controlled import</p><h2 id="finance-import-title">Accounting CSV</h2></div></div>
             <form className="financeForm" onSubmit={(event) => {
               event.preventDefault();
@@ -107,7 +109,7 @@ export function FinanceWorkspace({
               </div> : null}
             </div> : null}
             {workspace.imports.length ? <p className="recordNote">Last import: {workspace.imports[0].fileName} · {workspace.imports[0].state} · {workspace.imports[0].acceptedAt ? new Date(workspace.imports[0].acceptedAt).toLocaleString() : "not accepted"}</p> : null}
-          </section>
+          </section>}
 
           <div className="financeGrid">
             <section className="financePanel" aria-labelledby="inventory-entry-title">
@@ -138,7 +140,8 @@ export function FinanceWorkspace({
             </section>
 
             <section className="financePanel" aria-labelledby="labour-entry-title">
-              <div className="panelHeading"><div><p className="eyebrow">Costed hours</p><h2 id="labour-entry-title">Labour cost</h2></div></div>
+              <div className="panelHeading"><div><p className="eyebrow">Administrative adjustment</p><h2 id="labour-entry-title">Direct labour cost adjustment</h2></div></div>
+              <p>Use approved time and effective worker rates for normal labour cost. This form records a separately audited adjustment or import reference.</p>
               <form className="financeForm" onSubmit={(event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
@@ -151,7 +154,7 @@ export function FinanceWorkspace({
                   hours: Number(form.get("hours")),
                   hourlyCost: Number(form.get("hourlyCost")),
                   costType: String(form.get("costType")) as "regular" | "overtime" | "contractor",
-                  notes: String(form.get("notes") || "") || undefined,
+                  notes: String(form.get("notes")),
                 });
                 event.currentTarget.reset();
               }}>
@@ -159,8 +162,8 @@ export function FinanceWorkspace({
                 <label>Task reference<select name="taskRunId" defaultValue=""><option value="">No task reference</option>{workspace.tasks.map((task) => <option key={task.id} value={task.id}>{task.name} · {task.state}</option>)}</select></label>
                 <div className="financeFormRow"><label>Work date<input name="workDate" type="date" defaultValue={date()} required /></label><label>Cost type<select name="costType" defaultValue="regular"><option value="regular">Regular</option><option value="overtime">Overtime</option><option value="contractor">Contractor</option></select></label></div>
                 <div className="financeFormRow"><label>Hours<input name="hours" type="number" min="0.01" max="24" step="0.25" required /></label><label>Hourly cost<input name="hourlyCost" type="number" min="0" step="0.01" required /></label></div>
-                <label>Note<input name="notes" maxLength={1000} placeholder="Optional payroll or contractor note" /></label>
-                <button className="reviewButton reviewButton-primary" type="submit" disabled={pending}>Record labour</button>
+                <label>Adjustment reason or import reference<input name="notes" minLength={4} maxLength={1000} required placeholder="Explain this direct ledger adjustment" /></label>
+                <button className="reviewButton reviewButton-primary" type="submit" disabled={pending}>Record adjustment</button>
               </form>
             </section>
           </div>
@@ -308,15 +311,15 @@ export function FinanceWorkspace({
               </form>
             ) : (
               <div key={entry.id} className={editable ? "financeTableRow financeTableRow-editable" : "financeTableRow"}>
-                <strong>{entry.worker ?? "Unassigned labour"}<small>{entry.notes ?? "No note"}</small></strong><span>{entry.workDate}</span><span>{entry.type}</span><span>{entry.hours}</span><span>{money.format(entry.totalCost)}</span>
-                {editable ? <div className="financeRowActions">
+                <strong>{entry.worker ?? "Unassigned labour"}<small>{entry.timeEntryId ? "Approved time · immutable" : entry.notes ?? "Administrative adjustment"}</small></strong><span>{entry.workDate}</span><span>{entry.type}</span><span>{entry.hours}</span><span>{money.format(entry.totalCost)}</span>
+                {editable && !entry.timeEntryId ? <div className="financeRowActions">
                   <button className="reviewButton reviewButton-secondary" type="button" disabled={pending} onClick={() => setEditingLabourId(entry.id)}>Edit</button>
                   <button className="reviewButton reviewButton-danger" type="button" disabled={pending} onClick={() => {
                     if (window.confirm(`Delete this ${entry.hours}h ${entry.type} labour entry for ${entry.workDate}? This is recorded in the finance audit trail.`)) {
                       act({ action: "delete_labour", id: entry.id, siteId });
                     }
                   }}>Delete</button>
-                </div> : null}
+                </div> : editable ? <span>Posted time</span> : null}
               </div>
             ))}
           </div>

@@ -99,6 +99,7 @@ async function assertScope(client, plan, allowPartial = false, registry = null) 
   for (const [table, planned] of tables) assertIdSet(await rowsFor(client, table, plan.organization.id), planned, table, allowPartial);
   if (plan.contract) await assertContractScope(client, plan, allowPartial);
   if (plan.expenseCases) await assertExpenseScope(client,plan,registry,allowPartial);
+  if (plan.timeCases) await assertTimeScope(client,plan,registry,allowPartial);
   return org;
 }
 const contractTables = ["contract_events", "contract_financial_terms", "contract_obligations",
@@ -153,8 +154,9 @@ async function assertContractScope(client, plan, allowPartial) {
   ]) assertIdSet(await rowsFor(client, table, plan.organization.id), planned, table, allowPartial);
   const versionIds = new Set(ids(contract.versions));
   for (const [table, planned] of Object.entries(contractGeneratedIds(contract))) {
-    const entries = await checked(client.from(table).select("id,contract_version_id")
-      .eq("organization_id", plan.organization.id), `Read ${table}`);
+    let query=client.from(table).select("id,contract_version_id").eq("organization_id", plan.organization.id);
+    if(table==="shifts")query=query.in("contract_version_id",ids(contract.versions));
+    const entries = await checked(query, `Read ${table}`);
     if (entries.some((entry) => !versionIds.has(entry.contract_version_id)) ||
       entries.some((entry) => !planned.includes(entry.id)) ||
       (!allowPartial && entries.length !== planned.length)) {
@@ -215,7 +217,53 @@ async function assertExpenseScope(client,plan,registry,allowPartial){
       throw new Error("Approved expense cost differs from the scenario manifest.");
   }
 }
-async function countAttached(organizationId, hasContracts, hasExpenses) {
+async function assertTimeScope(client,plan,registry,allowPartial){
+  if(!registry?.time){if(allowPartial)return;throw new Error("Time scenario registry missing.");}
+  const time=registry.time;
+  const checks=[
+    ["shifts",time.rows.filter(row=>row.createdShiftId).map(row=>row.createdShiftId)],
+    ["shift_assignments",time.rows.filter(row=>row.assignmentId).map(row=>row.assignmentId)],
+    ["attendance_events",time.rows.flatMap(row=>row.attendanceIds??[])],
+    ["time_entries",time.rows.map(row=>row.timeEntryId)],
+    ["worker_cost_rates",time.rateIds],
+    ["labor_cost_entries",time.rows.map(row=>row.ledgerId).filter(Boolean)],
+  ];
+  for(const [table,planned] of checks){
+    const actual=await rowsFor(client,table,plan.organization.id);
+    if(table==="shifts"){
+      const contractIds=new Set(plan.contract?contractGeneratedIds(plan.contract).shifts:[]);
+      assertIdSet(actual.filter(row=>!contractIds.has(row.id)),planned,table,allowPartial);
+    }else assertIdSet(actual,planned,table,allowPartial);
+  }
+  const rateEvents=await checked(client.from("worker_cost_rate_events").select("rate_id")
+    .eq("organization_id",plan.organization.id),"Read rate audit scope");
+  const timeEvents=await checked(client.from("time_entry_events").select("time_entry_id")
+    .eq("organization_id",plan.organization.id),"Read time audit scope");
+  if(rateEvents.some(row=>!time.rateIds.includes(row.rate_id)) ||
+    timeEvents.some(row=>!time.rows.some(item=>item.timeEntryId===row.time_entry_id)))
+    throw new Error("Time or rate audit outside scenario registry; refusing reset.");
+  if(!allowPartial){
+    if(time.rows.length!==plan.timeCases.length)throw new Error("Time case count differs from manifest.");
+    const entries=await checked(client.from("time_entries").select("id,state,exception_code,source_type,project_reference,contract_version_id")
+      .eq("organization_id",plan.organization.id),"Read time cases");
+    for(const item of plan.timeCases){
+      const row=time.rows.find(record=>record.key===item.key);
+      const actual=entries.find(record=>record.id===row?.timeEntryId);
+      if(!actual||actual.state!==item.status || (item.status==="exception"&&
+        actual.exception_code!==(item.key==="worker_swap_original"?"worker_swap":"missing_checkout")))
+        throw new Error(`Time case ${item.key} differs from its expected state.`);
+    }
+    const recurring=entries.find(entry=>entry.id===time.rows.find(row=>row.key==="normal_shift")?.timeEntryId);
+    if(plan.contract && recurring?.contract_version_id!==plan.contract.versions[0].id)
+      throw new Error("Normal shift time lost activated contract provenance.");
+    const ledger=await checked(client.from("labor_cost_entries").select("total_cost")
+      .eq("organization_id",plan.organization.id),"Read approved labour cost");
+    const cents=ledger.reduce((sum,row)=>sum+Math.round(Number(row.total_cost)*100),0);
+    if((cents/100).toFixed(2)!==plan.expected.controlTotals.finance.approvedLabourCost)
+      throw new Error("Approved labour cost differs from the source-backed scenario manifest.");
+  }
+}
+async function countAttached(organizationId, hasContracts, hasExpenses, hasTime) {
   if (!/^[0-9a-f-]{36}$/.test(organizationId) || !localDatabaseUrl) throw new Error("Invalid local reset scope.");
   const baseTables = new Set(["clients", "sites", "workers", "worker_site_permissions", "memberships", "member_site_access"]);
   if (hasContracts) for (const table of contractTables) baseTables.add(table);
@@ -223,6 +271,9 @@ async function countAttached(organizationId, hasContracts, hasExpenses) {
     "processing_jobs","external_messages","external_message_contexts","external_message_media",
     "task_evidence","finance_intake_items","expense_documents","expense_claims","expense_items",
     "expense_allocations","expense_postings","expense_audit_events"])baseTables.add(table);
+  if(hasTime)for(const table of ["shifts","shift_assignments","attendance_events",
+    "time_entries","time_entry_events","worker_cost_rates","worker_cost_rate_events",
+    "labor_cost_entries"])baseTables.add(table);
   const names = execFileSync("psql", [localDatabaseUrl, "-At", "-c", "select table_name from information_schema.columns where table_schema='public' and column_name='organization_id' order by table_name"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   const tables = names.trim().split("\n").filter((table) => table && !baseTables.has(table));
   if (tables.some((table) => !/^[a-z][a-z0-9_]*$/.test(table))) throw new Error("Unexpected table name in local schema.");
@@ -409,6 +460,90 @@ async function generateExpenses(client,plan,registry,directory){
     await atomicJson(join(directory,"registry.json"),registry);
   }
 }
+async function generateTime(client,plan,registry,directory){
+  if(!plan.timeCases)return;
+  const director=plan.personas.find(persona=>persona.role==="organization_administrator");
+  const directorId=registry.authUserIds[plan.personas.indexOf(director)];
+  const actor=personaClient(directorId);
+  const primary=plan.timeCases[0].workerId;
+  const replacement=plan.timeCases.find(item=>item.key==="worker_swap_replacement").workerId;
+  registry.time={rateIds:[],rows:[]};
+  await atomicJson(join(directory,"registry.json"),registry);
+  for(const [worker,rateType,cost,from,reference] of [
+    [primary,"regular",24,"2026-06-01","DEMO-REG-1"],
+    [primary,"overtime",36,"2026-06-01","DEMO-OT"],
+    [replacement,"regular",24,"2026-06-01","DEMO-SWAP"],
+    [primary,"regular",27,"2026-08-01","DEMO-REG-2"],
+  ]){
+    const rateId=await checked(actor.rpc("set_worker_cost_rate",{
+      p_worker_id:worker,p_rate_type:rateType,p_hourly_cost:cost,p_currency:"CAD",
+      p_effective_from:from,p_effective_to:null,p_reference:reference,
+      p_reason:"Synthetic effective rate source",
+    }),`Set ${reference} rate`);
+    registry.time.rateIds.push(rateId);
+    await atomicJson(join(directory,"registry.json"),registry);
+  }
+  for(const item of plan.timeCases){
+    let timeEntryId;
+    const attendanceIds=[];
+    let shiftId=item.shiftId;
+    let createdShiftId=null;
+    let start=item.start;
+    let end=item.end;
+    if(item.useContractShift){
+      const source=await checked(client.from("shifts").select("id,starts_at,ends_at")
+        .eq("organization_id",plan.organization.id)
+        .eq("contract_version_id",plan.contract.versions[0].id)
+        .order("starts_at").limit(1).single(),"Find activated recurring contract shift");
+      shiftId=source.id;start=source.starts_at;end=source.ends_at;
+    }
+    if(shiftId){
+      if(!item.useContractShift&&!item.reuseShift){
+        await checked(client.from("shifts").insert({id:shiftId,organization_id:plan.organization.id,
+          site_id:item.siteId,starts_at:start,ends_at:end??`${item.date}T16:00:00Z`,
+          state:"completed"}),`Create ${item.key} shift`);
+        createdShiftId=shiftId;
+      }
+      await checked(client.from("shift_assignments").insert({id:item.assignmentId,
+        organization_id:plan.organization.id,site_id:item.siteId,shift_id:shiftId,
+        worker_id:item.workerId,state:item.key==="worker_swap_original"?"cancelled":"completed"}),
+      `Assign ${item.key} worker`);
+      for(const [type,at] of [["check_in",start],["check_out",end]].filter(([,at])=>at)){
+        const eventId=sqlId(`time-attendance:${item.assignmentId}:${type}`);
+        await checked(client.from("attendance_events").insert({id:eventId,
+          organization_id:plan.organization.id,site_id:item.siteId,
+          assignment_id:item.assignmentId,event_type:type,occurred_at:at,recorded_by:directorId}),
+        `Record ${item.key} ${type}`);
+        attendanceIds.push(eventId);
+      }
+      timeEntryId=await checked(actor.rpc("derive_shift_time_entry",{p_assignment_id:item.assignmentId}),
+        `Derive ${item.key} time`);
+    }else{
+      timeEntryId=await checked(actor.rpc("create_manual_time_entry",{
+        p_site_id:item.siteId,p_worker_id:item.workerId,p_work_date:item.date,
+        p_hours:item.hours,p_cost_type:item.costType,p_project_reference:item.projectReference,
+        p_contract_version_id:null,p_task_run_id:null,p_reason:"Synthetic one-off project source",
+      }),"Create manual project time");
+    }
+    let ledgerId=null;
+    if(item.status==="posted"){
+      const hours=item.hours??(new Date(end)-new Date(start))/3600000;
+      await checked(actor.rpc("review_time_entry",{
+        p_time_entry_id:timeEntryId,p_action:"approve",p_hours:hours,
+        p_cost_type:item.costType,p_reason:"Synthetic attendance or project reviewed",
+      }),`Approve ${item.key} hours`);
+      ledgerId=await checked(actor.rpc("post_approved_time_cost",{p_time_entry_id:timeEntryId}),
+        `Post ${item.key} cost`);
+    }
+    registry.time.rows.push({key:item.key,shiftId:shiftId??null,createdShiftId,
+      assignmentId:item.assignmentId??null,attendanceIds,timeEntryId,ledgerId});
+    await atomicJson(join(directory,"registry.json"),registry);
+  }
+  await atomicJson(join(directory,"time-cases.json"),{
+    schemaVersion:1,cases:plan.timeCases,approvedLabourCost:plan.expected.controlTotals.finance.approvedLabourCost,
+    rateChanges:["DEMO-REG-1","DEMO-REG-2"],
+    note:"All people and shifts are synthetic; posted cost is calculated from approved hours and effective rates."});
+}
 async function generate(name, seed) {
   const plan = await loadPlan(name, seed); // Validate before any writes.
   const directory = join(outputRoot, name);
@@ -444,10 +579,11 @@ async function generate(name, seed) {
     if (plan.memberGrants.length) await checked(client.from("member_site_access").insert(plan.memberGrants), "Grant persona sites");
     await generateContracts(client, plan, registry);
     await generateExpenses(client,plan,registry,directory);
+    await generateTime(client,plan,registry,directory);
     await assertScope(client, plan, false,registry);
     registry.status = "ready";
     await atomicJson(registryPath, registry);
-  console.log(`Generated ${name} (seed ${plan.scenario.seed}): ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? ", one approved contract and future amendment" : ""}${plan.expenseCases ? `, ${plan.expenseCases.length} expense sources` : ""}.`);
+  console.log(`Generated ${name} (seed ${plan.scenario.seed}): ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? ", one approved contract and future amendment" : ""}${plan.expenseCases ? `, ${plan.expenseCases.length} expense sources` : ""}${plan.timeCases ? `, ${plan.timeCases.length} time cases` : ""}.`);
   } catch (error) {
     registry.status = "partial";
     await atomicJson(registryPath, registry);
@@ -487,15 +623,41 @@ async function assertScenario(name) {
         throw new Error(`Synthetic receipt ${file} differs from the manifest.`);
     }
   }
+  if(plan.timeCases){
+    const pack=await json(join(directory,"time-cases.json"));
+    if(JSON.stringify(pack.cases)!==JSON.stringify(plan.timeCases)||
+      pack.approvedLabourCost!==plan.expected.controlTotals.finance.approvedLabourCost)
+      throw new Error("Synthetic time source pack differs from deterministic plan.");
+  }
   console.log(`Scenario ${name} matches its manifest: ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? `, ${plan.contract.expected.expectedRevenue} CAD current expected revenue` : ""}${plan.expenseCases ? `, ${plan.expected.controlTotals.finance.approvedExpenseCost} CAD approved expense cost` : ""}.`);
 }
 async function reset(name) {
   const { directory, registry, plan } = await loadRegistry(name);
   const client = connectLocal();
   const org = await assertScope(client, plan, true,registry);
-  if (org) await countAttached(plan.organization.id, Boolean(plan.contract),Boolean(plan.expenseCases));
+  if (org) await countAttached(plan.organization.id, Boolean(plan.contract),Boolean(plan.expenseCases),Boolean(plan.timeCases));
   registry.status = "resetting";
   await atomicJson(join(directory, "registry.json"), registry);
+  if(plan.timeCases){
+    const scopedOrg=plan.organization.id;
+    if(!/^[0-9a-f-]{36}$/.test(scopedOrg))throw new Error("Invalid time scenario organization ID.");
+    const localCleanup=`begin;
+      set local session_replication_role=replica;
+      delete from public.time_entry_events where organization_id='${scopedOrg}';
+      delete from public.worker_cost_rate_events where organization_id='${scopedOrg}';
+      delete from public.labor_cost_entries where organization_id='${scopedOrg}';
+      delete from public.time_entries where organization_id='${scopedOrg}';
+      delete from public.worker_cost_rates where organization_id='${scopedOrg}';
+      commit;`;
+    execFileSync("psql",[localDatabaseUrl,"-v","ON_ERROR_STOP=1","-c",localCleanup],
+      {encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+    for(const table of ["attendance_events","shift_assignments","shifts"]){
+      const planned=registry.time?.rows.flatMap(row=>table==="attendance_events"?row.attendanceIds??[]:
+        [table==="shift_assignments"?row.assignmentId:row.createdShiftId]).filter(Boolean)??[];
+      if(planned.length)await checked(client.from(table).delete().eq("organization_id",plan.organization.id)
+        .in("id",planned),`Delete scenario ${table}`);
+    }
+  }
   if(plan.expenseCases){
     for(const row of registry.expenses?.rows??[]){
       await checked(client.storage.from(row.storageBucket).remove([row.storagePath]),
@@ -553,7 +715,7 @@ async function presenter(name) {
     "Run npm run demo:assert -- " + name + " before presenting.",
     "Persona Auth records have no password until a protected provisioning step sets one.",
     plan.contract
-      ? `Contract ${plan.contract.identity.code}: fixed monthly source ${plan.contract.terms[0].amount} CAD, future amendment ${plan.contract.terms[1].amount} CAD from ${plan.contract.expected.amendmentDate}. Expected current revenue ${plan.contract.expected.expectedRevenue} CAD; inspect /finance/contracts. Time, projects and reconciliation remain pending.`
+      ? `Contract ${plan.contract.identity.code}: fixed monthly source ${plan.contract.terms[0].amount} CAD, future amendment ${plan.contract.terms[1].amount} CAD from ${plan.contract.expected.amendmentDate}. Expected current revenue ${plan.contract.expected.expectedRevenue} CAD; inspect /finance/contracts.`
       : "Finance, contracts, expenses, time, projects and reconciliation journeys are not generated by Stage A.",
     ...(plan.contract ? [
       `Document files: fixtures/generated/${name}/contract-source.pdf, contract-amendment.pdf and contract-scan.png.`,
@@ -565,6 +727,11 @@ async function presenter(name) {
       "Open /finance/inbox. Fuel and duplicate-fuel are separate normalized WhatsApp messages with the same receipt bytes; only fuel posts. Meal, supplies, repair and equipment purchase use app submissions.",
       "Open /finance/expenses for source text, receipt, human review, Director approval and allocated site/project posting. Equipment purchase is flagged for accounting/asset review.",
       ...plan.expenseCases.map(item => `Message ${item.key}: ${expenseMessage(item,plan.sites[item.siteIndex].name)} Attach ${item.file}. Expected ${item.approved ? "approved cost" : "duplicate warning, no cost"}.`),
+    ] : []),
+    ...(plan.timeCases ? [
+      `Time cases: fixtures/generated/${name}/time-cases.json. Approved labour cost ${plan.expected.controlTotals.finance.approvedLabourCost} CAD.`,
+      "Open /finance/time for normal, missing-checkout, overtime, worker-swap and manual project entries. Two exceptions remain unposted.",
+      "Open /finance/rates as Director for the confidential midyear effective rate change. Area Managers cannot read rate payloads.",
     ] : []),
   ];
   const output = `${lines.join("\n")}\n`;

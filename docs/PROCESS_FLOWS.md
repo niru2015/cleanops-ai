@@ -335,7 +335,15 @@ The review screen shows the source span and machine proposal separately. Accept/
 4. Only the Director posts a submitted claim. The approval transaction locks the claim, verifies the receipt and totals, serializes by organization plus receipt hash, and creates one immutable posting per balanced allocation. A retry returns the posted claim; another source with the same receipt hash is rejected.
 5. The expense view drills back to the source and receipt. Employee-paid status does not create a payment. An equipment purchase is marked for later asset review. Accounting reconciliation remains a later #66 action.
 
-## 19. Agent change checklist
+## 19. Approved time to confidential labour cost (CLEAN-036)
+
+1. A site operational reviewer derives one time entry from a shift assignment's persisted attendance. Missing checkout, missing check-in, invalid order, over-24-hour span or cancelled assignment becomes an exception. The source fingerprint makes unchanged derivation idempotent. A changed source refreshes only an unposted entry and appends audit.
+2. The same reviewer may create a manual project draft for an active site worker with a source reason. In either path, review records the actual approved hours, explicit cost class and reason; approval alone does not write a cost.
+3. A Director maintains effective CAD worker cost rates. New intervals close or supersede the old active interval and append rate audit. Overlap is blocked by a database exclusion constraint.
+4. A Director posts an approved time entry. The RPC locks the entry, requires exactly one effective rate on its site-local work date, writes a Director-only `labor_cost_entries` snapshot and links it back to the time entry in one transaction. Retry returns the same ledger ID. Linked posted cost and audit rows are immutable.
+5. `/finance/time` gives managers operational hours and exceptions without rate payloads. `/finance/rates` is Director-only. Direct ledger rows in `/finance` remain separately labelled adjustments. #65 will use the project/contract references; #66 will reconcile approved cost to accounting periods.
+
+## 20. Agent change checklist
 
 Before changing a flow:
 

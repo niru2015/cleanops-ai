@@ -41,7 +41,7 @@ export const financeActionSchema = z.discriminatedUnion("action", [
     hours: z.number().finite().positive().max(24),
     hourlyCost: money,
     costType: z.enum(["regular", "overtime", "contractor"]),
-    notes: z.string().trim().min(1).max(1_000).optional(),
+    notes: z.string().trim().min(4).max(1_000),
   }).strict(),
   z.object({
     action: z.literal("update_inventory"),

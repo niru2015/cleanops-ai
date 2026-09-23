@@ -13,6 +13,8 @@ const baseWorkspace: FinanceWorkspaceData = {
   labourRestricted: false,
   reconciliations: [],
   imports: [],
+  accountingAvailable: true,
+  timeAvailable: true,
 };
 
 describe("CLEAN-032 labour ledger restricted vs empty", () => {
@@ -39,7 +41,7 @@ describe("CLEAN-032 labour ledger restricted vs empty", () => {
       <FinanceWorkspace
         workspace={{
           ...baseWorkspace,
-          labour: [{ id: "60000000-0000-4000-8000-000000000001", workDate: "2026-09-21", worker: "Worker 182 Demo", workerId: null, taskRunId: null, hours: 2, hourlyCost: 24.5, totalCost: 49, type: "regular", notes: null }],
+          labour: [{ id: "60000000-0000-4000-8000-000000000001", workDate: "2026-09-21", worker: "Worker 182 Demo", workerId: null, taskRunId: null, timeEntryId: null, hours: 2, hourlyCost: 24.5, totalCost: 49, type: "regular", notes: null }],
         }}
         editable
         siteId="40000000-0000-4000-8000-000000000001"
@@ -49,5 +51,14 @@ describe("CLEAN-032 labour ledger restricted vs empty", () => {
     expect(html).toContain("Worker 182 Demo");
     expect(html).not.toContain("Individual labour entries are restricted to Directors");
     expect(html).not.toContain("No labour cost entries have been recorded.");
+  });
+
+  it("keeps the overview visible when accounting import tables are unavailable", () => {
+    const html = renderToStaticMarkup(
+      <FinanceWorkspace workspace={{ ...baseWorkspace, accountingAvailable: false }} editable siteId="40000000-0000-4000-8000-000000000001" />,
+    );
+    expect(html).toContain("Accounting imports are unavailable");
+    expect(html).toContain("Finance &amp; inventory");
+    expect(html).not.toContain("Accounting CSV");
   });
 });
