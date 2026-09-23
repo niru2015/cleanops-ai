@@ -333,7 +333,7 @@ The review screen shows the source span and machine proposal separately. Accept/
 2. An app receipt is uploaded directly into the private bucket under a scoped ticket. Finalization reloads and verifies bytes/MIME/size/hash. A source document remains linked to its intake; failed or missing media stays visible for review.
 3. Deterministic text/OCR parsing stores a validated proposal with provenance. It never changes canonical claim values. A Director or granted Area Manager checks source, site, category, vendor, date, payment method, amount and allocation, then calls the resolution RPC. Corrections/rejection are audited.
 4. Only the Director posts a submitted claim. The approval transaction locks the claim, verifies the receipt and totals, serializes by organization plus receipt hash, and creates one immutable posting per balanced allocation. A retry returns the posted claim; another source with the same receipt hash is rejected.
-5. The expense view drills back to the source and receipt. Employee-paid status does not create a payment. An equipment purchase is marked for later asset review. Accounting reconciliation remains a later #66 action.
+5. The expense view drills back to the source and receipt. Employee-paid status does not create a payment. An equipment purchase is marked for later asset review. Posted non-capital expense may be linked to accepted accounting in CLEAN-038.
 
 ## 19. Approved time to confidential labour cost (CLEAN-036)
 
@@ -341,9 +341,17 @@ The review screen shows the source span and machine proposal separately. Accept/
 2. The same reviewer may create a manual project draft for an active site worker with a source reason. In either path, review records the actual approved hours, explicit cost class and reason; approval alone does not write a cost.
 3. A Director maintains effective CAD worker cost rates. New intervals close or supersede the old active interval and append rate audit. Overlap is blocked by a database exclusion constraint.
 4. A Director posts an approved time entry. The RPC locks the entry, requires exactly one effective rate on its site-local work date, writes a Director-only `labor_cost_entries` snapshot and links it back to the time entry in one transaction. Retry returns the same ledger ID. Linked posted cost and audit rows are immutable.
-5. `/finance/time` gives managers operational hours and exceptions without rate payloads. `/finance/rates` is Director-only. Direct ledger rows in `/finance` remain separately labelled adjustments. #65 will use the project/contract references; #66 will reconcile approved cost to accounting periods.
+5. `/finance/time` gives managers operational hours and exceptions without rate payloads. `/finance/rates` is Director-only. Direct ledger rows in `/finance` remain separately labelled adjustments. CLEAN-038 reconciles posted approved cost to accounting periods.
 
-## 20. Agent change checklist
+## 20. Accounting match and period close (CLEAN-038)
+
+1. A Director opens an organization-wide calendar month. Accepted accounting batches must cover the whole month; incomplete, estimated or missing coverage blocks close.
+2. Posted expenses, labour and inventory issues are compared to accepted, approved, actual direct-cost allocations at the same organization, site, project, category and currency. Exact source IDs, document references, then amount/date/context yield deterministic proposals. Reciprocal or multiple best proposals stay ambiguous. The Director can run unique proposals or enter an explained manual amount. A link never creates a new cost.
+3. Each link consumes remaining source and operational balance. Partial allocation and split matching remain visible until both sides balance. Invalid sources, invalid links, unmatched amounts and ambiguity block close. Area Managers see only their site's aggregate counts and amounts.
+4. A Director moves the period to review and closes only after the database recomputes full-month coverage and all balances. Close freezes a versioned metric snapshot. Correction requires a reasoned reopen; link voids and new matches are audited. A late accepted import or changed operational amount marks the closed snapshot stale for review.
+5. The finance-showcase scenario generates one unique exact match, two ambiguous duplicate-source proposals, an unmatched source, a closed July month and a late July import that makes its snapshot stale. The local reset deletes only that scenario's period, match and import records.
+
+## 21. Agent change checklist
 
 Before changing a flow:
 
