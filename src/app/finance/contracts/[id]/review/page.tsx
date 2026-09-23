@@ -4,6 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext } from "@/services/access-context";
 import { getContractDetail } from "@/integrations/finance/supabase-contracts";
+import { ContractDocumentPanel, type DocumentView, type ProposalView,
+  type DecisionView } from "@/components/contract-document-panel";
 import { transitionContract } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +28,29 @@ export default async function ContractReviewPage({ params, searchParams }: {
   const version = detail?.version;
   const director = access.role === "organization_administrator";
   const canDraft = director || access.role === "area_manager";
+  const [documentResult, proposalResult, decisionResult] = version ? await Promise.all([
+    canDraft ? client.from("contract_documents")
+      .select("id,file_name,status,detected_mime,page_count,created_at")
+      .eq("organization_id", access.organizationId).eq("site_id", detail.contract.site_id)
+      .eq("contract_version_id", version.id).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
+    client.from("contract_extraction_proposals")
+      .select("id,field_key,category,business_state,proposed_value,source_page,source_span")
+      .eq("organization_id", access.organizationId).eq("site_id", detail.contract.site_id)
+      .eq("contract_version_id", version.id).order("created_at", { ascending: false }),
+    client.from("contract_extraction_decisions")
+      .select("proposal_id,decision,reviewed_value,reviewed_at,reason,canonical_table")
+      .eq("organization_id", access.organizationId).eq("site_id", detail.contract.site_id)
+      .eq("contract_version_id", version.id).order("reviewed_at", { ascending: false }),
+  ]) : [{ data: [] }, { data: [] }, { data: [] }];
+  const documents = z.array(z.object({ id: z.uuid(), file_name: z.string(), status: z.string(),
+    detected_mime: z.string().nullable(), page_count: z.number().nullable(), created_at: z.string() }))
+    .parse(documentResult.data) as DocumentView[];
+  const proposals = z.array(z.object({ id: z.uuid(), field_key: z.string(), category: z.string(),
+    business_state: z.string(), proposed_value: z.unknown(), source_page: z.number().nullable(),
+    source_span: z.string().nullable() })).parse(proposalResult.data) as ProposalView[];
+  const decisions = z.array(z.object({ proposal_id: z.uuid(), decision: z.string(),
+    reviewed_value: z.unknown(), reviewed_at: z.string(), reason: z.string().nullable(),
+    canonical_table: z.string().nullable() })).parse(decisionResult.data) as DecisionView[];
   const impactResult = director && version?.state === "approved"
     ? await client.rpc("preview_contract_activation", { p_contract_version_id: version.id }) : null;
   const impact = impactResult?.error ? null : impactSchema.safeParse(impactResult?.data).data;
@@ -62,6 +87,9 @@ export default async function ContractReviewPage({ params, searchParams }: {
           : <p>No SLA definition saved.</p>}
         <h2>Responsibilities</h2>
         <p>Supplies: {version.supply_responsibility}; equipment: {version.equipment_responsibility}; repairs: {version.repair_responsibility}.</p>
+        <ContractDocumentPanel contractId={detail.contract.id} canUpload={canDraft && version.state === "draft"}
+          canReadDocuments={canDraft}
+          operationalOnly={!canDraft} documents={documents} proposals={proposals} decisions={decisions} />
         {missing.length > 0 && <p role="alert">Resolve before approval: {missing.join(", ")}.</p>}
         {version.state === "draft" && canDraft && <>
           <p><Link href={`/finance/contracts/new?draftId=${detail.contract.id}&step=2`}>Continue editing draft</Link></p>

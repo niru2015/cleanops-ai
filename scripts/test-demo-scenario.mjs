@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import { buildScenarioPlan } from "../src/demo/scenario-plan.mjs";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const scenarioName = "stage-a-smoke";
 const run = (...args) => execFileSync("node", ["scripts/demo-scenario.mjs", ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
@@ -64,6 +65,22 @@ try {
   const contractExpected = JSON.parse(await readFile("fixtures/generated/contract-smoke/expected.json", "utf8"));
   assert(contractExpected.controlTotals.finance.currentRevenueEntries === 16,
     "Contract manifest lost its amendment reconciliation control.");
+  const documents = JSON.parse(await readFile("fixtures/generated/contract-smoke/contract-documents.json", "utf8"));
+  assert(documents.expected.source.amount === contractPlan.contract.terms[0].amount,
+    "Synthetic source amount differs from the contract plan.");
+  assert(documents.expected.amendment.amount === contractPlan.contract.terms[1].amount,
+    "Synthetic amendment amount differs from the contract plan.");
+  assert(documents.expected.ambiguous === "Payment terms: TBD;", "Ambiguous source clause is missing.");
+  for (const [file, amount] of [["contract-source.pdf", contractPlan.contract.terms[0].amount],
+    ["contract-amendment.pdf", contractPlan.contract.terms[1].amount]]) {
+    const loading = getDocument({ data: new Uint8Array(await readFile(`fixtures/generated/contract-smoke/${file}`)) });
+    const document = await loading.promise;
+    const page = await document.getPage(1);
+    const content = await page.getTextContent();
+    assert(content.items.map((item) => item.str ?? "").join(" ").includes(`Monthly fee: CAD ${amount}`),
+      `${file} does not contain its expected amount.`);
+    await loading.destroy();
+  }
   const revenue = await client.from("contract_revenue_expectations").select("id")
     .eq("organization_id", contractPlan.organization.id).limit(1).single();
   if (revenue.error) throw revenue.error;

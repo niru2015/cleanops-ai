@@ -2,7 +2,7 @@
 
 Purpose: agent-readable business dictionary for the current CleanOps Supabase model. Exact SQL, constraints, grants, RLS and RPC behavior are owned by `supabase/migrations/`; if this file disagrees with a migration, the migration wins.
 
-Last reviewed: 2026-09-22 against migrations through `20260922034200_clean_028_finance_ledger_edits`.
+Last reviewed: 2026-09-23 against migrations through `20260923082248_clean_034_contract_document_extraction`.
 
 ## Conventions
 
@@ -290,6 +290,19 @@ Migration `20260923064804_clean_022_contract_foundation.sql` owns the following 
 | `contract_events` | Actor-attributed submitted, approved, activated and superseded events. |
 
 Generated `service_tasks`, `task_schedules`, `shifts`, `shift_coverage_requirements`, `sla_definitions` and later `task_runs` have nullable `contract_version_id` provenance. A task-run insert inherits its schedule's version via `private.bind_task_run_contract_version`; updates cannot change it. Generated tasks, shifts and SLA definitions also point to their source obligation, staffing rule or SLA term. Existing non-contract rows retain null provenance. Task schedule `recurrence` stores the source frequency and effective window; quarterly work is represented as one versioned schedule, not pre-created task runs. Fixed-fee expectations cover up to 12 months from the version start; hourly/per-shift/project/custom terms await approved billable activity or manual resolution.
+
+## CLEAN-034 contract document review
+
+Migration `20260923082248_clean_034_contract_document_extraction.sql` adds a private `contract-documents` Storage bucket (15 MB, PDF/DOCX/JPEG/PNG/WebP) and four organization/site/version-scoped tables:
+
+| Table | Meaning |
+|---|---|
+| `contract_documents` | Staged or verified original metadata: declared/detected MIME, claimed/verified size and SHA-256, page count, private path, uploader, status and duplicate pointer. The ready hash is unique per contract version. |
+| `contract_extraction_runs` | Provider and schema version, document, actor, success/failure code and time. Reruns append history. |
+| `contract_extraction_proposals` | Immutable field proposal, business state, source page/span/offsets and classification. Trusted tenant/site/version IDs are attached by the server, never supplied by the extractor. |
+| `contract_extraction_decisions` | One immutable human accept/edit/reject/unknown decision per proposal, with reviewed value, actor/time/reason and canonical draft row pointer when applied. |
+
+Direct browser grants on these tables are read-only. Directors and granted Area Managers can read source metadata/runs and all proposals for their sites; Operations Managers can read only operational proposals/decisions and cannot fetch originals or commercial values. The `review_contract_extraction_proposal` RPC checks draft state and role, applies supported accepted/edited values to the CLEAN-022 canonical draft, and records the decision in one transaction. Non-canonical reporting prose remains a review note. A version cannot be approved while a matched source proposal has no human decision. The source document and machine proposal remain separate from the canonical draft.
 
 ## Agent guidance
 
