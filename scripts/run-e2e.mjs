@@ -60,7 +60,7 @@ const membership = await admin
   .eq("id", "20000000-0000-4000-8000-000000000001");
 if (membership.error) throw membership.error;
 
-const run = spawnSync(command, ["playwright", "test", "--project=chromium"], {
+const run = spawnSync(command, ["playwright", "test", "--project=chromium", ...process.argv.slice(2)], {
   stdio: "inherit",
   env: environment,
 });

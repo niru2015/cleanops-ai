@@ -151,6 +151,13 @@ AI score never directly approves work.
 
 Access: Directors read and write everything below; Area Managers read the inventory ledger and the accepted-import reconciliation summary (§/finance accounting imports) for their granted casinos, but not the labour ledger or any import detail; every other role sees "Finance access restricted". A `siteId` query parameter (validated against the account's sites) selects the casino; the default is the first accessible site.
 
+`getAppAccessContext` resolves one active membership and its `organizationId` before any finance
+query. `getFinanceSiteContext` validates the selected site against that membership and supplies
+organization/site/actor/capability values to both finance and message repositories. Finance actions
+derive organization from the same context; import staging passes that authenticated organization to
+the Director-only RPC. Multiple active memberships require a future explicit selector and currently
+fail closed. The demo tenant constants are not used by these generic paths.
+
 ### Reads
 
 | UI | Source |
@@ -163,6 +170,10 @@ Access: Directors read and write everything below; Area Managers read the invent
 | Labour ledger (Director only) | selected-site `labor_cost_entries` + worker join |
 
 The entry forms are rendered only for Directors (`editable`). RLS independently limits `inventory_transactions` reads to `private.can_view_site_finance`, `labor_cost_entries` reads to `private.can_administer_org` (Director only, since CLEAN-020) and both inserts to `private.can_edit_site_finance`.
+The finance and message repositories load task, item, vendor and worker names through separately
+organization/site-scoped queries, then join by ID in server memory. This avoids relying on an
+unavailable PostgREST embedded relationship for composite task foreign keys. Only active vendors
+and items appear as entry choices; historical ledger rows can still display inactive names.
 
 Fixed (issue #55): `getFinanceWorkspace` now takes a `canReadLabour` flag and skips the `labor_cost_entries` query entirely when the caller cannot read it, returning `labourRestricted: true` instead of an empty array. `FinanceWorkspace` shows an explicit "restricted to Directors" message for the labour ledger in that case, distinct from the genuine "No labour cost entries have been recorded." empty state a Director still sees.
 

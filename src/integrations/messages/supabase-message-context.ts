@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { DEMO_ORGANIZATION_ID } from "@/services/operations-runtime";
+import type { FinanceSiteContext } from "@/services/finance-context";
 import type { MessageResolutionInput } from "@/schemas/finance";
 
 const uuid = z.string().uuid();
@@ -17,7 +17,8 @@ const row = async <T>(promise: PromiseLike<{ data: unknown; error: { message?: s
 const contextSchema = z.object({ id: uuid, external_message_id: uuid, site_id: uuid.nullable(), zone_id: uuid.nullable(), task_run_id: uuid.nullable(), sender_worker_id: uuid.nullable(), sender_role: z.string(), resolution_status: z.string(), resolution_source: z.string().nullable(), updated_at: z.string() });
 const mediaSchema = z.object({ external_message_id: uuid, id: uuid, media_kind: z.string(), mime_type: z.string().nullable(), ingestion_status: z.string(), storage_path: z.string().nullable() });
 const zoneSchema = z.object({ id: uuid, name: z.string() });
-const taskSchema = z.object({ id: uuid, state: z.string(), service_tasks: z.object({ name: z.string() }).nullable() });
+const taskSchema = z.object({ id: uuid, task_id: uuid, state: z.string() });
+const serviceTaskSchema = z.object({ id: uuid, name: z.string() });
 const workerSchema = z.object({ id: uuid, display_name: z.string() });
 
 export type MessageWorkspace = {
@@ -29,20 +30,21 @@ export type MessageWorkspace = {
 
 type MessageRow = { id: string; sender_id: string; text_content: string | null; occurred_at: string };
 
-export async function getMessageWorkspace(client: SupabaseClient, actorUserId: string, siteId: string): Promise<MessageWorkspace> {
-  const [contexts, zones, tasks, workers] = await Promise.all([
-    row(client.from("external_message_contexts").select("id,external_message_id,site_id,zone_id,task_run_id,sender_worker_id,sender_role,resolution_status,resolution_source,updated_at").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", siteId).order("updated_at", { ascending: false }).limit(25), z.array(contextSchema)),
-    row(client.from("site_zones").select("id,name").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", siteId).order("name"), z.array(zoneSchema)),
-    row(client.from("task_runs").select("id,state,service_tasks(name)").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", siteId).order("due_at"), z.array(taskSchema)),
-    row(client.from("workers").select("id,display_name").eq("organization_id", DEMO_ORGANIZATION_ID).order("display_name"), z.array(workerSchema)),
+export async function getMessageWorkspace(client: SupabaseClient, context: FinanceSiteContext): Promise<MessageWorkspace> {
+  const [contexts, zones, tasks, serviceTasks, workers] = await Promise.all([
+    row(client.from("external_message_contexts").select("id,external_message_id,site_id,zone_id,task_run_id,sender_worker_id,sender_role,resolution_status,resolution_source,updated_at").eq("organization_id", context.organizationId).eq("site_id", context.siteId).order("updated_at", { ascending: false }).limit(25), z.array(contextSchema)),
+    row(client.from("site_zones").select("id,name").eq("organization_id", context.organizationId).eq("site_id", context.siteId).order("name"), z.array(zoneSchema)),
+    row(client.from("task_runs").select("id,task_id,state").eq("organization_id", context.organizationId).eq("site_id", context.siteId).order("due_at"), z.array(taskSchema)),
+    row(client.from("service_tasks").select("id,name").eq("organization_id", context.organizationId).eq("site_id", context.siteId), z.array(serviceTaskSchema)),
+    row(client.from("workers").select("id,display_name").eq("organization_id", context.organizationId).order("display_name"), z.array(workerSchema)),
   ]);
   const messageIds = contexts.map((context) => context.external_message_id);
   let messages: MessageRow[] = [];
   let media: z.infer<typeof mediaSchema>[] = [];
   if (messageIds.length) {
     const [messageResult, mediaResult] = await Promise.all([
-      client.rpc("list_site_external_messages", { p_site_id: siteId, p_limit: 25, p_actor_user_id: actorUserId }),
-      client.from("external_message_media").select("id,external_message_id,media_kind,mime_type,ingestion_status,storage_path").in("external_message_id", messageIds),
+      client.rpc("list_site_external_messages", { p_site_id: context.siteId, p_limit: 25, p_actor_user_id: context.actorUserId }),
+      client.from("external_message_media").select("id,external_message_id,media_kind,mime_type,ingestion_status,storage_path").eq("organization_id", context.organizationId).in("external_message_id", messageIds),
     ]);
     if (messageResult.error || mediaResult.error) throw new Error("Message records are unavailable.");
     const parsedMessages = z.array(z.object({ message_id: uuid, sender_id: z.string(), text_content: z.string().nullable(), occurred_at: z.string() })).safeParse(messageResult.data);
@@ -57,7 +59,7 @@ export async function getMessageWorkspace(client: SupabaseClient, actorUserId: s
 
   return {
     zones,
-    tasks: tasks.map((task) => ({ id: task.id, name: task.service_tasks?.name ?? "Service task", state: task.state })),
+    tasks: tasks.map((task) => ({ id: task.id, name: serviceTasks.find((serviceTask) => serviceTask.id === task.task_id)?.name ?? "Service task", state: task.state })),
     workers: workers.map((worker) => ({ id: worker.id, name: worker.display_name })),
     messages: contexts.flatMap((context) => {
       const message = messageById.get(context.external_message_id);
@@ -71,8 +73,8 @@ export async function getMessageWorkspace(client: SupabaseClient, actorUserId: s
   };
 }
 
-export async function resolveMessageContext(client: SupabaseClient, input: MessageResolutionInput) {
-  const { error } = await client.from("external_message_contexts").update({
+export async function resolveMessageContext(client: SupabaseClient, context: FinanceSiteContext, input: MessageResolutionInput) {
+  const { error, count } = await client.from("external_message_contexts").update({
     site_id: input.siteId,
     zone_id: input.zoneId ?? null,
     task_run_id: input.taskRunId ?? null,
@@ -83,6 +85,7 @@ export async function resolveMessageContext(client: SupabaseClient, input: Messa
     confidence: 1,
     resolved_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  }).eq("id", input.contextId).eq("organization_id", DEMO_ORGANIZATION_ID);
+  }, { count: "exact" }).eq("id", input.contextId).eq("organization_id", context.organizationId).eq("site_id", context.siteId);
   if (error) throw new Error(error.message);
+  if (!count) throw new Error("Message context was not found for this casino.");
 }
