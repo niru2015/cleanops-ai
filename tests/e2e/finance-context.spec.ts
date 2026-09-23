@@ -1,0 +1,17 @@
+import { expect, test } from "@playwright/test";
+import { signInAsDirector } from "./auth";
+
+test("Director finance remains scoped to the selected authorized casino", async ({ page }) => {
+  await signInAsDirector(page);
+  await page.goto("/finance");
+  await expect(page.getByRole("heading", { name: "Finance & inventory" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Inventory ledger" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Message context review" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Accounting CSV" })).toBeVisible();
+
+  await page.getByLabel("Choose casino").selectOption("40000000-0000-4000-8000-000000000002");
+  await page.getByRole("button", { name: "Open casino" }).click();
+  await expect(page).toHaveURL(/siteId=40000000-0000-4000-8000-000000000002/);
+  await expect(page.getByText("Copper Peak East Demo").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Message context review" })).toBeVisible();
+});

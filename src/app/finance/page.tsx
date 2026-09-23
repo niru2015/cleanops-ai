@@ -5,6 +5,7 @@ import { getFinanceWorkspace, type FinanceWorkspace as FinanceWorkspaceData } fr
 import { getMessageWorkspace, type MessageWorkspace } from "@/integrations/messages/supabase-message-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext, resolveSelectedSite, type AppAccessContext, type AccessSite } from "@/services/access-context";
+import { getFinanceSiteContext } from "@/services/finance-context";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,23 +23,28 @@ export default async function FinancePage({
   searchParams: Promise<{ siteId?: string }>;
 }) {
   let loaded: Loaded | null = null;
+  let loadError: "organization" | "unavailable" | null = null;
   try {
     const client = await createSupabaseServerClient();
     const access = await getAppAccessContext(client);
     const params = await searchParams;
     const selectedSite = resolveSelectedSite(access, params.siteId);
+    const context = access.canViewFinance && selectedSite ? getFinanceSiteContext(access, selectedSite.id) : null;
     const [finance, messages] =
-      access.canViewFinance && selectedSite
+      context
         ? await Promise.all([
-            getFinanceWorkspace(client, selectedSite.id, access.canEditFinance),
-            getMessageWorkspace(client, access.userId, selectedSite.id),
+            getFinanceWorkspace(client, context),
+            getMessageWorkspace(client, context),
           ])
         : [null, null];
     loaded = { access, selectedSite, finance, messages };
-  } catch {}
+  } catch (error) {
+    if (error instanceof Error && error.message === "Organization selection required.") loadError = "organization";
+    else if (!(error instanceof Error && error.message === "Authentication required.")) loadError = "unavailable";
+  }
 
   if (!loaded) {
-    return <AppShell currentPath="/finance"><section className="accessState"><p className="eyebrow">Finance &amp; inventory</p><h1>Sign in required</h1><p>Use a Director or Area Manager demo account.</p><a className="reviewButton reviewButton-primary" href="/login">Sign in</a></section></AppShell>;
+    return <AppShell currentPath="/finance"><section className="accessState"><p className="eyebrow">Finance &amp; inventory</p><h1>{loadError === "organization" ? "Organization selection required" : loadError === "unavailable" ? "Finance workspace unavailable" : "Sign in required"}</h1><p>{loadError === "organization" ? "This account belongs to more than one organization. Ask an administrator to select one before opening finance." : loadError === "unavailable" ? "The workspace could not be loaded. Please try again." : "Use a Director or Area Manager demo account."}</p>{loadError ? null : <a className="reviewButton reviewButton-primary" href="/login">Sign in</a>}</section></AppShell>;
   }
 
   const { access, selectedSite, finance, messages } = loaded;

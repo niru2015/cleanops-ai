@@ -3,7 +3,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { HOSTED_DEMO_ORGANIZATION_ID } from "@/services/hosted-demo";
 
 export type AppRole =
   | "cleaner"
@@ -22,6 +21,7 @@ export type AccessSite = {
 export type AppAccessContext = {
   userId: string;
   membershipId: string;
+  organizationId: string;
   role: AppRole;
   roleLabel: string;
   sites: AccessSite[];
@@ -36,6 +36,7 @@ export type AppAccessContext = {
 
 const membershipSchema = z.object({
   id: z.string().uuid(),
+  organization_id: z.string().uuid(),
   role: z.enum([
     "cleaner",
     "site_supervisor",
@@ -76,17 +77,21 @@ export async function getAppAccessContext(
 
   const membershipResult = await client
     .from("memberships")
-    .select("id,role")
-    .eq("organization_id", HOSTED_DEMO_ORGANIZATION_ID)
+    .select("id,organization_id,role")
     .eq("user_id", userId)
     .eq("state", "active")
-    .maybeSingle();
-  const membership = membershipSchema.safeParse(membershipResult.data);
-  if (membershipResult.error || !membership.success) {
+    .limit(2);
+  const memberships = z.array(membershipSchema).safeParse(membershipResult.data);
+  if (membershipResult.error || !memberships.success || memberships.data.length === 0) {
     throw new Error("Active CleanOps membership required.");
   }
+  if (memberships.data.length > 1) {
+    throw new Error("Organization selection required.");
+  }
+  const membership = memberships.data[0];
+  const organizationId = membership.organization_id;
 
-  const role = membership.data.role;
+  const role = membership.role;
   let sites: AccessSite[] = [];
 
   if (
@@ -96,7 +101,7 @@ export async function getAppAccessContext(
     const result = await client
       .from("sites")
       .select("id,name,city")
-      .eq("organization_id", HOSTED_DEMO_ORGANIZATION_ID)
+      .eq("organization_id", organizationId)
       .order("name");
     const parsed = z.array(siteSchema).safeParse(result.data);
     if (result.error || !parsed.success) {
@@ -108,8 +113,8 @@ export async function getAppAccessContext(
     const accessResult = await client
       .from("member_site_access")
       .select("site_id")
-      .eq("organization_id", HOSTED_DEMO_ORGANIZATION_ID)
-      .eq("membership_id", membership.data.id)
+      .eq("organization_id", organizationId)
+      .eq("membership_id", membership.id)
       .lte("starts_at", now)
       .or(`ends_at.is.null,ends_at.gt.${now}`);
     const accessRows = z.array(accessRowSchema).safeParse(accessResult.data);
@@ -122,7 +127,7 @@ export async function getAppAccessContext(
       const siteResult = await client
         .from("sites")
         .select("id,name,city")
-        .eq("organization_id", HOSTED_DEMO_ORGANIZATION_ID)
+        .eq("organization_id", organizationId)
         .in("id", siteIds)
         .order("name");
       const parsed = z.array(siteSchema).safeParse(siteResult.data);
@@ -142,7 +147,8 @@ export async function getAppAccessContext(
 
   return {
     userId,
-    membershipId: membership.data.id,
+    membershipId: membership.id,
+    organizationId,
     role,
     roleLabel: roleLabels[role],
     sites,
