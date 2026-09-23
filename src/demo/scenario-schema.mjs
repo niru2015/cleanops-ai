@@ -16,7 +16,7 @@ export const scenarioSchema = z.object({
   schemaVersion: z.literal(1),
   scenarioId: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/),
   seed: z.number().int().nonnegative().max(0xffffffff),
-  generatorVersion: z.union([z.literal(1), z.literal(2)]),
+  generatorVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   clock: z.object({ start: date, end: date, timezone: z.string().min(3) }).strict(),
   organization: z.object({ name: z.string().min(2).max(120), siteCount: z.number().int().min(1).max(20), workerCount: z.number().int().min(1).max(300) }).strict(),
   referencePack: z.enum(["fictional-v1", "tornado-v1"]),
@@ -24,9 +24,10 @@ export const scenarioSchema = z.object({
   cases: z.array(z.string().regex(/^[a-z][a-z0-9_]*$/)).max(50),
 }).strict().superRefine((value, context) => {
   if (value.clock.end < value.clock.start) context.addIssue({ code: "custom", path: ["clock", "end"], message: "end must follow start" });
-  if (value.modules.contracts && value.generatorVersion !== 2) context.addIssue({ code: "custom", path: ["generatorVersion"], message: "contracts require generatorVersion 2" });
+  if (value.modules.contracts && value.generatorVersion < 2) context.addIssue({ code: "custom", path: ["generatorVersion"], message: "contracts require generatorVersion 2 or later" });
+  if (value.modules.expenses && value.generatorVersion !== 3) context.addIssue({ code: "custom", path: ["generatorVersion"], message: "expenses require generatorVersion 3" });
   for (const [key, enabled] of Object.entries(value.modules)) {
-    if (key !== "base" && key !== "contracts" && enabled) context.addIssue({ code: "custom", path: ["modules", key], message: `${key} adapter is not implemented` });
+    if (key !== "base" && key !== "contracts" && key !== "expenses" && enabled) context.addIssue({ code: "custom", path: ["modules", key], message: `${key} adapter is not implemented` });
   }
 });
 

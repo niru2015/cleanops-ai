@@ -13,5 +13,6 @@ Supersede decisions with a new ADR and update canonical docs; retain old rationa
 - [008 Real casino names, public repository, supply approvers](008-real-casino-names-public-repo.md)
 - [009 Versioned contract activation](009-contract-version-activation.md)
 - [010 Private contract source and reviewed extraction](010-private-contract-document-review.md)
+- [011 Finance intake and approved direct cost](011-finance-intake-expense-approval.md)
 
 New ADR: context, status/date, decision, alternatives, consequences, revisit trigger.

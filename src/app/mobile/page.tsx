@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import Link from "next/link";
 import { MobileTask } from "@/components/mobile-task";
 import { getMobileWorkspace } from "@/integrations/operations/supabase-operations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -41,7 +42,7 @@ export default async function MobilePage() {
     return <AppShell authenticated currentPath="/mobile" role={access.role} roleLabel={access.roleLabel}><section className="accessState"><p className="eyebrow">Cleaner mobile</p><h1>Cleaner workflow restricted</h1><p>This role is not authorized for cleaner task capture.</p></section></AppShell>;
   }
   if (!fixtureAvailable) {
-    return <AppShell authenticated currentPath="/mobile" role={access.role} roleLabel={access.roleLabel}><section className="accessState"><p className="eyebrow">Cleaner mobile</p><h1>No mobile task fixture for assigned casino</h1><p>This account is correctly restricted to its assigned casino; the current camera walkthrough is seeded at Grand Villa Casino.</p></section></AppShell>;
+    return <AppShell authenticated currentPath="/mobile" role={access.role} roleLabel={access.roleLabel}><p><Link href="/mobile/expenses">Submit an expense and receipt</Link></p><section className="accessState"><p className="eyebrow">Cleaner mobile</p><h1>No mobile task fixture for assigned casino</h1><p>This account is correctly restricted to its assigned casino; the current camera walkthrough is seeded at Grand Villa Casino.</p></section></AppShell>;
   }
-  return <AppShell authenticated currentPath="/mobile" role={access.role} roleLabel={access.roleLabel}>{workspace ? <MobileTask workspace={workspace} demo={demo} /> : null}</AppShell>;
+  return <AppShell authenticated currentPath="/mobile" role={access.role} roleLabel={access.roleLabel}><p><Link href="/mobile/expenses">Submit an expense and receipt</Link></p>{workspace ? <MobileTask workspace={workspace} demo={demo} /> : null}</AppShell>;
 }
