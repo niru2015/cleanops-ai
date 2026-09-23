@@ -2,7 +2,7 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last reviewed: 2026-09-22, includes issues #48 and #55 on top of `main` at `9efa8d3`.
+Last updated: 2026-09-23 for issue #62 on top of `main` at `fab8888`.
 
 ## Route summary
 
@@ -287,6 +287,12 @@ Client view does not expose raw evidence, private worker statements, raw message
 | Submit/approve/preview/activate | Dedicated RPCs; activation writes canonical operational rows and `contract_revenue_expectations` transactionally |
 
 Expected revenue is a contract projection and does not enter CLEAN-020 `finance_reconciliations` as recognized revenue. The manager finance overview remains issue #34.
+
+### Contract document upload and extraction (CLEAN-034)
+
+The `/finance/contracts/[id]/review` panel reads `contract_documents`, `contract_extraction_proposals` and `contract_extraction_decisions` for its current version. `prepareContractDocumentUpload` checks the authenticated Director or assigned Area Manager and current draft, records a staged document with a server-selected path, and issues a short signed Storage upload token. The browser sends file bytes directly to the private `contract-documents` bucket. `finalizeContractDocumentUpload` re-downloads the object with the privileged server client, checks byte count, content signature, SHA-256 and page limit, then marks it ready or duplicate. Bad content is rejected. No file bytes pass through a Next.js request body.
+
+`extractContractDocument` downloads only a ready document, uses native PDF or DOCX text extraction before bounded image/PDF OCR, validates the provider result and exact source span against the text, then appends a run and immutable proposals. Failures append a failed run and leave the manual wizard usable. `recordContractExtractionDecision` calls a transaction RPC to apply reviewed values to the existing draft rows; extraction alone never activates, approves, schedules or posts revenue. The original download route checks document RLS and site access before issuing a 60-second private signed URL. Operations Managers see only operational snippets and can record an operational decision without writing canonical contract values.
 
 ## Backend/provider mappings
 

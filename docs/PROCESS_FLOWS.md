@@ -2,7 +2,7 @@
 
 Purpose: implementation-aligned end-to-end flows for coding agents. Migrations, services and tests remain authoritative.
 
-Last reviewed: 2026-09-21 against `main` at `e6aedc5`.
+Last updated: 2026-09-23 for issue #62 on top of `main` at `fab8888`.
 
 ## 1. Authentication and site authorization
 
@@ -319,7 +319,15 @@ Manual create resolves organization/client from the selected authorized site in 
 
 `contract_revenue_expectations` represent expected billing only. CLEAN-020 imported accounting rows remain distinct recognized actuals; #66 will reconcile them. Task runs created from a contract schedule inherit its version ID; an amendment leaves existing task-run provenance and requirements snapshots unchanged. The scenario factory's contracts adapter builds synthetic source terms and replays approval/activation through the same RPCs, then queries current expectations against the generated manifest. Its local reset refuses other attached operational records before deleting scenario-owned contract rows.
 
-## 17. Agent change checklist
+## 17. Contract document source and review (CLEAN-034)
+
+Director or granted Area Manager selects a draft and stages PDF/DOCX/image metadata. A 15-minute scoped ticket and signed Storage token allow direct private upload. Finalization reads the object server-side, validates its bytes against the prepared size/type/hash, counts bounded pages and deduplicates the same hash within that version. A changed amendment uses CLEAN-022's new draft version and leaves the historical active version intact.
+
+Extraction reads native PDF/DOCX text first, runs bounded English OCR only on image or scanned PDF pages, then the deterministic provider proposes terms. Zod validates the structured result, and the service verifies every cited span against the extracted page text before storing it. Absent/ambiguous terms remain `not_found` or `review_recommended`; no model confidence is presented as legal certainty. A provider failure creates a failed run without changing the draft.
+
+The review screen shows the source span and machine proposal separately. Accept/edit/reject/unknown invokes `review_contract_extraction_proposal`, which writes a human decision and any supported canonical draft value transactionally. Operations Managers may review only operational snippets and do not apply canonical rows. Director approval is blocked while any matched proposal remains undecided; CLEAN-022 still checks canonical effective dates, priced terms and obligation zones. Extraction and review never activate a version. Original files remain private, including after amendment supersession.
+
+## 18. Agent change checklist
 
 Before changing a flow:
 
