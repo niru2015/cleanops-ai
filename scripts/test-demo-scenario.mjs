@@ -112,7 +112,8 @@ try {
   const cents = posted.data.reduce((sum, row) => sum + Math.round(Number(row.amount) * 100), 0);
   assert((cents / 100).toFixed(2) === financeExpected.controlTotals.finance.approvedExpenseCost,
     "Expense postings do not reconcile to generated source costs.");
-  assert(posted.data.length === 5, "Duplicate WhatsApp receipt created an extra cost.");
+  assert(posted.data.length === financePlan.expenseCases.filter(item => item.approved).length,
+    "Duplicate WhatsApp receipt created an extra cost.");
   assert(financeReceipts.cases.find((item) => item.key === "duplicate-fuel")?.file === "fuel-receipt.png",
     "Duplicate case must reuse exact receipt bytes.");
   const timePack = JSON.parse(await readFile("fixtures/generated/finance-showcase/time-cases.json", "utf8"));
@@ -125,11 +126,18 @@ try {
     === financeExpected.controlTotals.finance.approvedLabourCost,
   "Approved time postings do not reconcile to generated source hours and rates.");
   assert(labour.data.length === 4, "Time exceptions created an unapproved labour cost.");
+  const director = financePlan.personas.find(persona => persona.role === "organization_administrator");
+  assert(director && financePlan.projects?.length === 2, "Project scenario lost its Director or project plan.");
+  const projectRows = await client.from("projects").select("id,project_code,state")
+    .eq("organization_id",financePlan.organization.id);
+  if (projectRows.error) throw projectRows.error;
+  assert(projectRows.data.length === 2 && projectRows.data.some(row => row.state === "completed"),
+    "Synthetic project completion did not persist.");
   run("reset", "finance-showcase");
   financeCreated = false;
   assert(await count("sites", financePlan.organization.id) === 0,
     "Finance scenario tenant remained after reset.");
-  console.log("Scenario CLI integration passed: base, contracts, expenses, time, source totals, reset and tenant isolation.");
+  console.log("Scenario CLI integration passed: base, contracts, expenses, time, projects, source totals, reset and tenant isolation.");
 } finally {
   if (created) {
     try { run("reset", scenarioName); } catch { console.error(`Manual cleanup may be needed: npm run demo:reset -- ${scenarioName}`); }

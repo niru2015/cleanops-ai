@@ -338,6 +338,10 @@ Budget in `quality_ai_budgets`; provider/cost/cache provenance in `quality_ai_ru
 
 ## /finance/time and /finance/rates — CLEAN-036
 
+## /finance/projects — CLEAN-037
+
+The server page calls `list_finance_projects` and `list_finance_project_reconciliation` for only authorized sites and reads project dates for the month filter. The Director source drill-through reads linked time-cost, expense, inventory-issue and accounting-allocation records; Area Managers receive aggregate RPC results without individual worker costs. `performProjectAction` validates each action with Zod and current membership, then calls database RPCs that repeat organization/site and Director checks. Create and assigned-site scope editing are operational drafts; activation and cancellation are Director-only. Billable time approval references approved project time. Invoices and accepted accounting revenue remain separate. `project_source_links` associates immutable posted sources; project totals never add accounting direct costs again.
+
 | Surface | Read path | Write path |
 |---|---|---|
 | `/finance/time` | `supabase-time.ts` loads site-filtered `time_entries`, `shift_assignments`, `worker_site_permissions`, worker labels and site labels. The browser receives no worker rate or ledger amount. | `performTimeAction` validates Zod input and current site membership, then calls `derive_shift_time_entry`, `create_manual_time_entry`, `review_time_entry` or Director-only `post_approved_time_cost`. SQL repeats role/site checks and records audit. |

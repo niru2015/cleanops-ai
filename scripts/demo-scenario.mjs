@@ -100,6 +100,7 @@ async function assertScope(client, plan, allowPartial = false, registry = null) 
   if (plan.contract) await assertContractScope(client, plan, allowPartial);
   if (plan.expenseCases) await assertExpenseScope(client,plan,registry,allowPartial);
   if (plan.timeCases) await assertTimeScope(client,plan,registry,allowPartial);
+  if (plan.projects) await assertProjectScope(client,plan,registry,allowPartial);
   return org;
 }
 const contractTables = ["contract_events", "contract_financial_terms", "contract_obligations",
@@ -263,7 +264,45 @@ async function assertTimeScope(client,plan,registry,allowPartial){
       throw new Error("Approved labour cost differs from the source-backed scenario manifest.");
   }
 }
-async function countAttached(organizationId, hasContracts, hasExpenses, hasTime) {
+async function assertProjectScope(client,plan,registry,allowPartial){
+  const projectIds=plan.projects.map(item=>item.id);
+  for(const table of ["projects","project_revenue_terms","project_invoices","project_source_links"]){
+    const actual=await rowsFor(client,table,plan.organization.id);
+    const planned=table==="projects"?projectIds:table==="project_revenue_terms"?registry.projects?.termIds??[]:
+      table==="project_invoices"?registry.projects?.invoiceIds??[]:registry.projects?.linkIds??[];
+    assertIdSet(actual,planned,table,allowPartial);
+  }
+  for(const table of ["finance_import_batches","finance_source_rows","finance_source_allocations"]){
+    const actual=await rowsFor(client,table,plan.organization.id);
+    const planned=registry.projects?.accounting?.[table]??[];
+    assertIdSet(actual,planned,table,allowPartial);
+  }
+  if(allowPartial)return;
+  const director=plan.personas.find(persona=>persona.role==="organization_administrator");
+  const actor=personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
+  const summaries=await checked(actor.rpc("list_finance_projects",{p_site_id:plan.sites[0].id}),"Read project contribution");
+  for(const expected of plan.expected.projects){
+    const actual=summaries.find(item=>item.project_code===expected.code);
+    if(!actual||Number(actual.expected_revenue).toFixed(2)!==expected.quote||
+      Number(actual.recognized_revenue).toFixed(2)!==expected.recognized||
+      Number(actual.direct_cost).toFixed(2)!==expected.directCost||
+      (actual.recognized_contribution===null?null:Number(actual.recognized_contribution).toFixed(2))!==expected.contribution||
+      actual.completeness!==expected.completeness)
+      throw new Error(`Project ${expected.code} does not reconcile to its source-backed manifest.`);
+  }
+  const sitePostings=await checked(client.from("expense_postings").select("id,amount,project_id")
+    .eq("organization_id",plan.organization.id).eq("site_id",plan.sites[0].id),"Read site expense source total");
+  const plannedSiteCents=plan.expenseCases.filter(item=>item.approved&&item.siteIndex===0)
+    .reduce((sum,item)=>sum+item.cents,0);
+  const actualSiteCents=sitePostings.reduce((sum,item)=>sum+Math.round(Number(item.amount)*100),0);
+  if(actualSiteCents!==plannedSiteCents)throw new Error("Project expense was added again to the site cost.");
+  const allocation=await checked(client.from("finance_source_allocations").select("id,amount,project_id")
+    .eq("organization_id",plan.organization.id).eq("site_id",plan.sites[0].id),"Read project accounting allocation");
+  if(allocation.length!==1||allocation[0].project_id!==plan.projects[0].id||
+    Math.round(Number(allocation[0].amount)*100)!==plan.projects[0].recognized)
+    throw new Error("Project accounting revenue does not equal its single site allocation.");
+}
+async function countAttached(organizationId, hasContracts, hasExpenses, hasTime, hasProjects) {
   if (!/^[0-9a-f-]{36}$/.test(organizationId) || !localDatabaseUrl) throw new Error("Invalid local reset scope.");
   const baseTables = new Set(["clients", "sites", "workers", "worker_site_permissions", "memberships", "member_site_access"]);
   if (hasContracts) for (const table of contractTables) baseTables.add(table);
@@ -274,6 +313,9 @@ async function countAttached(organizationId, hasContracts, hasExpenses, hasTime)
   if(hasTime)for(const table of ["shifts","shift_assignments","attendance_events",
     "time_entries","time_entry_events","worker_cost_rates","worker_cost_rate_events",
     "labor_cost_entries"])baseTables.add(table);
+  if(hasProjects)for(const table of ["projects","project_revenue_terms","project_invoices","project_source_links",
+    "project_billable_approvals","finance_import_batches","finance_source_rows",
+    "finance_source_allocations"])baseTables.add(table);
   const names = execFileSync("psql", [localDatabaseUrl, "-At", "-c", "select table_name from information_schema.columns where table_schema='public' and column_name='organization_id' order by table_name"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   const tables = names.trim().split("\n").filter((table) => table && !baseTables.has(table));
   if (tables.some((table) => !/^[a-z][a-z0-9_]*$/.test(table))) throw new Error("Unexpected table name in local schema.");
@@ -524,6 +566,8 @@ async function generateTime(client,plan,registry,directory){
         p_hours:item.hours,p_cost_type:item.costType,p_project_reference:item.projectReference,
         p_contract_version_id:null,p_task_run_id:null,p_reason:"Synthetic one-off project source",
       }),"Create manual project time");
+      if(plan.projects)await checked(actor.rpc("assign_finance_project_time",{
+        p_project_id:plan.projects[0].id,p_time_entry_id:timeEntryId}),"Link synthetic project time");
     }
     let ledgerId=null;
     if(item.status==="posted"){
@@ -543,6 +587,65 @@ async function generateTime(client,plan,registry,directory){
     schemaVersion:1,cases:plan.timeCases,approvedLabourCost:plan.expected.controlTotals.finance.approvedLabourCost,
     rateChanges:["DEMO-REG-1","DEMO-REG-2"],
     note:"All people and shifts are synthetic; posted cost is calculated from approved hours and effective rates."});
+}
+async function generateProjectDrafts(client,plan,registry,directory){
+  if(!plan.projects)return;
+  const director=plan.personas.find(persona=>persona.role==="organization_administrator");
+  const directorId=registry.authUserIds[plan.personas.indexOf(director)];
+  const actor=personaClient(directorId);
+  registry.projects={termIds:[],invoiceIds:[],linkIds:[],accounting:{
+    finance_import_batches:[],finance_source_rows:[],finance_source_allocations:[]}};
+  for(const item of plan.projects){
+    await checked(client.from("projects").insert({id:item.id,organization_id:plan.organization.id,
+      site_id:plan.sites[0].id,project_code:item.code,name:item.name,scope:item.scope,
+      starts_on:plan.scenario.clock.start,currency:"CAD",created_by:directorId}),`Create ${item.code} draft`);
+    await checked(actor.rpc("approve_finance_project",{p_project_id:item.id,p_pricing_model:"fixed",
+      p_fixed_quote:item.quote/100,p_hourly_rate:null}),`Approve ${item.code}`);
+    const term=await checked(client.from("project_revenue_terms").select("id").eq("project_id",item.id).single(),"Find project term");
+    registry.projects.termIds.push(term.id);
+  }
+  await atomicJson(join(directory,"registry.json"),registry);
+}
+async function completeProjectScenario(client,plan,registry,directory){
+  if(!plan.projects)return;
+  const director=plan.personas.find(persona=>persona.role==="organization_administrator");
+  const directorId=registry.authUserIds[plan.personas.indexOf(director)];
+  const actor=personaClient(directorId);
+  const project=plan.projects[0];
+  for(const row of registry.expenses.rows.filter(row=>["fuel","project-supply"].includes(row.key))){
+    for(const postingId of row.postingIds) await checked(actor.rpc("assign_finance_project_source",{
+      p_project_id:project.id,p_source_type:"expense",p_source_id:postingId}),`Link ${row.key} expense`);
+  }
+  registry.projects.linkIds=ids(await checked(client.from("project_source_links").select("id")
+    .eq("organization_id",plan.organization.id),"Read synthetic project links"));
+  const batchId=sqlId(`project-accounting-batch:${plan.runId}`);
+  const rowId=sqlId(`project-accounting-row:${plan.runId}`);
+  const allocationId=sqlId(`project-accounting-allocation:${plan.runId}`);
+  await checked(client.from("finance_import_batches").insert({id:batchId,organization_id:plan.organization.id,
+    source_system:"scenario_csv",source_file_name:"synthetic-project-revenue.csv",
+    source_file_hash:createHash("sha256").update(`project:${plan.runId}`).digest("hex"),mapping_version:"clean-037-v1",
+    currency:"CAD",service_period_start:plan.scenario.clock.start,
+    service_period_end:plan.scenario.clock.end,state:"accepted",completeness:"complete",
+    accepted_by:directorId,accepted_at:new Date().toISOString()}),"Create accepted synthetic accounting batch");
+  await checked(client.from("finance_source_rows").insert({id:rowId,organization_id:plan.organization.id,
+    import_batch_id:batchId,source_row_number:1,source_document_id:`DEMO-${project.code}`,
+    source_line_id:"1",site_id:plan.sites[0].id,job_reference:project.code,
+    service_period:plan.scenario.clock.start,accounting_period:plan.scenario.clock.start,
+    currency:"CAD",category:"revenue",amount:project.recognized/100,
+    approval_state:"approved",recognition_state:"actual",allocation_state:"allocated",
+    raw_row:{synthetic:true,scenario:plan.scenario.scenarioId}}),"Create synthetic revenue source row");
+  await checked(client.from("finance_source_allocations").insert({id:allocationId,organization_id:plan.organization.id,
+    source_row_id:rowId,site_id:plan.sites[0].id,job_reference:project.code,
+    amount:project.recognized/100}),"Allocate synthetic revenue to project");
+  registry.projects.accounting={finance_import_batches:[batchId],finance_source_rows:[rowId],
+    finance_source_allocations:[allocationId]};
+  const invoiceId=await checked(actor.rpc("record_finance_project_invoice",{
+    p_project_id:project.id,p_reference:`DEMO-${project.code}`,p_date:plan.scenario.clock.start,
+    p_amount:project.quote/100}),"Record synthetic project invoice");
+  registry.projects.invoiceIds.push(invoiceId);
+  await checked(actor.rpc("set_finance_project_completion",{p_project_id:project.id,p_complete:true}),
+    "Close synthetic project costs");
+  await atomicJson(join(directory,"registry.json"),registry);
 }
 async function generate(name, seed) {
   const plan = await loadPlan(name, seed); // Validate before any writes.
@@ -578,8 +681,10 @@ async function generate(name, seed) {
     }
     if (plan.memberGrants.length) await checked(client.from("member_site_access").insert(plan.memberGrants), "Grant persona sites");
     await generateContracts(client, plan, registry);
+    await generateProjectDrafts(client,plan,registry,directory);
     await generateExpenses(client,plan,registry,directory);
     await generateTime(client,plan,registry,directory);
+    await completeProjectScenario(client,plan,registry,directory);
     await assertScope(client, plan, false,registry);
     registry.status = "ready";
     await atomicJson(registryPath, registry);
@@ -635,9 +740,23 @@ async function reset(name) {
   const { directory, registry, plan } = await loadRegistry(name);
   const client = connectLocal();
   const org = await assertScope(client, plan, true,registry);
-  if (org) await countAttached(plan.organization.id, Boolean(plan.contract),Boolean(plan.expenseCases),Boolean(plan.timeCases));
+  if (org) await countAttached(plan.organization.id, Boolean(plan.contract),Boolean(plan.expenseCases),Boolean(plan.timeCases),Boolean(plan.projects));
   registry.status = "resetting";
   await atomicJson(join(directory, "registry.json"), registry);
+  if(plan.projects){
+    const scopedOrg=plan.organization.id;
+    if(!/^[0-9a-f-]{36}$/.test(scopedOrg))throw new Error("Invalid project scenario organization ID.");
+    const cleanup=`begin;
+      delete from public.project_source_links where organization_id='${scopedOrg}';
+      delete from public.project_invoices where organization_id='${scopedOrg}';
+      delete from public.project_billable_approvals where organization_id='${scopedOrg}';
+      delete from public.finance_source_allocations where organization_id='${scopedOrg}';
+      delete from public.finance_source_rows where organization_id='${scopedOrg}';
+      delete from public.finance_import_batches where organization_id='${scopedOrg}';
+      commit;`;
+    execFileSync("psql",[localDatabaseUrl,"-v","ON_ERROR_STOP=1","-c",cleanup],
+      {encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+  }
   if(plan.timeCases){
     const scopedOrg=plan.organization.id;
     if(!/^[0-9a-f-]{36}$/.test(scopedOrg))throw new Error("Invalid time scenario organization ID.");
@@ -684,6 +803,10 @@ async function reset(name) {
       await checked(client.from(table).delete().eq("organization_id",plan.organization.id),
         `Delete ${table}`);
     }
+  }
+  if(plan.projects){
+    await checked(client.from("project_revenue_terms").delete().eq("organization_id",plan.organization.id),"Delete project terms");
+    await checked(client.from("projects").delete().eq("organization_id",plan.organization.id),"Delete projects");
   }
   if (plan.contract) {
     for (const table of ["contract_events", "contract_revenue_expectations", "sla_definitions",

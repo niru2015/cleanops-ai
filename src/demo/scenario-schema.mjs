@@ -16,7 +16,7 @@ export const scenarioSchema = z.object({
   schemaVersion: z.literal(1),
   scenarioId: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/),
   seed: z.number().int().nonnegative().max(0xffffffff),
-  generatorVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  generatorVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
   clock: z.object({ start: date, end: date, timezone: z.string().min(3) }).strict(),
   organization: z.object({ name: z.string().min(2).max(120), siteCount: z.number().int().min(1).max(20), workerCount: z.number().int().min(1).max(300) }).strict(),
   referencePack: z.enum(["fictional-v1", "tornado-v1"]),
@@ -27,8 +27,9 @@ export const scenarioSchema = z.object({
   if (value.modules.contracts && value.generatorVersion < 2) context.addIssue({ code: "custom", path: ["generatorVersion"], message: "contracts require generatorVersion 2 or later" });
   if (value.modules.expenses && value.generatorVersion < 3) context.addIssue({ code: "custom", path: ["generatorVersion"], message: "expenses require generatorVersion 3 or later" });
   if (value.modules.time && value.generatorVersion < 4) context.addIssue({ code: "custom", path: ["generatorVersion"], message: "time requires generatorVersion 4 or later" });
+  if (value.modules.projects && (value.generatorVersion < 5 || !value.modules.time || !value.modules.expenses)) context.addIssue({ code: "custom", path: ["modules", "projects"], message: "projects require generatorVersion 5 with time and expenses" });
   for (const [key, enabled] of Object.entries(value.modules)) {
-    if (key !== "base" && key !== "contracts" && key !== "expenses" && key !== "time" && enabled) context.addIssue({ code: "custom", path: ["modules", key], message: `${key} adapter is not implemented` });
+    if (key !== "base" && key !== "contracts" && key !== "expenses" && key !== "time" && key !== "projects" && enabled) context.addIssue({ code: "custom", path: ["modules", key], message: `${key} adapter is not implemented` });
   }
 });
 

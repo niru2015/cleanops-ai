@@ -2,7 +2,7 @@
 
 Purpose: implementation-aligned end-to-end flows for coding agents. Migrations, services and tests remain authoritative.
 
-Last updated: 2026-09-23 for issue #62 on top of `main` at `fab8888`.
+Last updated: 2026-09-23 for CLEAN-037 project contribution.
 
 ## 1. Authentication and site authorization
 
@@ -356,3 +356,6 @@ Before changing a flow:
 7. Preserve append-only audit/history behavior.
 8. Update database isolation tests for persistence or authorization changes.
 9. Update these docs in the same PR when a data path changes.
+# CLEAN-037 one-off project contribution
+
+An assigned Area Manager or Director creates and edits a site-bound project draft, optionally under a contract. Only a Director approves fixed/hourly terms, activates or cancels the project. Operational time is assigned to the project before cost posting; approved hours become a confidential labour cost snapshot. A Director may link an existing posted expense, inventory issue or accounting allocation without editing the original immutable source. Equipment purchases are excluded from direct expense cost pending asset treatment. Director-approved billable hours drive hourly expected revenue; recorded invoices do not imply accounting recognition. Accepted, approved, actual revenue allocations drive recognized revenue. The register shows recognized, unresolved and incomplete accounting-source counts. The Director closes costs only after review; recognized contribution remains pending until accounting completeness is also confirmed. The site finance overview retains its original ledger totals and does not add project subtotals again.

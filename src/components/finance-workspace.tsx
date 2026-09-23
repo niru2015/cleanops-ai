@@ -255,7 +255,7 @@ export function FinanceWorkspace({
                 </div>
               </form>
             ) : (
-              <div key={entry.id} className={editable ? "financeTableRow financeTableRow-editable" : "financeTableRow"}>
+              <div key={entry.id} id={entry.id} className={editable ? "financeTableRow financeTableRow-editable" : "financeTableRow"}>
                 <strong>{entry.item}<small>{new Date(entry.occurredAt).toLocaleString()}</small></strong><span>{entry.type}</span><span>{entry.vendor ?? "—"}</span><span>{entry.quantity} {entry.unit}</span><span>{money.format(entry.totalCost)}</span>
                 {editable ? <div className="financeRowActions">
                   <button className="reviewButton reviewButton-secondary" type="button" disabled={pending} onClick={() => setEditingInventoryId(entry.id)}>Edit</button>
