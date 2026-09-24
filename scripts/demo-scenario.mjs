@@ -95,14 +95,6 @@ function connectHosted() {
   const client = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
   hostedClient = client;
   localAuth = { url, anonKey, password };
-  if (process.env.CLEANOPS_HOSTED_DEMO_DATABASE_URL) {
-    const dbUrl = new URL(process.env.CLEANOPS_HOSTED_DEMO_DATABASE_URL);
-    if (dbUrl.protocol !== "postgresql:" ||
-      (!dbUrl.hostname.includes(projectRef) && !decodeURIComponent(dbUrl.username).includes(projectRef)) ||
-      ["localhost", "127.0.0.1"].includes(dbUrl.hostname))
-      throw new Error("Hosted database URL does not identify the explicit project ref.");
-    localDatabaseUrl = dbUrl.toString();
-  }
   return client;
 }
 function connectTarget() { return hostedTarget ? connectHosted() : connectLocal(); }
@@ -364,8 +356,32 @@ async function assertProjectScope(client,plan,registry,allowPartial){
     Math.round(Number(allocation[0].amount)*100)!==plan.projects[0].recognized)
     throw new Error("Project accounting revenue does not equal its single site allocation.");
 }
+function scenarioSqlRows(sql) {
+  if(hostedTarget){
+    const output=execFileSync("npx",["supabase","db","query","--linked","--project-ref",
+      hostedTarget.projectRef,sql],{encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+    const result=JSON.parse(output);
+    if(!Array.isArray(result.rows))throw new Error("Hosted SQL query returned no rows array.");
+    return result.rows;
+  }
+  if(!localDatabaseUrl)throw new Error("Local database URL is unavailable.");
+  const wrapped=`select coalesce(json_agg(result),'[]'::json)::text from (${sql}) result`;
+  const output=execFileSync("psql",[localDatabaseUrl,"-At","-v","ON_ERROR_STOP=1","-c",wrapped],
+    {encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+  return JSON.parse(output.trim());
+}
+function executeScenarioSql(sql) {
+  if(hostedTarget){
+    execFileSync("npx",["supabase","db","query","--linked","--project-ref",
+      hostedTarget.projectRef,sql],{encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+    return;
+  }
+  if(!localDatabaseUrl)throw new Error("Local database URL is unavailable.");
+  execFileSync("psql",[localDatabaseUrl,"-v","ON_ERROR_STOP=1","-c",sql],
+    {encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+}
 async function countAttached(organizationId, hasContracts, hasExpenses, hasTime, hasProjects) {
-  if (!/^[0-9a-f-]{36}$/.test(organizationId) || !localDatabaseUrl) throw new Error("Database URL and exact scenario organization are required for reset.");
+  if (!/^[0-9a-f-]{36}$/.test(organizationId)) throw new Error("Exact scenario organization is required for reset.");
   const baseTables = new Set(["clients", "sites", "workers", "worker_site_permissions", "memberships", "member_site_access", "demo_scenario_runs"]);
   if (hasContracts) for (const table of contractTables) baseTables.add(table);
   if (hasExpenses) for(const table of ["integration_accounts","integration_webhook_events",
@@ -380,15 +396,13 @@ async function countAttached(organizationId, hasContracts, hasExpenses, hasTime,
     "finance_source_allocations","finance_reconciliations"])baseTables.add(table);
   if(hasProjects)for(const table of ["finance_periods","finance_period_events",
     "finance_reconciliation_links","finance_reconciliation_events"])baseTables.add(table);
-  const names = execFileSync("psql", [localDatabaseUrl, "-At", "-c", "select table_name from information_schema.columns where table_schema='public' and column_name='organization_id' order by table_name"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-  const tables = names.trim().split("\n").filter((table) => table && !baseTables.has(table));
+  const names=scenarioSqlRows("select table_name from information_schema.columns where table_schema='public' and column_name='organization_id' order by table_name");
+  const tables=names.map(row=>row.table_name).filter(table=>table&&!baseTables.has(table));
   if (tables.some((table) => !/^[a-z][a-z0-9_]*$/.test(table))) throw new Error("Unexpected table name in local schema.");
   if (!tables.length) throw new Error("No organization-scoped tables found in local schema.");
-  const query = tables.map((table) => `select '${table}',count(*) from public.${table} where organization_id='${organizationId}'`).join(" union all ");
-  const result = execFileSync("psql", [localDatabaseUrl, "-At", "-c", query], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-  for (const line of result.trim().split("\n")) {
-    const [table, count] = line.split("|");
-    if (Number(count) > 0) throw new Error(`Scenario organization has ${table} records outside the Stage A registry; refusing reset.`);
+  const query=tables.map(table=>`select '${table}' as table_name,count(*) as row_count from public.${table} where organization_id='${organizationId}'`).join(" union all ");
+  for(const row of scenarioSqlRows(query)){
+    if(Number(row.row_count)>0)throw new Error(`Scenario organization has ${row.table_name} records outside the Stage A registry; refusing reset.`);
   }
 }
 async function listScenarioUsers(client, plan) {
@@ -501,6 +515,11 @@ async function generateExpenses(client,plan,registry,directory){
   for(const item of plan.expenseCases){
     const site=plan.sites[item.siteIndex];
     const sourceText=expenseMessage(item,site.name);
+    const scenarioRow={key:item.key,intakeId:null,claimId:null,documentId:null,
+      messageId:null,eventId:null,jobId:null,evidenceId:null,
+      storageBucket:null,storagePath:null,postingIds:[]};
+    registry.expenses.rows.push(scenarioRow);
+    await atomicJson(join(directory,"registry.json"),registry);
     let intakeId;
     let messageId=null;
     let eventId=null;
@@ -514,6 +533,8 @@ async function generateExpenses(client,plan,registry,directory){
         p_payload_sha256:receiptSha(Buffer.from(JSON.stringify(payload))),
       }),`Accept ${item.key} WhatsApp event`);
       eventId=accepted[0].event_id;jobId=accepted[0].job_id;
+      Object.assign(scenarioRow,{eventId,jobId});
+      await atomicJson(join(directory,"registry.json"),registry);
       // The normal worker claims the oldest job across every organization. A demo replay
       // must lease only the job created by this event, without touching another tenant's queue.
       const workerId=`scenario-${plan.runId}`;
@@ -538,6 +559,8 @@ async function generateExpenses(client,plan,registry,directory){
         .eq("external_message_id",`scenario-${plan.runId}-${item.key}`).single(),
       `Find ${item.key} message`);
       messageId=message.id;
+      scenarioRow.messageId=messageId;
+      await atomicJson(join(directory,"registry.json"),registry);
       const intake=await checked(client.from("finance_intake_items").select("id")
         .eq("source_message_id",messageId).single(),`Find ${item.key} candidate`);
       intakeId=intake.id;
@@ -549,12 +572,16 @@ async function generateExpenses(client,plan,registry,directory){
       intakeId=await checked((await personaClient(userId)).rpc("submit_app_finance_intake",
         {p_site_id:site.id,p_text:sourceText}),`Submit ${item.key} app expense`);
     }
+    Object.assign(scenarioRow,{intakeId,messageId});
+    await atomicJson(join(directory,"registry.json"),registry);
     const bytes=await readFile(join(directory,item.file));
     const sha256=receiptSha(bytes);
     const storageBucket=item.sourceKind==="whatsapp"?"operational-evidence":"expense-receipts";
     const storagePath=`${plan.organization.id}/expense-scenario/${plan.runId}/${item.key}.png`;
     await checked(client.storage.from(storageBucket).upload(storagePath,bytes,
       {contentType:"image/png",upsert:false}),`Store ${item.key} receipt`);
+    Object.assign(scenarioRow,{storageBucket,storagePath});
+    await atomicJson(join(directory,"registry.json"),registry);
     let documentId;
     if(messageId){
       const evidence=await checked(client.from("task_evidence").insert({
@@ -564,6 +591,8 @@ async function generateExpenses(client,plan,registry,directory){
         content_type:"image/png",byte_size:bytes.length,sha256,received_at:`${item.date}T12:01:00Z`,
       }).select("id").single(),`Link ${item.key} receipt media`);
       evidenceId=evidence.id;
+      scenarioRow.evidenceId=evidenceId;
+      await atomicJson(join(directory,"registry.json"),registry);
       const document=await checked(client.from("expense_documents").select("id")
         .eq("source_evidence_id",evidenceId).single(),`Find ${item.key} expense document`);
       documentId=document.id;
@@ -576,6 +605,8 @@ async function generateExpenses(client,plan,registry,directory){
       }).select("id").single(),`Link ${item.key} app receipt`);
       documentId=document.id;
     }
+    Object.assign(scenarioRow,{documentId,evidenceId});
+    await atomicJson(join(directory,"registry.json"),registry);
     const resolved=await checked(directorActor.rpc("resolve_finance_intake",{
       p_intake_id:intakeId,p_site_id:site.id,p_category:item.category,p_vendor:item.vendor,
       p_expense_date:item.date,p_payment_method:item.paymentMethod,p_currency:"CAD",
@@ -583,6 +614,8 @@ async function generateExpenses(client,plan,registry,directory){
       p_description:`Synthetic ${item.category.replaceAll("_"," ")} receipt`,
       p_project_reference:item.projectReference,p_reason:"Synthetic source reviewed",
     }),`Review ${item.key} expense`);
+    scenarioRow.claimId=resolved;
+    await atomicJson(join(directory,"registry.json"),registry);
     let postingIds=[];
     if(item.approved){
       await checked(directorActor.rpc("approve_finance_expense",{p_claim_id:resolved}),
@@ -594,8 +627,7 @@ async function generateExpenses(client,plan,registry,directory){
       if(!duplicate.error||!duplicate.error.message.includes("Duplicate receipt"))
         throw new Error("Duplicate receipt unexpectedly posted.");
     }
-    registry.expenses.rows.push({key:item.key,intakeId,claimId:resolved,documentId,messageId,
-      eventId,jobId,evidenceId,storageBucket,storagePath,postingIds});
+    scenarioRow.postingIds=postingIds;
     await atomicJson(join(directory,"registry.json"),registry);
   }
 }
@@ -1135,8 +1167,7 @@ async function reset(name) {
       delete from public.finance_source_rows where organization_id='${scopedOrg}';
       delete from public.finance_import_batches where organization_id='${scopedOrg}';
       commit;`;
-    execFileSync("psql",[localDatabaseUrl,"-v","ON_ERROR_STOP=1","-c",cleanup],
-      {encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+    executeScenarioSql(cleanup);
   }
   if(plan.timeCases){
     const scopedOrg=plan.organization.id;
@@ -1149,8 +1180,7 @@ async function reset(name) {
       delete from public.time_entries where organization_id='${scopedOrg}';
       delete from public.worker_cost_rates where organization_id='${scopedOrg}';
       commit;`;
-    execFileSync("psql",[localDatabaseUrl,"-v","ON_ERROR_STOP=1","-c",localCleanup],
-      {encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+    executeScenarioSql(localCleanup);
     for(const table of ["attendance_events","shift_assignments","shifts"]){
       const planned=registry.time?.rows.flatMap(row=>table==="attendance_events"?row.attendanceIds??[]:
         [table==="shift_assignments"?row.assignmentId:row.createdShiftId]).filter(Boolean)??[];
@@ -1160,6 +1190,7 @@ async function reset(name) {
   }
   if(plan.expenseCases){
     for(const row of registry.expenses?.rows??[]){
+      if(!row.storageBucket||!row.storagePath)continue;
       await checked(client.storage.from(row.storageBucket).remove([row.storagePath]),
         `Remove ${row.key} receipt`);
     }
@@ -1175,8 +1206,7 @@ async function reset(name) {
       alter table public.expense_postings enable trigger expense_postings_immutable;
       alter table public.expense_audit_events enable trigger expense_audit_immutable;
       commit;`;
-    execFileSync("psql",[localDatabaseUrl,"-v","ON_ERROR_STOP=1","-c",localCleanup],
-      {encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+    executeScenarioSql(localCleanup);
     for(const table of ["expense_allocations",
       "expense_items","expense_claims","expense_documents","finance_intake_items",
       "task_evidence","external_message_media","external_message_contexts","external_messages",
