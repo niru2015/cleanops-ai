@@ -2,7 +2,7 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last updated: 2026-09-23 for issue #63.
+Last updated: 2026-09-24 for hosted fixture commands.
 
 ## Route summary
 
@@ -84,6 +84,12 @@ The interactive command view below is shown only when the account can manage ope
 4. Coverage is recalculated from persisted attendance.
 
 Selection never counts as attendance.
+
+**Reset shared synthetic walkthrough**
+`performOperationsAction` requires hosted demo access, takes a server-side operation lease,
+calls the site-scoped `reset_hosted_demo` RPC, then removes only returned private evidence paths.
+The lease start/outcome is recorded in `hosted_demo_fixture_audit`; concurrent fixture commands
+return a conflict state. In local simulator mode the existing token-gated path remains separate.
 
 ## /mobile
 

@@ -132,4 +132,19 @@ begin
 end;
 $$;
 
+-- The reset may restore an approved synthetic run, but the finality guard must
+-- remain effective for every other run.
+update public.task_runs
+   set state = 'approved', submission_revision = 1
+ where id = '81000000-0000-4000-8000-000000000001';
+select * from public.reset_hosted_demo();
+
+do $$
+begin
+  if (select state from public.task_runs where id = '81000000-0000-4000-8000-000000000001') <> 'ready' then
+    raise exception 'approved synthetic task did not reset';
+  end if;
+end;
+$$;
+
 rollback;

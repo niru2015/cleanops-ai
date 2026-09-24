@@ -65,7 +65,7 @@ tables or code exist but the issue's acceptance criteria are not met. No item be
 
 | Issue | Work | Status on main |
 |---|---|---|
-| #25 CLEAN-012 | Production-mode hosted prep/reset | Not started. `submitSyntheticPair` in `src/app/review/actions.ts` still requires the simulator flag, which is forced off in production. |
+| #25 CLEAN-012 | Production-mode hosted prep/reset | In review on `codex/clean-012-hosted-demo-prep`: server-only preparation, site-scoped reset/operation audit, production-mode browser regression. Hosted deployment remains unverified. |
 | #26 CLEAN-013 | Connected evidence, real photo review, correction | Not started. CLEAN-011 upload is merged; review still shows placeholder evidence and fixed task IDs. |
 | #27 CLEAN-014 | Canonical intake API + resolution inbox | Foundation: durable ingestion, Make Cloud adapter (CLEAN-026), context tables/RPC (CLEAN-027). No generic `/api/integrations/events`. The existing queue UI is re-mounted on `/finance` (issue #50); a standalone, multi-type resolution inbox is still open. |
 | #28 CLEAN-015 | Deterministic multi-site fixtures | Not started. `supabase/seed.sql` has the Aurora fixture, "Copper Peak East" and, in the isolation tenant, "Northstar Harbour"; no Harbour/Cedar sites, no June-August data. |

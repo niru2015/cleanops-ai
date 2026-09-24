@@ -34,6 +34,8 @@ const environment = {
   CLEANOPS_DEMO_INGRESS_TOKEN: "cleanops-browser-e2e-token-2026",
   CLEANOPS_DEMO_WORKER_ID: "cleanops-browser-e2e-worker",
 };
+const productionMode = process.argv.includes("--production");
+if (productionMode) environment.CLEANOPS_E2E_PRODUCTION_MODE = "true";
 
 const admin = createClient(apiUrl, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -102,7 +104,12 @@ const supervisorSiteAccess = await admin.from("member_site_access").upsert({
 }, { onConflict: "id" });
 if (supervisorSiteAccess.error) throw supervisorSiteAccess.error;
 
-const run = spawnSync(command, ["playwright", "test", "--project=chromium", ...process.argv.slice(2)], {
+if (productionMode) {
+  const build = spawnSync("npm", ["run", "build"], { stdio: "inherit", env: environment });
+  if (build.status !== 0) process.exit(build.status ?? 1);
+}
+const testArgs = process.argv.slice(2).filter((argument) => argument !== "--production");
+const run = spawnSync(command, ["playwright", "test", "--project=chromium", ...testArgs], {
   stdio: "inherit",
   env: environment,
 });

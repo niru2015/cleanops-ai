@@ -10,6 +10,10 @@ this trusted organization plus a site selected from the membership's allowed-sit
 site ID never establishes organization membership. Hosted-demo constants remain confined to demo
 capability and provisioning code. Existing finance RLS and composite foreign keys also reject
 cross-organization/site records and guessed vendor, item, worker and task references.
+Hosted fixture preparation additionally checks the signed-in actor, active role and grant for the
+single walkthrough site on the server. Its privileged database commands accept only enumerated
+synthetic events and use a site-scoped operation lease with an audit record. Browser roles cannot
+execute those commands. Production `/api/demo/*` routes stay disabled.
 
 | Role | Allowed scope |
 |---|---|

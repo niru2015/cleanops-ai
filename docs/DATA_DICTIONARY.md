@@ -2,7 +2,7 @@
 
 Purpose: agent-readable business dictionary for the current CleanOps Supabase model. Exact SQL, constraints, grants, RLS and RPC behavior are owned by `supabase/migrations/`; if this file disagrees with a migration, the migration wins.
 
-Last reviewed: 2026-09-23 against migrations through `20260923202018_clean_037_projects_revenue`.
+Last reviewed: 2026-09-24 for the hosted fixture guard migrations.
 
 ## Conventions
 
@@ -24,6 +24,8 @@ Last reviewed: 2026-09-23 against migrations through `20260923202018_clean_037_p
 | `organizations` | Cleaning contractor tenant. | `name`, `slug`. |
 | `memberships` | User role in an organization. | `user_id`, `role`, `state`. Roles include cleaner, site_supervisor, area_manager, operations_manager, organization_administrator, client_viewer. |
 | `member_site_access` | Time-bounded app access to a site. | `membership_id`, `site_id`, `starts_at`, `ends_at`. |
+| `hosted_demo_fixture_operations` | Current server-only operation lease for the synthetic walkthrough site. | `operation_id`, `site_id`, `actor_user_id`, `action`, `status`, `expires_at`. |
+| `hosted_demo_fixture_audit` | Start and outcome record for each hosted prepare, correction or reset command. | `operation_id`, `site_id`, `actor_user_id`, `action`, `status`, `recorded_at`. |
 | `clients` | Customer of the cleaning contractor, e.g. casino operator. | `name`, `is_demo`, `demo_note`. |
 | `sites` | Physical customer property. | `client_id`, `name`, `city` (2-120 chars when set), `province`, `timezone`, `is_demo`, `demo_note`. |
 | `site_zones` | Operational area inside a site. | `site_id`, `name`. |

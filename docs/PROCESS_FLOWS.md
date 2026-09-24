@@ -2,7 +2,7 @@
 
 Purpose: implementation-aligned end-to-end flows for coding agents. Migrations, services and tests remain authoritative.
 
-Last updated: 2026-09-23 for CLEAN-037 project contribution.
+Last updated: 2026-09-24 for CLEAN-012 hosted fixture guard.
 
 ## 1. Authentication and site authorization
 
@@ -307,9 +307,13 @@ only. Message contexts and media are removed indirectly (they cascade from the d
 It now also clears `inventory_transactions` and `labor_cost_entries` for the walkthrough site, so a Director's demo
 finance entries no longer survive a reset. It deliberately does not touch `equipment_assets`: that table is seeded
 fixture data with no application write path today (only `select` is granted to `authenticated`), so there is nothing
-for a demo to mutate there — add reset coverage only once a write path exists. The review page's synthetic
-preparation/correction helper (`submitSyntheticPair`) still depends on the local simulator flag, which production
-forces off, so preparing the walkthrough on a production build is currently blocked (issue #25).
+for a demo to mutate there — add reset coverage only once a write path exists. In production mode, review
+preparation/correction uses an authenticated server-only fixture command. It verifies the actor's active role and
+grant to the exact synthetic site, limits the task and event IDs, and passes labelled images through durable ingress
+and evidence services. A site-level operation lease prevents simultaneous preparation/correction/reset; start and
+outcome are stored in `hosted_demo_fixture_audit`. Reset may restore the two enumerated synthetic task runs from
+approved to ready; approved submissions outside that scope remain final. Storage cleanup receives only paths returned
+by the site-scoped database reset, and the UI reports a partial reset if object deletion fails.
 
 ## 16. Contract draft and activation (CLEAN-022)
 
