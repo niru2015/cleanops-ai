@@ -14,10 +14,6 @@ Hosted fixture preparation additionally checks the signed-in actor, active role 
 single walkthrough site on the server. Its privileged database commands accept only enumerated
 synthetic events and use a site-scoped operation lease with an audit record. Browser roles cannot
 execute those commands. Production `/api/demo/*` routes stay disabled.
-For connected mobile evidence, a server-verified worker assignment and exact synthetic site limit capture.
-The persisted `submitted_by_user_id` identifies the authenticated uploader independently of the attributed
-worker. An inspection trigger rejects approval when its reviewer submitted either image in that pair.
-Review images use short-lived signed URLs after row-level evidence access; client viewers cannot obtain them.
 
 | Role | Allowed scope |
 |---|---|

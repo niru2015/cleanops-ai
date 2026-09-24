@@ -36,10 +36,7 @@ const environment = {
   CLEANOPS_DEMO_WORKER_ID: "cleanops-browser-e2e-worker",
 };
 const productionMode = process.argv.includes("--production");
-if (productionMode) {
-  environment.CLEANOPS_E2E_PRODUCTION_MODE = "true";
-  environment.CLEANOPS_NEXT_DIST_DIR = ".next-gate-a";
-}
+if (productionMode) environment.CLEANOPS_E2E_PRODUCTION_MODE = "true";
 
 const admin = createClient(apiUrl, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
