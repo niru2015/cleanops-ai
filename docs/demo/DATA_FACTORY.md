@@ -36,8 +36,9 @@ see this scenario, because membership and RLS remain tenant-scoped.
 Set `CLEANOPS_HOSTED_DEMO_URL`, `CLEANOPS_HOSTED_DEMO_SECRET_KEY`,
 `CLEANOPS_HOSTED_DEMO_PUBLISHABLE_KEY`, and a unique 12+ character
 `CLEANOPS_HOSTED_DEMO_PASSWORD` in the protected operator environment. Never commit values.
-For reset only, provide `CLEANOPS_HOSTED_DEMO_DATABASE_URL` for the same project. The URL and
-explicit `--project-ref` must agree. Run the read-only preflight first and review its project,
+Hosted reset also requires an authenticated Supabase CLI linked to that project; it uses
+`supabase db query --linked --project-ref` to check organization scope and remove immutable
+scenario rows. No database password is needed. Run the read-only preflight first and review its project,
 organization, sites, personas, expected controls, and collisions:
 
 ```bash
@@ -55,7 +56,7 @@ before business records and updates that registry after each replay step. `asser
 registry and source records; reset checks the exact scenario-owned IDs and refuses unrelated
 organization rows before any deletion. Keep a copy of the generated manifest and assertion log
 with the release evidence. A partial failure leaves the registry marked `partial`; inspect and
-reset it before another generation attempt. Hosted reset uses the exact project database URL and
+reset it before another generation attempt. Hosted reset uses the linked project and
 privileged trigger handling required by immutable demo finance rows. Never run these commands
 against an organization containing customer or unrelated demo data. No browser reset endpoint exists.
 Synthetic WhatsApp replay leases only the processing job returned for its own event. It cannot
