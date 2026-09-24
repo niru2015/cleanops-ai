@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { performProjectAction } from "@/app/finance/projects/actions";
 
@@ -17,12 +17,18 @@ export type ProjectSummary = {
 };
 
 type Source = { id: string; project_id: string | null; label: string; amount: number; kind: "time" | "expense" | "inventory_issue" | "accounting"; href?: string };
+const subscribeToHydration = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
 
 export function ProjectWorkspace({ projects, sites, contracts, sources, director }: {
   projects: ProjectSummary[]; sites: { id: string; name: string }[];
   contracts: { id: string; site_id: string; name: string }[]; sources: Source[]; director: boolean;
 }) {
   const [pending, start] = useTransition();
+  // The forms use client handlers, so native submission must wait for hydration.
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
+  const controlsDisabled = !hydrated || pending;
   const [message, setMessage] = useState("");
   const [site, setSite] = useState("all");
   const [state, setState] = useState("all");
@@ -43,7 +49,7 @@ export function ProjectWorkspace({ projects, sites, contracts, sources, director
         <label>Project code <input name="code" required maxLength={40} placeholder="HASTINGS-DEEP-CLEAN" /></label>
         <label>Name <input name="name" required maxLength={160} /></label>
         <label>Scope <textarea name="scope" required maxLength={2000} /></label>
-        <button className="reviewButton reviewButton-primary" disabled={pending}>Create draft</button>
+        <button className="reviewButton reviewButton-primary" disabled={controlsDisabled}>Create draft</button>
       </form>
     </section>
     <section className="reviewCard"><h2>Project contribution</h2>
@@ -73,7 +79,7 @@ export function ProjectWorkspace({ projects, sites, contracts, sources, director
           {director && <form onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget);
             run({ kind: "link", projectId: project.project_id, sourceType: String(form.get("type")) as "time" | "expense" | "inventory_issue" | "accounting", sourceId: String(form.get("source")) }); }}>
             <select name="type" required>{["time","expense","inventory_issue","accounting"].map(type => <option key={type}>{type}</option>)}</select>
-            <input name="source" required placeholder="Source record ID" /><button disabled={pending}>Link source</button>
+            <input name="source" required placeholder="Source record ID" /><button disabled={controlsDisabled}>Link source</button>
           </form>}
         </details>
         {project.state === "draft" && <form onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget);
@@ -83,27 +89,27 @@ export function ProjectWorkspace({ projects, sites, contracts, sources, director
           <label>Scope <textarea name="scope" defaultValue={project.scope} required maxLength={2000} /></label>
           <label>Parent contract <select name="contractId" defaultValue={project.contract_id ?? ""}><option value="">Standalone project</option>
             {contracts.filter(item => item.site_id === project.site_id).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-          <button disabled={pending}>Save draft scope</button>
+          <button disabled={controlsDisabled}>Save draft scope</button>
         </form>}
         {director && project.state === "draft" && <form onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget);
           run({ kind: "approve", projectId: project.project_id, model: String(form.get("model")) as "fixed" | "hourly", amount: Number(form.get("amount")) }); }}>
           <label>Pricing <select name="model"><option value="fixed">Fixed quote</option><option value="hourly">Hourly billing</option></select></label>
-          <label>Quote or hourly rate <input name="amount" type="number" min="0" step="0.01" required /></label><button disabled={pending}>Approve terms and activate</button>
+          <label>Quote or hourly rate <input name="amount" type="number" min="0" step="0.01" required /></label><button disabled={controlsDisabled}>Approve terms and activate</button>
         </form>}
         {director && project.state !== "draft" && project.state !== "cancelled" && <>
           <form onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget);
             run({ kind: "invoice", projectId: project.project_id, reference: String(form.get("reference")), date: String(form.get("date")), amount: Number(form.get("amount")) }); }}>
             <label>Invoice reference <input name="reference" required /></label><label>Date <input name="date" type="date" required /></label>
-            <label>Amount <input name="amount" type="number" min="0.01" step="0.01" required /></label><button disabled={pending}>Record invoice</button>
+            <label>Amount <input name="amount" type="number" min="0.01" step="0.01" required /></label><button disabled={controlsDisabled}>Record invoice</button>
           </form>
           {project.pricing_model === "hourly" && <form onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget);
             run({ kind: "billable", projectId: project.project_id, timeEntryId: String(form.get("time")), hours: Number(form.get("hours")) }); }}>
             <label>Approved time ID <input name="time" required /></label><label>Billable hours <input name="hours" type="number" step="0.000001" min="0.000001" required /></label>
-            <button disabled={pending}>Approve billable hours</button>
+            <button disabled={controlsDisabled}>Approve billable hours</button>
           </form>}
-          <button disabled={pending} onClick={() => run({ kind: "complete", projectId: project.project_id, complete: project.state !== "completed" })}>
+          <button disabled={controlsDisabled} onClick={() => run({ kind: "complete", projectId: project.project_id, complete: project.state !== "completed" })}>
             {project.state === "completed" ? "Reopen cost close" : "Mark costs complete"}</button>
-          {project.state === "active" && <button disabled={pending} onClick={() => run({ kind: "cancel", projectId: project.project_id })}>Cancel project</button>}
+          {project.state === "active" && <button disabled={controlsDisabled} onClick={() => run({ kind: "cancel", projectId: project.project_id })}>Cancel project</button>}
         </>}
       </article>)}
       {!projects.length && <p>No projects yet.</p>}
