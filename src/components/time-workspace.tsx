@@ -7,10 +7,10 @@ import type { getTimeWorkspace } from "@/integrations/finance/supabase-time";
 type Workspace = Awaited<ReturnType<typeof getTimeWorkspace>>;
 const today = () => new Date().toISOString().slice(0, 10);
 
-export function TimeWorkspace({ data, director }: { data: Workspace; director: boolean }) {
+export function TimeWorkspace({ data, director, initialSiteId }: { data: Workspace; director: boolean; initialSiteId?: string }) {
   const [pending, start] = useTransition();
   const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
-  const [siteId, setSiteId] = useState(data.sites[0]?.id ?? "");
+  const [siteId, setSiteId] = useState(data.sites.some(site => site.id === initialSiteId) ? initialSiteId! : data.sites[0]?.id ?? "");
   const run = (value: Parameters<typeof performTimeAction>[0]) => start(async () => setNotice(await performTimeAction(value)));
   const names = new Map(data.workers.map(worker => [worker.id, worker.display_name]));
   const siteNames = new Map(data.sites.map(site => [site.id, site.name]));
