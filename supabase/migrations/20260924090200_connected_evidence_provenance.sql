@@ -10,7 +10,8 @@ create index task_evidence_submitted_by_user_idx
 insert into public.task_run_assignments
   (id, organization_id, site_id, task_run_id, worker_id, assigned_by, assigned_at)
 select 'b1000000-0000-4000-8000-000000000002',
-  run.organization_id, run.site_id, run.id, worker.id, null,
+  run.organization_id, run.site_id, run.id, worker.id,
+  '00000000-0000-4000-8000-000000000002',
   '2026-09-14T05:50:00Z'
 from public.task_runs as run
 join public.workers as worker
