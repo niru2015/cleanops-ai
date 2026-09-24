@@ -514,11 +514,20 @@ async function generateExpenses(client,plan,registry,directory){
         p_payload_sha256:receiptSha(Buffer.from(JSON.stringify(payload))),
       }),`Accept ${item.key} WhatsApp event`);
       eventId=accepted[0].event_id;jobId=accepted[0].job_id;
-      const claimed=await checked(client.rpc("claim_processing_job",{
-        p_worker_id:`scenario-${plan.runId}`,p_lease_seconds:60}),`Claim ${item.key} message job`);
-      if(claimed?.[0]?.job_id!==jobId)throw new Error(`Scenario message queue selected another job for ${item.key}.`);
+      // The normal worker claims the oldest job across every organization. A demo replay
+      // must lease only the job created by this event, without touching another tenant's queue.
+      const workerId=`scenario-${plan.runId}`;
+      const leasedAt=new Date();
+      const claimed=await checked(client.from("processing_jobs").update({
+        status:"processing",attempt_count:1,lease_owner:workerId,
+        lease_expires_at:new Date(leasedAt.getTime()+120_000).toISOString(),
+        updated_at:leasedAt.toISOString(),
+      }).eq("id",jobId).eq("organization_id",plan.organization.id)
+        .eq("integration_event_id",eventId).eq("status","pending")
+        .eq("attempt_count",0).select("id"),`Lease ${item.key} scenario message job`);
+      if(claimed.length!==1)throw new Error(`Scenario message job ${item.key} was already claimed or changed.`);
       await checked(client.rpc("complete_processing_job",{
-        p_job_id:jobId,p_worker_id:`scenario-${plan.runId}`,
+        p_job_id:jobId,p_worker_id:workerId,
         p_messages:[{externalMessageId:`scenario-${plan.runId}-${item.key}`,
           externalThreadId:"expense-demo",senderId:"synthetic-worker",
           occurredAt:`${item.date}T12:00:00Z`,text:sourceText,

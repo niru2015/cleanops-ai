@@ -58,6 +58,9 @@ with the release evidence. A partial failure leaves the registry marked `partial
 reset it before another generation attempt. Hosted reset uses the exact project database URL and
 privileged trigger handling required by immutable demo finance rows. Never run these commands
 against an organization containing customer or unrelated demo data. No browser reset endpoint exists.
+Synthetic WhatsApp replay leases only the processing job returned for its own event. It cannot
+claim the next job in the shared production queue; the normal worker still uses the global
+claim RPC for live work.
 
 ## Add a scenario
 

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import { buildScenarioPlan } from "../src/demo/scenario-plan.mjs";
@@ -29,6 +30,7 @@ function assert(value, message) { if (!value) throw new Error(message); }
 let created = false;
 let contractCreated = false;
 let financeCreated = false;
+let foreignQueue = null;
 try {
   const before = await Promise.all(seededOrganizations.map((id) => count("sites", id)));
   run("generate", scenarioName);
@@ -98,8 +100,31 @@ try {
   run("assert", "contract-smoke");
   run("reset", "contract-smoke");
   contractCreated = false;
+  const externalAccountId=`scenario-queue-isolation-${randomUUID()}`;
+  const account=await client.from("integration_accounts").insert({
+    organization_id:seededOrganizations[0],site_id:"40000000-0000-4000-8000-000000000001",
+    provider:"mock_legacy_whatsapp_group",external_account_id:externalAccountId,
+    display_name:"Synthetic queue isolation check",
+  }).select("id").single();
+  if(account.error)throw account.error;
+  foreignQueue={accountId:account.data.id};
+  const payload={source:"scenario-test",key:"unrelated-pending"};
+  const accepted=await client.rpc("accept_mock_ingress_event",{
+    p_external_account_id:externalAccountId,p_provider_event_id:randomUUID(),
+    p_dedupe_key:randomUUID(),p_payload:payload,
+    p_payload_sha256:createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
+  });
+  if(accepted.error)throw accepted.error;
+  foreignQueue.eventId=accepted.data[0].event_id;
+  foreignQueue.jobId=accepted.data[0].job_id;
   run("generate", "finance-showcase");
   financeCreated = true;
+  const unrelatedJob=await client.from("processing_jobs").select("status,attempt_count,lease_owner")
+    .eq("id",foreignQueue.jobId).single();
+  if(unrelatedJob.error)throw unrelatedJob.error;
+  assert(unrelatedJob.data.status==="pending"&&unrelatedJob.data.attempt_count===0
+    &&unrelatedJob.data.lease_owner===null,
+  "Finance scenario touched another organization's pending message job.");
   run("assert", "finance-showcase");
   const financeExpected = JSON.parse(await readFile("fixtures/generated/finance-showcase/expected.json", "utf8"));
   const financeReceipts = JSON.parse(await readFile("fixtures/generated/finance-showcase/expense-receipts.json", "utf8"));
@@ -147,5 +172,10 @@ try {
   }
   if (financeCreated) {
     try { run("reset", "finance-showcase"); } catch { console.error("Manual cleanup may be needed: npm run demo:reset -- finance-showcase"); }
+  }
+  if(foreignQueue){
+    if(foreignQueue.jobId)await client.from("processing_jobs").delete().eq("id",foreignQueue.jobId);
+    if(foreignQueue.eventId)await client.from("integration_webhook_events").delete().eq("id",foreignQueue.eventId);
+    await client.from("integration_accounts").delete().eq("id",foreignQueue.accountId);
   }
 }
