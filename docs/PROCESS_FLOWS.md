@@ -2,7 +2,7 @@
 
 Purpose: implementation-aligned end-to-end flows for coding agents. Migrations, services and tests remain authoritative.
 
-Last updated: 2026-09-24 for CLEAN-013 connected evidence.
+Last updated: 2026-09-24 for CLEAN-012 hosted fixture guard.
 
 ## 1. Authentication and site authorization
 

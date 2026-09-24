@@ -2,7 +2,7 @@
 
 Purpose: agent-readable business dictionary for the current CleanOps Supabase model. Exact SQL, constraints, grants, RLS and RPC behavior are owned by `supabase/migrations/`; if this file disagrees with a migration, the migration wins.
 
-Last reviewed: 2026-09-24 for connected evidence and hosted fixture migrations.
+Last reviewed: 2026-09-24 for the hosted fixture guard migrations.
 
 ## Conventions
 

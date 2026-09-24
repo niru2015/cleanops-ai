@@ -2,7 +2,7 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last updated: 2026-09-24 for connected task evidence and hosted fixture commands.
+Last updated: 2026-09-24 for hosted fixture commands.
 
 ## Route summary
 
