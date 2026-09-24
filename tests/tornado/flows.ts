@@ -5,8 +5,9 @@ import { join } from "node:path";
 export const accounts = {
   director: process.env.TORNADO_FINANCE_DIRECTOR_EMAIL ?? "finance-showcase.darrel-director@cleanops.example.com",
   area: process.env.TORNADO_FINANCE_AREA_EMAIL ?? "finance-showcase.shayana-area@cleanops.example.com",
-  supervisor: process.env.TORNADO_OPERATIONS_SUPERVISOR_EMAIL ?? "hardeep.supervisor@cleanops.example.com",
-  financeSupervisor: process.env.TORNADO_FINANCE_SUPERVISOR_EMAIL ?? "finance-showcase.hardeep@cleanops.example.com",
+  showcaseSupervisor: process.env.TORNADO_FINANCE_SUPERVISOR_EMAIL ?? "finance-showcase.hardeep@cleanops.example.com",
+  legacySupervisor: process.env.TORNADO_OPERATIONS_SUPERVISOR_EMAIL ?? "hardeep.supervisor@cleanops.example.com",
+  legacyDirector: process.env.TORNADO_OPERATIONS_DIRECTOR_EMAIL ?? "darrel.director@cleanops.example.com",
 } as const;
 
 export async function capture(page: Page, name: string) {
@@ -17,8 +18,7 @@ export async function capture(page: Page, name: string) {
   await test.info().attach(name, { path, contentType: "image/png" });
 }
 
-export async function signIn(page: Page, email: string) {
-  const password = process.env.TORNADO_DEMO_PASSWORD;
+export async function signIn(page: Page, email: string, password = process.env.TORNADO_DEMO_PASSWORD) {
   if (!password) throw new Error("TORNADO_DEMO_PASSWORD is required. See TORNADO_DEMO.md.");
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Explore the BC casino operations demo" })).toBeVisible();
