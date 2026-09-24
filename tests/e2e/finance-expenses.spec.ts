@@ -59,6 +59,7 @@ test("Area Manager resolves assigned-site context but cannot post missing receip
   await expect(page.getByLabel("Casino").locator("option")).toHaveCount(1);
   await page.getByLabel("Expense details").fill(`Expense: lunch; Vendor: ${vendor}; Date: 2026-09-02; Total: CAD $18.00`);
   await page.getByRole("button",{name:"Submit expense"}).click();
+  await expect(page.getByText("Expense submitted. Add its receipt before review.")).toBeVisible();
   await page.goto("/finance/inbox");
   const candidate=page.locator("article.reviewCard").filter({hasText:vendor}).first();
   await expect(candidate.getByText(/Receipt missing/)).toBeVisible();
