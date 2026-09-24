@@ -56,3 +56,7 @@ For every case record date/time, role, URL/site/month, input or source ID, expec
 6. **#38 Gate B — pilot policy.** Obtain Tornado approval for finance owners, Sage source format, rate/privacy source, retention, reimbursement and contribution rules before any customer-data pilot.
 
 The issue states and observations above are a dated snapshot. Recheck `main`, deployment, the hosted scenario manifest and browser values before each external presentation.
+
+The next code release introduces generator version 8 with populated-site Area Manager grants,
+a same-tenant client viewer and direct finance-showcase login choices. Until that version is
+separately released to the hosted project, the verified version 7 baseline above still applies.

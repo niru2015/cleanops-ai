@@ -1,6 +1,6 @@
 # Deterministic demo scenarios (CLEAN-015 Stage A and finance adapters)
 
-Stage A creates base organizations, clients, sites, workers, memberships and site grants in **local Supabase by default**. CLEAN-022 adds the first Stage B adapter: `finance-showcase` and `contract-smoke` create a synthetic manual fixed-monthly contract and future amendment, replay Director approval/activation through production RPCs, and reconcile expected revenue. CLEAN-035 adds Finance Inbox app/WhatsApp expense cases, verified synthetic receipts and approved direct-cost postings to `finance-showcase`. CLEAN-036 adds attendance, missing-checkout, overtime, worker-swap, effective-rate-change and manual-project time cases with approved cost. CLEAN-037 adds two canonical one-off projects: a completed Hastings deep clean with source-linked labour, fuel, supplies, invoice and accepted accounting revenue, plus an incomplete follow-up whose final margin stays pending. CLEAN-038 adds accepted accounting cost rows, unique and ambiguous match proposals, an unmatched source, and a closed month made stale by a late accepted import. Generator version 7 adds two August approved expenses, moves approved project labour into August, accepts a complete synthetic August accounting batch for two sites, links all three direct costs, and closes a current comparison month. Equipment events and reports remain ungenerated. `operations-showcase` and `edge-cases` still produce only the base layer. No dashboard total is inserted to make a demo look complete.
+Stage A creates base organizations, clients, sites, workers, memberships and site grants in **local Supabase by default**. CLEAN-022 adds the first Stage B adapter: `finance-showcase` and `contract-smoke` create a synthetic manual fixed-monthly contract and future amendment, replay Director approval/activation through production RPCs, and reconcile expected revenue. CLEAN-035 adds Finance Inbox app/WhatsApp expense cases, verified synthetic receipts and approved direct-cost postings to `finance-showcase`. CLEAN-036 adds attendance, missing-checkout, overtime, worker-swap, effective-rate-change and manual-project time cases with approved cost. CLEAN-037 adds two canonical one-off projects: a completed Hastings deep clean with source-linked labour, fuel, supplies, invoice and accepted accounting revenue, plus an incomplete follow-up whose final margin stays pending. CLEAN-038 adds accepted accounting cost rows, unique and ambiguous match proposals, an unmatched source, and a closed month made stale by a late accepted import. Generator version 7 adds two August approved expenses, moves approved project labour into August, accepts a complete synthetic August accounting batch for two sites, links all three direct costs, and closes a current comparison month. Version 8 grants the two Area Manager personas the populated August sites and adds a same-tenant client viewer for denial testing. Equipment events and reports remain ungenerated. `operations-showcase` and `edge-cases` still produce only the base layer. No dashboard total is inserted to make a demo look complete.
 
 ## Commands
 
@@ -32,6 +32,15 @@ local commands above still target local Supabase by default. Hosted mode is limi
 organization ID must equal the deterministic scenario plan ID. Presenters sign in with the
 scenario's generated Director account; an existing Director in a different organization will not
 see this scenario, because membership and RLS remain tenant-scoped.
+
+Version 8 is a new hosted release, not an in-place change to the existing version 7 run. The
+CLI reconstructs a run from its recorded generator version, so a guarded version 7 assert/reset
+continues to use its original 17 personas and site grants. Run read-only `reset-preflight` against
+the exact hosted project and organization, and review its run ID, counts and scope check before
+any authorized reset. Then run a fresh version 8 preflight and generate with
+an alternate seed; verify its 18 personas, Director access, River Rock and Grand Villa Area
+Manager grants, and the Grand Villa client-viewer denial. The login picker offers these
+generated identities directly, but their passwords stay in the protected operator channel.
 
 Set `CLEANOPS_HOSTED_DEMO_URL`, `CLEANOPS_HOSTED_DEMO_SECRET_KEY`,
 `CLEANOPS_HOSTED_DEMO_PUBLISHABLE_KEY`, and a unique 12+ character

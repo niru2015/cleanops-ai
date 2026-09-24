@@ -9,8 +9,8 @@
   "personas": [
     {"key":"darrel-director","displayName":"Darrel","role":"organization_administrator"},
     {"key":"shayana-director","displayName":"Shayana","role":"organization_administrator"},
-    {"key":"darrel-area","displayName":"Darrel","role":"area_manager"},
-    {"key":"shayana-area","displayName":"Shayana","role":"area_manager"},
+    {"key":"darrel-area","displayName":"Darrel","role":"area_manager","siteIndex":1},
+    {"key":"shayana-area","displayName":"Shayana","role":"area_manager","siteIndex":0},
     {"key":"hardeep","displayName":"Hardeep","role":"site_supervisor"},
     {"key":"danny","displayName":"Danny","role":"site_supervisor"},
     {"key":"rj","displayName":"RJ","role":"site_supervisor"},
@@ -23,6 +23,7 @@
     {"key":"mandeep","displayName":"Mandeep","role":"cleaner"},
     {"key":"manuel","displayName":"Manuel","role":"cleaner"},
     {"key":"susanna","displayName":"Susanna","role":"cleaner"},
-    {"key":"ricky","displayName":"Ricky","role":"cleaner"}
+    {"key":"ricky","displayName":"Ricky","role":"cleaner"},
+    {"key":"scenario-client","displayName":"Scenario Client Viewer","role":"client_viewer","siteIndex":0,"minGeneratorVersion":8}
   ]
 }

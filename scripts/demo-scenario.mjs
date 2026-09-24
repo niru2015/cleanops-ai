@@ -19,8 +19,8 @@ let hostedTarget;
 
 function parseArgs() {
   const [operation, name, ...flags] = process.argv.slice(2);
-  if (!["generate", "reset", "assert", "presenter", "preflight", "plan"].includes(operation) || !safeName.test(name ?? "")) {
-    throw new Error("Usage: demo-scenario.mjs <generate|reset|assert|presenter|preflight|plan> <scenario-name> [--seed <integer>] [--target hosted --project-ref <ref> --organization-id <uuid> --apply]");
+  if (!["generate", "reset", "reset-preflight", "assert", "presenter", "preflight", "plan"].includes(operation) || !safeName.test(name ?? "")) {
+    throw new Error("Usage: demo-scenario.mjs <generate|reset|reset-preflight|assert|presenter|preflight|plan> <scenario-name> [--seed <integer>] [--target hosted --project-ref <ref> --organization-id <uuid> --apply]");
   }
   let seed, target = "local", projectRef, organizationId, apply = false;
   for (let i = 0; i < flags.length; i += 1) {
@@ -61,10 +61,15 @@ async function atomicJson(path, value) {
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`);
   await rename(temporary, path);
 }
-async function loadPlan(name, seed) {
+async function loadPlan(name, seed, generatorVersion) {
   const scenario = await json(join(root, "fixtures", "scenarios", name, "scenario.json"));
   if (scenario.scenarioId !== name) throw new Error("Scenario directory and scenarioId must match.");
   if (seed !== undefined) scenario.seed = seed;
+  if (generatorVersion !== undefined) {
+    if (!Number.isInteger(generatorVersion) || generatorVersion > scenario.generatorVersion)
+      throw new Error("Scenario registry has an unsupported generator version.");
+    scenario.generatorVersion = generatorVersion;
+  }
   const pack = await json(join(root, "fixtures", "reference", `${scenario.referencePack}.json`));
   return buildScenarioPlan(scenario, pack);
 }
@@ -1040,7 +1045,7 @@ async function loadRegistry(name) {
     registry = await json(path);
   }
   if (registry.scenarioId !== name) throw new Error("Registry scenario ID mismatch.");
-  const plan = await loadPlan(name, registry.seed);
+  const plan = await loadPlan(name, registry.seed, registry.generatorVersion);
   if (plan.organization.id !== registry.organizationId || plan.runId !== registry.runId) throw new Error("Registry identity mismatch.");
   if (hostedTarget) {
     if (hostedTarget.organizationId !== plan.organization.id) throw new Error("Hosted organization ID differs from scenario registry.");
@@ -1140,13 +1145,23 @@ async function assertScenario(name) {
   }
   console.log(`Scenario ${name} matches its manifest: ${plan.sites.length} sites, ${plan.workers.length} workers, ${plan.personas.length} personas${plan.contract ? `, ${plan.contract.expected.expectedRevenue} CAD current expected revenue` : ""}${plan.expenseCases ? `, ${plan.expected.controlTotals.finance.approvedExpenseCost} CAD approved expense cost` : ""}.`);
 }
-async function reset(name) {
+async function resetPreflight(name) {
   const { directory, registry, plan } = await loadRegistry(name);
   const client = connectTarget();
   const org = await assertScope(client, plan, true,registry);
   const scenarioUsers = await listScenarioUsers(client, plan);
   assertIdSet(scenarioUsers, registry.authUserIds, "Auth users", registry.status !== "ready");
   if (org) await countAttached(plan.organization.id, Boolean(plan.contract),Boolean(plan.expenseCases),Boolean(plan.timeCases),Boolean(plan.projects));
+  process.stdout.write(`${JSON.stringify({ target: hostedTarget ? `hosted ${hostedTarget.projectRef}` : "local",
+    scenarioId: name, runId: registry.runId, organizationId: registry.organizationId,
+    seed: registry.seed, generatorVersion: registry.generatorVersion, status: registry.status,
+    sites: plan.sites.map(site => ({ id: site.id, name: site.name })),
+    authUserCount: scenarioUsers.length, entityCounts: plan.expected.entityCounts,
+    scopeVerified: true }, null, 2)}\n`);
+  return { directory, registry, plan, client, org, scenarioUsers };
+}
+async function reset(name) {
+  const { directory, registry, plan, client, org, scenarioUsers } = await resetPreflight(name);
   registry.status = "resetting";
   await atomicJson(join(directory, "registry.json"), registry);
   if(plan.scenario.modules.reconciliation){
@@ -1300,6 +1315,7 @@ try {
     outputRoot = join(root, "fixtures", "generated", "hosted", projectRef);
   }
   if (operation === "preflight") await preflight(name, seed);
+  if (operation === "reset-preflight") await resetPreflight(name);
   if (operation === "generate" && hostedTarget) await preflight(name, seed);
   if (operation === "generate") await generate(name, seed);
   if (operation === "reset") await reset(name);

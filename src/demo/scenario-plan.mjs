@@ -22,17 +22,21 @@ export function buildScenarioPlan(input, reference) {
     siteIndex: Math.floor(rng() * sites.length),
   }));
   let cleanerOrdinal = 0;
-  const personas = reference.personas.map((persona, index) => {
+  const personaDefinitions = reference.personas.filter((persona) => scenario.generatorVersion >= (persona.minGeneratorVersion ?? 1));
+  const personas = personaDefinitions.map((persona, index) => {
     const worker = persona.role === "cleaner" ? workers[cleanerOrdinal++] : null;
-    return ({
-    key: persona.key,
-    displayName: persona.displayName,
-    role: persona.role,
-    email: `${scenario.scenarioId}.${persona.key}@cleanops.example.com`,
-    membershipId: id(`membership/${persona.key}`),
-    siteIndex: worker?.siteIndex ?? index % sites.length,
-    workerId: worker?.id ?? null,
-  });
+    const siteIndex = worker?.siteIndex ?? (scenario.generatorVersion >= 8 && persona.siteIndex !== undefined
+      ? persona.siteIndex : index % sites.length);
+    if (siteIndex >= sites.length) throw new Error(`Persona ${persona.key} targets a site outside this scenario.`);
+    return {
+      key: persona.key,
+      displayName: persona.displayName,
+      role: persona.role,
+      email: `${scenario.scenarioId}.${persona.key}@cleanops.example.com`,
+      membershipId: id(`membership/${persona.key}`),
+      siteIndex,
+      workerId: worker?.id ?? null,
+    };
   });
   const workerPermissions = workers.map((worker, index) => ({
     id: id(`worker-permission/${index}`), organization_id: organization.id,

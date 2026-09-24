@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatorVersion": 7,
+  "generatorVersion": 8,
   "scenarioId": "finance-showcase",
   "seed": 20260922,
   "clock": {"start":"2026-06-01","end":"2026-09-30","timezone":"America/Vancouver"},
