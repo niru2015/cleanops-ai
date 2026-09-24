@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
-    "postbuild": "node scripts/check-finance-pdf-worker.mjs",
+    "postbuild": "node scripts/check-finance-runtime-assets.mjs",
     "start": "next start",
     "db:start": "supabase start",
     "db:stop": "supabase stop",

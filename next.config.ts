@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+const ocrRuntimeAssets = [
+  "./node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz",
+  "./node_modules/tesseract.js-core/*.wasm",
+];
+
 const nextConfig: NextConfig = {
   distDir: process.env.CLEANOPS_NEXT_DIST_DIR || ".next",
   devIndicators: false,
@@ -7,11 +12,14 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@napi-rs/canvas", "@tesseract.js-data/eng", "mammoth", "pdfjs-dist", "tesseract.js"],
   outputFileTracingIncludes: {
     "/finance/contracts/**": [
-      "./node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz",
+      ...ocrRuntimeAssets,
       "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
     ],
     "/finance/expenses": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
-    "/finance/inbox": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
+    "/finance/inbox": [
+      ...ocrRuntimeAssets,
+      "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+    ],
   },
 };
 
