@@ -323,6 +323,7 @@ These postings do not mutate CLEAN-020 `finance_reconciliations`; #66 owns accou
 | Identity create | `create_manual_contract` RPC |
 | Dates/responsibilities | Draft `contract_versions` update |
 | Billing, staffing, recurring/specialist work, SLA | `contract_financial_terms`, `contract_staffing_requirements`, `contract_obligations`, `contract_sla_terms` draft inserts and scoped removal for correction |
+| Resolve an existing obligation zone | `assign_contract_obligation_zone` validates draft, actor, obligation and same-site zone, then updates `contract_obligations.zone_id` and appends a `contract_events` audit record |
 | Submit/approve/preview/activate | Dedicated RPCs; activation writes canonical operational rows and `contract_revenue_expectations` transactionally |
 
 Expected revenue is a contract projection and does not enter CLEAN-020 `finance_reconciliations` as recognized revenue. The manager finance overview remains issue #34.

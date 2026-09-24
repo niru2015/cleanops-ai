@@ -160,6 +160,31 @@ export async function transitionContract(form: FormData) {
   redirect(destination);
 }
 
+export async function assignContractObligationZone(form: FormData) {
+  const id = z.string().uuid().parse(value(form, "contractId"));
+  let destination = `/finance/contracts/${id}/review`;
+  try {
+    const input = z.object({ obligationId: z.uuid(), zoneId: z.uuid() }).parse({
+      obligationId: value(form, "obligationId"), zoneId: value(form, "zoneId") });
+    const client = await createSupabaseServerClient();
+    const access = await getAppAccessContext(client);
+    if (!["organization_administrator", "area_manager"].includes(access.role))
+      throw new Error("Contract draft access is required.");
+    const detail = await getContractDetail(client, access, id);
+    if (detail.version.state !== "draft" || !isSiteAllowed(access, detail.contract.site_id) ||
+      !detail.obligations.some((item) => item.id === input.obligationId) ||
+      !detail.zones.some((zone) => zone.id === input.zoneId))
+      throw new Error("The obligation or zone is unavailable for this draft.");
+    const result = await client.rpc("assign_contract_obligation_zone", {
+      p_obligation_id: input.obligationId, p_zone_id: input.zoneId });
+    if (result.error) throw new Error(result.error.message);
+    revalidatePath(destination);
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(errorMessage(error))}`;
+  }
+  redirect(destination);
+}
+
 export async function removeContractDraftItem(form: FormData) {
   const id = z.string().uuid().parse(value(form, "contractId"));
   const itemId = z.string().uuid().parse(value(form, "itemId"));

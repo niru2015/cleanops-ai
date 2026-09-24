@@ -6,7 +6,7 @@ import { getAppAccessContext } from "@/services/access-context";
 import { getContractDetail } from "@/integrations/finance/supabase-contracts";
 import { ContractDocumentPanel, type DocumentView, type ProposalView,
   type DecisionView } from "@/components/contract-document-panel";
-import { transitionContract } from "../../actions";
+import { assignContractObligationZone, transitionContract } from "../../actions";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -80,7 +80,17 @@ export default async function ContractReviewPage({ params, searchParams }: {
           : <p>No staffing requirement saved.</p>}
         <h2>Service obligations</h2>
         {detail.obligations.length ? <ul>{detail.obligations.map((item) =>
-          <li key={item.id}>{item.name} · {item.work_type} · {item.recurrence} · {detail.zones.find((zone) => zone.id === item.zone_id)?.name ?? "zone unresolved"} · evidence {item.evidence_required ? "required" : "optional"}</li>)}</ul>
+          <li key={item.id}>{item.name} · {item.work_type} · {item.recurrence} · {detail.zones.find((zone) => zone.id === item.zone_id)?.name ?? "zone unresolved"} · evidence {item.evidence_required ? "required" : "optional"}
+            {canDraft && version.state === "draft" && <form action={assignContractObligationZone}>
+              <input type="hidden" name="contractId" value={detail.contract.id} />
+              <input type="hidden" name="obligationId" value={item.id} />
+              <label>Zone for {item.name} <select name="zoneId" defaultValue={item.zone_id ?? ""} required>
+                <option value="" disabled>Select zone</option>
+                {detail.zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
+              </select></label>
+              <button type="submit">Save obligation zone</button>
+            </form>}
+          </li>)}</ul>
           : <p>No recurring obligation saved.</p>}
         <h2>SLA and reporting</h2>
         {detail.sla.length ? <ul>{detail.sla.map((item) => <li key={item.id}>{item.name}: {item.numerator_rule} / {item.denominator_rule}; exclusion: {item.exclusion_rule}</li>)}</ul>
