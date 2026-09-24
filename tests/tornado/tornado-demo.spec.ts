@@ -64,7 +64,7 @@ test.describe("Tornado synthetic demo recording", () => {
     test.skip(!process.env.TORNADO_OPERATIONS_PASSWORD, "The separate legacy operations password is required for the mobile task fixture.");
     await signIn(page, accounts.legacyDirector, process.env.TORNADO_OPERATIONS_PASSWORD);
     await test.step("Show the supported mobile task and any linked evidence", async () => {
-      await visit(page, "/mobile", "My tasks");
+      await visit(page, "/mobile", "Task evidence");
       await expect(page.getByRole("heading", { name: "Slot Bank 14 detail clean" })).toBeVisible();
       if (process.env.TORNADO_EXPECT_MOBILE_EVIDENCE === "1") {
         await expect(page.getByText("Submission ready for review")).toBeVisible();
