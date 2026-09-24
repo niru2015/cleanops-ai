@@ -37,10 +37,10 @@ test("cleaner selects QR context and uploads real before and after images", asyn
   await signInAsDirector(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/mobile");
-  await expect(page.getByRole("heading", { name: "My tasks" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Task evidence" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Slot Bank 14 detail clean" })).toBeVisible();
-  await page.getByRole("button", { name: "Scan Slot Bank 14 code" }).click();
-  await expect(page.getByText(/does not record attendance or prove identity/)).toBeVisible();
+  await expect(page.getByText(/does not check you in or prove identity/)).toBeVisible();
+  await page.getByRole("button", { name: "Select Slot Bank 14 Demo task" }).click();
   await expect(page.getByLabel("Take before photo")).toHaveAttribute("capture", "environment");
   await expect(page.getByLabel("Choose before photo from library")).not.toHaveAttribute("capture");
 
