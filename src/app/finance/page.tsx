@@ -1,8 +1,11 @@
 import { AppShell } from "@/components/app-shell";
 import Link from "next/link";
 import { FinanceWorkspace } from "@/components/finance-workspace";
+import { FinanceSummary } from "@/components/finance-summary";
 import { MessageContextQueue } from "@/components/message-context-queue";
 import { getFinanceWorkspace, type FinanceWorkspace as FinanceWorkspaceData } from "@/integrations/finance/supabase-finance";
+import { getFinanceSummary } from "@/integrations/finance/supabase-finance-summary";
+import type { SiteFinanceSummary } from "@/services/finance-summary";
 import { getMessageWorkspace, type MessageWorkspace } from "@/integrations/messages/supabase-message-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext, resolveSelectedSite, type AppAccessContext, type AccessSite } from "@/services/access-context";
@@ -16,12 +19,15 @@ type Loaded = {
   selectedSite: AccessSite | null;
   finance: FinanceWorkspaceData | null;
   messages: MessageWorkspace | null;
+  summary: SiteFinanceSummary[];
+  month: string;
+  summarySiteId: string | null;
 };
 
 export default async function FinancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ siteId?: string }>;
+  searchParams: Promise<{ siteId?: string; month?: string }>;
 }) {
   let loaded: Loaded | null = null;
   let loadError: "organization" | "unavailable" | null = null;
@@ -30,15 +36,19 @@ export default async function FinancePage({
     const access = await getAppAccessContext(client);
     const params = await searchParams;
     const selectedSite = resolveSelectedSite(access, params.siteId);
+    const month = typeof params.month === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month)
+      ? params.month : new Date().toISOString().slice(0, 7);
+    const summarySiteId = params.siteId === "all" ? null : selectedSite?.id ?? null;
     const context = access.canViewFinance && selectedSite ? getFinanceSiteContext(access, selectedSite.id) : null;
-    const [finance, messages] =
+    const [finance, messages, summary] =
       context
         ? await Promise.all([
             getFinanceWorkspace(client, context),
             getMessageWorkspace(client, context),
+            getFinanceSummary(client, access, month),
           ])
-        : [null, null];
-    loaded = { access, selectedSite, finance, messages };
+        : [null, null, []];
+    loaded = { access, selectedSite, finance, messages, summary, month, summarySiteId };
   } catch (error) {
     if (error instanceof Error && error.message === "Organization selection required.") loadError = "organization";
     else if (!(error instanceof Error && error.message === "Authentication required.")) loadError = "unavailable";
@@ -48,7 +58,7 @@ export default async function FinancePage({
     return <AppShell currentPath="/finance"><section className="accessState"><p className="eyebrow">Finance &amp; inventory</p><h1>{loadError === "organization" ? "Organization selection required" : loadError === "unavailable" ? "Finance workspace unavailable" : "Sign in required"}</h1><p>{loadError === "organization" ? "This account belongs to more than one organization. Ask an administrator to select one before opening finance." : loadError === "unavailable" ? "The workspace could not be loaded. Please try again." : "Use a Director or Area Manager demo account."}</p>{loadError ? null : <a className="reviewButton reviewButton-primary" href="/login">Sign in</a>}</section></AppShell>;
   }
 
-  const { access, selectedSite, finance, messages } = loaded;
+  const { access, selectedSite, finance, messages, summary, month, summarySiteId } = loaded;
 
   if (!access.canViewFinance) {
     return (
@@ -82,6 +92,7 @@ export default async function FinancePage({
           <strong>{selectedSite.name}{selectedSite.city ? ` · ${selectedSite.city}` : ""}</strong>
         </div>
         <form method="get">
+          <input type="hidden" name="month" value={month} />
           <label>
             <span className="visuallyHidden">Choose casino</span>
             <select name="siteId" defaultValue={selectedSite.id}>
@@ -95,6 +106,7 @@ export default async function FinancePage({
         <span className="recordLabel">{access.canEditFinance ? "Director · edit" : "Area Manager · read only"}</span>
       </section>
       <p><Link href="/finance/contracts">Open contract register</Link> · <Link href="/finance/projects">One-off projects</Link> · <Link href="/finance/inbox">Finance Inbox</Link> · <Link href="/finance/expenses">Expenses and direct costs</Link> · <Link href="/finance/time">Approved time and labour</Link> · <Link href="/finance/reconciliation">Reconciliation and period close</Link>{access.canEditFinance && <> · <Link href="/finance/rates">Worker cost rates</Link></>}</p>
+      <FinanceSummary sites={summary} selectedSiteId={summarySiteId} month={month} />
       <FinanceWorkspace workspace={finance} editable={access.canEditFinance} siteId={selectedSite.id} />
       <MessageContextQueue workspace={messages} />
     </AppShell>
