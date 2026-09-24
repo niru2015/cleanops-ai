@@ -83,6 +83,32 @@ Zod validates the manifest and reference pack. SHA-256-derived UUIDv5-shaped IDs
 
 ## Registry and reset boundary
 
+### Gate A post-UAT cleanup for the hosted 20260926 run
+
+Issue [#103](https://github.com/niru2015/cleanops-ai/issues/103) has a one-run cleanup runner at
+`scripts/demo-uat-cleanup.mjs`. Its input is the reviewed, ignored
+`artifacts/tornado-demo/gate-a/hosted-uat-cleanup-manifest.json`, accompanied by the ignored full
+database snapshot, 94-table fingerprints, storage inventory and private-object backups in the same
+artifact folder. The current manifest selects 213 UAT-added rows in 33 tables and six backed-up
+private objects; it leaves 445 generator rows for the existing scenario reset. Never commit these
+audit files or private bytes. Any further phone/browser UAT write invalidates the manifest and
+requires a fresh inventory, review and manifest hash in the runner.
+
+Run `node scripts/demo-uat-cleanup.mjs dry-run artifacts/tornado-demo/gate-a/hosted-uat-cleanup-manifest.json`
+first. It verifies the exact hosted project, organization, run, source hashes, all organization
+table fingerprints and storage object IDs, then attempts the exact-ID dependency-order deletions
+inside a serializable transaction that rolls back. It never uses `session_replication_role`.
+The apply mode requires the reviewed run ID in `CLEANOPS_GATE_A_CLEANUP_APPROVED_RUN_ID` and
+`apply` instead of `dry-run`; it commits the same guarded transaction, then removes only the six
+listed storage objects. A storage-removal failure after commit requires reconciliation from the
+ignored backup. The script takes short locks on the affected tables while it temporarily disables
+named immutable/provenance triggers within its transaction, restores them before commit and
+aborts if any count, source or object has drifted.
+
+After separately reviewing the hosted reset, rerun `reset-preflight`, then the existing hosted
+`reset --apply`, alternate-seed `preflight`, `generate --apply` and `assert` commands above. The
+cleanup dry run alone is not a hosted reset or an alternate-seed Gate A pass.
+
 `fixtures/generated/<scenario-id>/registry.json` is a local, ignored service-tooling registry. It records the run, seed, generator version, organization ID, status and created Auth IDs. The scenario plan contains every base entity ID; the registry is written before database insertion and marked `partial` on failure. A partial run can be reset and regenerated. Reset checks the organization slug and planned base IDs, refuses deletion when the generated organization has unrelated operational/finance records, deletes only scenario-owned records, and removes only Auth users tagged with the scenario ID. Other tenant and legacy seed IDs are untouched. The contract adapter scopes source and generated rows by deterministic IDs or generated version links, reconciles current expected revenue, and deletes those rows in dependency order. Later adapters must extend the same preflight before writing more entities.
 
 `expected.json` contains the scenario version, seed, clock, source-backed entity counts, role/site matrix and explicit control totals. For `finance-showcase` it includes current expected contract revenue, approved operational expense cost and approved labour cost, excluding deliberate duplicate-receipt and time exceptions. Its reconciliation section records a review-required June, a closed July and the late-import stale signal. It is for assertions and demos only. The app never imports it. `demo:assert` queries the local database and fails if generated records or totals differ. `presenter-tests.md` is generated from the same plan and states which later journeys are not available.
