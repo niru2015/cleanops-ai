@@ -1,5 +1,7 @@
 # Tornado finance rehearsal — synthetic hosted demo
 
+**Current status:** This route was written for the earlier `20260925` baseline. The current hosted run uses seed `20260926` and has additional Gate A UAT records. Read [GATE_A_EXECUTION.md](GATE_A_EXECUTION.md) and the current generated manifest before quoting figures; do not use the dated numbers below as current hosted totals.
+
 Use this as a guided **prototype** presentation and a record of what still needs a full Gate A rehearsal. The detailed state-changing UAT is in [FINANCE_UAT.md](FINANCE_UAT.md). Casino names are reference names in synthetic data; no Tornado customer data or live accounting/WhatsApp connection is represented.
 
 ## Verified baseline — 2026-09-24 UTC
