@@ -14,7 +14,7 @@ Paths below are relative to `docs/`. Follow linked security/integration details 
 | End-to-end process flow | [PROCESS_FLOWS](PROCESS_FLOWS.md) | Multi-step persistence, state transitions and human gates |
 | Message / media ingestion | [WHATSAPP](integrations/WHATSAPP.md), [DOMAIN](DOMAIN.md), [SECURITY](SECURITY.md) | Durable ingestion contract |
 | AI / evaluation | [AI](AI.md), [OPENAI](integrations/OPENAI.md) | Suggestions, budgets, fallback |
-| Demo / UI | [DEMO](DEMO.md), [DATA_FACTORY](demo/DATA_FACTORY.md), [FINANCE_UAT](demo/FINANCE_UAT.md), [DOMAIN](DOMAIN.md) | Synthetic scenario, generator, presenter checks and states |
+| Demo / UI | [DEMO](DEMO.md), [DATA_FACTORY](demo/DATA_FACTORY.md), [TORNADO_FINANCE_REHEARSAL](demo/TORNADO_FINANCE_REHEARSAL.md), [FINANCE_UAT](demo/FINANCE_UAT.md), [DOMAIN](DOMAIN.md) | Synthetic scenario, generator, presenter route, UAT and states |
 | Architecture change | relevant [ADR](adr/README.md) plus affected spec | Decision and rationale |
 
 ## Context budget
