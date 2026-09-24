@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { acceptFinanceImport, performFinanceAction, previewFinanceImport, type FinanceActionState } from "@/app/finance/actions";
 import type { FinanceWorkspace } from "@/integrations/finance/supabase-finance";
 import type { FinanceImportPreview } from "@/services/finance-csv";
+import { formatUtcTimestamp } from "@/lib/format-utc-timestamp";
 
 const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
 const importedMoney = (amount: number, currency: string) => `${currency || "—"} ${amount.toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -61,7 +62,7 @@ export function FinanceWorkspace({
             <div><span>Direct cost</span><strong>{importedMoney(entry.labour + entry.supplies + entry.repairs + entry.otherDirectCost, entry.currency)}</strong></div>
             <div><span>Direct contribution</span><strong>{importedMoney(entry.contribution, entry.currency)}</strong></div>
             <div><span>Contribution margin</span><strong>{margin === null ? "N/A" : `${(margin * 100).toFixed(1)}%`}</strong></div>
-            <p>{entry.period} · {entry.completeness} · reconciled {new Date(entry.reconciledAt).toLocaleString()}</p>
+            <p>{entry.period} · {entry.completeness} · reconciled {formatUtcTimestamp(entry.reconciledAt)}</p>
           </div>;
         }) : <p className="recordNote">No accepted accounting import is available for this casino.</p>}
         <p className="recordNote">Direct contribution is revenue less direct labour, supplies, repairs and other direct costs. It is not net profit; overhead, depreciation and tax are excluded.</p>
@@ -108,7 +109,7 @@ export function FinanceWorkspace({
                 }}>Accept import</button>
               </div> : null}
             </div> : null}
-            {workspace.imports.length ? <p className="recordNote">Last import: {workspace.imports[0].fileName} · {workspace.imports[0].state} · {workspace.imports[0].acceptedAt ? new Date(workspace.imports[0].acceptedAt).toLocaleString() : "not accepted"}</p> : null}
+            {workspace.imports.length ? <p className="recordNote">Last import: {workspace.imports[0].fileName} · {workspace.imports[0].state} · {workspace.imports[0].acceptedAt ? formatUtcTimestamp(workspace.imports[0].acceptedAt) : "not accepted"}</p> : null}
           </section>}
 
           <div className="financeGrid">
@@ -256,7 +257,7 @@ export function FinanceWorkspace({
               </form>
             ) : (
               <div key={entry.id} id={entry.id} className={editable ? "financeTableRow financeTableRow-editable" : "financeTableRow"}>
-                <strong>{entry.item}<small>{new Date(entry.occurredAt).toLocaleString()}</small></strong><span>{entry.type}</span><span>{entry.vendor ?? "—"}</span><span>{entry.quantity} {entry.unit}</span><span>{money.format(entry.totalCost)}</span>
+                <strong>{entry.item}<small>{formatUtcTimestamp(entry.occurredAt)}</small></strong><span>{entry.type}</span><span>{entry.vendor ?? "—"}</span><span>{entry.quantity} {entry.unit}</span><span>{money.format(entry.totalCost)}</span>
                 {editable ? <div className="financeRowActions">
                   <button className="reviewButton reviewButton-secondary" type="button" disabled={pending} onClick={() => setEditingInventoryId(entry.id)}>Edit</button>
                   <button className="reviewButton reviewButton-danger" type="button" disabled={pending} onClick={() => {
