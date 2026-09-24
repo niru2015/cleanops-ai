@@ -39,8 +39,14 @@ import {
 const EVIDENCE_BUCKET = "operational-evidence";
 const MOBILE_ACCOUNT_EXTERNAL_ID = "demo-nightshift-group";
 const MOBILE_INTEGRATION_ACCOUNT_ID = "c0000000-0000-4000-8000-000000000001";
-const MOBILE_THREAD_ID = "cleanops-mobile-demo";
 const MOBILE_SENDER_ID = "worker-182";
+const RESTROOM_TASK_ID = "81000000-0000-4000-8000-000000000001";
+
+function captureContext(taskRunId: string) {
+  if (taskRunId === RESTROOM_TASK_ID) return { threadId: "restroom-b-thread", label: "Restroom B" };
+  if (taskRunId === DEMO_MOBILE_TASK_ID) return { threadId: "cleanops-mobile-demo", label: "Slot Bank 14" };
+  throw new Error("This task is not in the synthetic capture walkthrough.");
+}
 
 const evidenceRowSchema = z.object({
   id: z.string().uuid(),
@@ -51,13 +57,14 @@ const evidenceRowSchema = z.object({
   byte_size: z.number().int().positive(),
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
   processing_status: z.literal("staged"),
+  submitted_by_user_id: z.string().uuid(),
 });
 
 const sourceMessageSchema = z.object({
   external_message_id: z.string().min(1),
-  external_thread_id: z.literal(MOBILE_THREAD_ID),
+  external_thread_id: z.string(),
   sender_id: z.literal(MOBILE_SENDER_ID),
-  text_content: z.enum(["#before Slot Bank 14", "#after Slot Bank 14"]),
+  text_content: z.string(),
   media_refs: z.array(z.object({
     externalId: z.string().min(1),
     contentType: z.string().optional(),
@@ -77,8 +84,20 @@ export type MobilePhotoPrepareState = MobileActionState & {
 };
 
 function expectedCaptureRole(workspace: Awaited<ReturnType<typeof getMobileWorkspace>>) {
-  if (workspace.afterReady) return null;
+  if (workspace.state === "correction_required") return workspace.beforeReady && !workspace.afterReady ? "after" : null;
+  if ((workspace.state !== "ready" && workspace.state !== "in_progress") || workspace.afterReady) return null;
   return workspace.beforeReady ? "after" : "before";
+}
+
+async function authorizedCaptureWorkspace(runtime: OperationsRuntime, taskRunId: string) {
+  captureContext(taskRunId);
+  const workspace = await getMobileWorkspace(runtime.accessClient, taskRunId);
+  const { data, error } = await runtime.writeClient.from("task_run_assignments")
+    .select("id").eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", DEMO_SITE_ID)
+    .eq("task_run_id", taskRunId).eq("worker_id", "60000000-0000-4000-8000-000000000001")
+    .limit(1);
+  if (error || !data?.length) throw new Error("This task is not assigned to the demo worker.");
+  return workspace;
 }
 
 async function ensureNormalizedMessage(
@@ -116,8 +135,8 @@ export async function performMobileAction(
   if (!parsed.success) return { ok: false, message: "The mobile request was invalid." };
 
   try {
-    const runtime = await getOperationsRuntime("cleaner");
-    await getMobileWorkspace(runtime.accessClient, parsed.data.taskRunId);
+    const runtime = await getOperationsRuntime("capture");
+    await authorizedCaptureWorkspace(runtime, parsed.data.taskRunId);
     await selectMobileZone(
       runtime.demo ? runtime.writeClient : runtime.accessClient,
       parsed.data.taskRunId,
@@ -142,10 +161,11 @@ export async function prepareMobilePhotoUpload(
   }
 
   try {
-    const runtime = await getOperationsRuntime("cleaner");
+    const runtime = await getOperationsRuntime("capture");
     if (!runtime.demo) throw new Error("Mobile demo upload is unavailable.");
 
-    const workspace = await getMobileWorkspace(runtime.accessClient, parsed.data.taskRunId);
+    const workspace = await authorizedCaptureWorkspace(runtime, parsed.data.taskRunId);
+    const context = captureContext(parsed.data.taskRunId);
     if (!workspace.contextSelected) throw new Error("Select the work area first.");
     if (expectedCaptureRole(workspace) !== parsed.data.role) {
       throw new Error("Refresh the task before uploading this photo.");
@@ -154,9 +174,8 @@ export async function prepareMobilePhotoUpload(
     const uniqueId = randomUUID();
     const externalMessageId = `cleanops-mobile-${parsed.data.role}-${uniqueId}`;
     const mediaExternalId = `cleanops-mobile-media-${uniqueId}`;
-    const occurredAt = parsed.data.role === "before"
-      ? "2026-09-14T06:15:00Z"
-      : "2026-09-14T06:29:00Z";
+    const occurredAt = parsed.data.role === "before" ? "2026-09-14T06:15:00Z"
+      : workspace.state === "correction_required" ? "2026-09-14T06:34:00Z" : "2026-09-14T06:29:00Z";
     const ingress = new SupabaseIngressRepository(runtime.writeClient);
 
     await acceptDemoMessageBatch(ingress, {
@@ -166,10 +185,10 @@ export async function prepareMobilePhotoUpload(
         accountExternalId: MOBILE_ACCOUNT_EXTERNAL_ID,
         messages: [{
           externalMessageId,
-          externalThreadId: MOBILE_THREAD_ID,
+          externalThreadId: context.threadId,
           senderId: MOBILE_SENDER_ID,
           occurredAt,
-          text: `#${parsed.data.role} Slot Bank 14`,
+          text: `#${parsed.data.role} ${context.label}`,
           mediaRefs: [{
             externalId: mediaExternalId,
             contentType: parsed.data.contentType,
@@ -192,6 +211,11 @@ export async function prepareMobilePhotoUpload(
     if (staged.processingStatus !== "staged") {
       throw new Error("This photo has already been processed.");
     }
+    const provenance = await runtime.writeClient.from("task_evidence")
+      .update({ submitted_by_user_id: runtime.actorUserId })
+      .eq("id", staged.evidenceId).eq("organization_id", DEMO_ORGANIZATION_ID)
+      .eq("processing_status", "staged");
+    if (provenance.error) throw new Error("The upload actor could not be recorded.");
 
     const { data, error } = await runtime.writeClient.storage
       .from(EVIDENCE_BUCKET)
@@ -222,16 +246,18 @@ export async function finalizeMobilePhotoUpload(
   if (!parsed.success) return { ok: false, message: "The upload confirmation was invalid." };
 
   try {
-    const runtime = await getOperationsRuntime("cleaner");
+    const runtime = await getOperationsRuntime("capture");
     if (!runtime.demo) throw new Error("Mobile demo upload is unavailable.");
     if (!verifyMobileUploadTicket(parsed.data, runtime.actorUserId)) {
       throw new Error("The upload expired. Choose the photo again.");
     }
-    await getMobileWorkspace(runtime.accessClient, DEMO_MOBILE_TASK_ID);
+    const workspace = await authorizedCaptureWorkspace(runtime, parsed.data.taskRunId);
+    const context = captureContext(parsed.data.taskRunId);
+    if (expectedCaptureRole(workspace) === null) throw new Error("This task is no longer accepting photos.");
 
     const evidenceResult = await runtime.writeClient
       .from("task_evidence")
-      .select("id,external_message_id,media_external_id,storage_path,content_type,byte_size,sha256,processing_status")
+      .select("id,external_message_id,media_external_id,storage_path,content_type,byte_size,sha256,processing_status,submitted_by_user_id")
       .eq("id", parsed.data.evidenceId)
       .eq("organization_id", DEMO_ORGANIZATION_ID)
       .eq("site_id", DEMO_SITE_ID)
@@ -241,6 +267,7 @@ export async function finalizeMobilePhotoUpload(
     if (evidenceResult.error || !evidence.success) {
       throw new Error("The staged upload could not be found.");
     }
+    if (evidence.data.submitted_by_user_id !== runtime.actorUserId) throw new Error("The upload belongs to another user.");
 
     const sourceResult = await runtime.writeClient
       .from("external_messages")
@@ -252,6 +279,10 @@ export async function finalizeMobilePhotoUpload(
     const source = sourceMessageSchema.safeParse(sourceResult.data);
     if (sourceResult.error || !source.success) {
       throw new Error("The upload source could not be verified.");
+    }
+    if (source.data.external_thread_id !== context.threadId
+      || source.data.text_content !== `#${expectedCaptureRole(workspace)} ${context.label}`) {
+      throw new Error("The upload does not belong to this task or revision.");
     }
     const media = source.data.media_refs.find(
       (item) => item.externalId === evidence.data.media_external_id,
@@ -281,6 +312,7 @@ export async function finalizeMobilePhotoUpload(
 
     revalidatePath("/mobile");
     revalidatePath("/operations");
+    revalidatePath("/review");
     const label = source.data.text_content.startsWith("#after") ? "After" : "Before";
     return resolution.linkageStatus === "linked"
       ? { ok: true, message: `${label} photo uploaded and linked to this task.` }

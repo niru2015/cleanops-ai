@@ -26,6 +26,16 @@ const pairSchema = z.object({
   created_at: z.string(),
 });
 
+const evidencePreviewSchema = z.object({
+  id: uuid,
+  role: z.enum(["before", "after"]),
+  submission_revision: z.number().int().positive(),
+  captured_at: z.string().nullable(),
+  received_at: z.string(),
+  worker_id: uuid.nullable(),
+  submitted_by_user_id: uuid.nullable(),
+});
+
 const decisionSchema = z.object({
   id: uuid,
   submission_revision: z.number().int().positive(),
@@ -85,7 +95,9 @@ export type ReviewWorkspace = {
   task: z.infer<typeof taskSchema>;
   taskName: string;
   zoneName: string;
+  siteName: string;
   pair: z.infer<typeof pairSchema> | null;
+  evidence: { before: z.infer<typeof evidencePreviewSchema> | null; after: z.infer<typeof evidencePreviewSchema> | null };
   decision: z.infer<typeof decisionSchema> | null;
   findings: z.infer<typeof findingSchema>[];
   correctiveActions: z.infer<typeof actionSchema>[];
@@ -122,9 +134,10 @@ export async function getReviewWorkspace(client: SupabaseClient, taskRunId: stri
   const task = taskRows[0];
   if (!task) throw new ReviewRepositoryError("not_found");
 
-  const [taskNames, zoneNames, pairs, decisions, findings, correctiveActions, inspections, auditEvents] = await Promise.all([
+  const [taskNames, zoneNames, siteNames, pairs, decisions, findings, correctiveActions, inspections, auditEvents] = await Promise.all([
     rows(client.from("service_tasks").select("name").eq("id", task.task_id), z.object({ name: z.string() })),
     rows(client.from("site_zones").select("name").eq("id", task.zone_id), z.object({ name: z.string() })),
+    rows(client.from("sites").select("name").eq("id", task.site_id), z.object({ name: z.string() })),
     rows(client.from("evidence_pairs").select("id,submission_revision,before_evidence_id,after_evidence_id,created_at").eq("task_run_id", task.id).order("submission_revision", { ascending: false }), pairSchema),
     rows(client.from("quality_decisions").select("id,submission_revision,source_label,status,score,confidence,observations,limitations,error_code,created_at").eq("task_run_id", task.id).order("created_at", { ascending: false }), decisionSchema),
     rows(client.from("quality_findings").select("id,submission_revision,criterion_id,observation,severity,confirmed_at,resolved_at").eq("task_run_id", task.id).order("confirmed_at", { ascending: true }), findingSchema),
@@ -133,11 +146,24 @@ export async function getReviewWorkspace(client: SupabaseClient, taskRunId: stri
     rows(client.from("review_audit_events").select("id,submission_revision,action,details,created_at").eq("task_run_id", task.id).order("created_at", { ascending: true }), auditSchema),
   ]);
 
+  const pair = pairs.find((item) => item.submission_revision === task.submission_revision) ?? null;
+  const evidenceRows = pair ? await rows(
+    client.from("task_evidence")
+      .select("id,role,submission_revision,captured_at,received_at,worker_id,submitted_by_user_id")
+      .in("id", [pair.before_evidence_id, pair.after_evidence_id]),
+    evidencePreviewSchema,
+  ) : [];
+
   return {
     task,
     taskName: taskNames[0]?.name ?? "Service task",
     zoneName: zoneNames[0]?.name ?? "Assigned zone",
-    pair: pairs.find((item) => item.submission_revision === task.submission_revision) ?? null,
+    siteName: siteNames[0]?.name ?? "Authorized site",
+    pair,
+    evidence: {
+      before: evidenceRows.find((item) => item.id === pair?.before_evidence_id) ?? null,
+      after: evidenceRows.find((item) => item.id === pair?.after_evidence_id) ?? null,
+    },
     decision: decisions.find((item) => item.submission_revision === task.submission_revision) ?? null,
     findings,
     correctiveActions,

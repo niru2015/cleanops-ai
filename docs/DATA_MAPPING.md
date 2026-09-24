@@ -2,7 +2,7 @@
 
 Purpose: source-to-target map for implemented pages and server workflows. Exact behavior is owned by current code, migrations and tests.
 
-Last updated: 2026-09-24 for hosted fixture commands.
+Last updated: 2026-09-24 for connected task evidence and hosted fixture commands.
 
 ## Route summary
 
@@ -12,9 +12,9 @@ Roles per route come from `src/config/navigation.ts` and the page guards; RLS/RP
 |---|---|---|---|
 | `/login` | anonymous | `src/app/login`, hosted-demo services | Supabase Auth with a named demo persona selector. |
 | `/operations` | supervisor, area manager, operations manager, director | site-portfolio + operations Supabase integrations + actions | Portfolio of every accessible site; staffing, replacements, zones, review/correction/SLA risk for the walkthrough site. |
-| `/mobile` | cleaner, director | operations integration + mobile actions | Cleaner task context and before/after photo capture. |
+| `/mobile` | assigned demo cleaner, authorized supervisor/manager | operations integration + mobile actions | Assigned task selection, before/after photo capture and corrected after upload; supervisor actions are attributed separately from the worker. |
 | `/mobile/expenses` | cleaner, site supervisor, area manager | expense submission and receipt actions | Assigned-site expense message and private receipt upload. |
-| `/review` | supervisor, area manager, operations manager, director | review Supabase integration + actions | Evidence pair, AI suggestion, findings, corrections, approval. |
+| `/review` | supervisor, area manager, operations manager, director | review Supabase integration + actions | Selected task's private signed images, AI suggestion, findings, corrections and approval. |
 | `/finance` | area manager (read only), director (read + write) | finance integration + actions | Site-scoped supplier/item setup, inventory and labour ledgers, accepted accounting summaries, and the message context queue. Missing accounting import tables show a partial availability notice. |
 | `/finance/inbox` | granted area manager, director | expense integration + review actions | Candidate, source/receipt link, deterministic proposal and human resolution. |
 | `/finance/expenses` | granted area manager, director | expense integration + Director approval action | Reviewed claims, source drill-through, allocations and posted cost. |
@@ -111,14 +111,15 @@ Writes `conversation_contexts` with account/thread/sender/assignment/site/zone/t
 
 **Prepare photo**
 - validate JPEG/PNG/WebP metadata and size;
-- require cleaner/site/task access and expected before/after role;
+- require exact synthetic site, worker assignment, signed-in cleaner or authorized supervisor, and expected before/after role;
 - create durable ingress -> `integration_webhook_events` + `processing_jobs`;
 - normalize to `external_messages`;
-- stage `task_evidence`;
+- stage `task_evidence` and record authenticated `submitted_by_user_id` separately from attributed `worker_id`;
 - issue a single-path signed private Storage upload token.
 
 **Finalize photo**
 - verify signed application ticket and user;
+- match the selected task's source thread, expected role and current revision;
 - re-read staged `task_evidence` and source `external_messages`;
 - download private object server-side;
 - validate source, signature, MIME, size and SHA-256;

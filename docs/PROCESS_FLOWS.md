@@ -2,7 +2,7 @@
 
 Purpose: implementation-aligned end-to-end flows for coding agents. Migrations, services and tests remain authoritative.
 
-Last updated: 2026-09-24 for CLEAN-012 hosted fixture guard.
+Last updated: 2026-09-24 for CLEAN-013 connected evidence.
 
 ## 1. Authentication and site authorization
 
@@ -68,7 +68,9 @@ Rules:
 - QR/context selection does not record attendance or prove identity.
 - Browser never receives privileged credentials.
 - Evidence storage is private.
-- BEFORE must precede AFTER in the current mobile demo.
+- BEFORE must precede the initial AFTER. A correction can append only a new AFTER and reuse the original BEFORE in a new pair revision.
+- Authenticated `submitted_by_user_id` is recorded separately from attributed `worker_id`; the submitting supervisor cannot approve the same revision.
+- The selected task ID is checked against the demo worker assignment and source thread at preparation and finalization. Review obtains short-lived image URLs only after signed-in evidence authorization.
 - Source capture time is not proof of physical presence.
 
 ## 4. External WhatsApp inbound

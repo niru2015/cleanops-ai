@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  distDir: process.env.CLEANOPS_NEXT_DIST_DIR || ".next",
   devIndicators: false,
   reactStrictMode: true,
   serverExternalPackages: ["@napi-rs/canvas", "@tesseract.js-data/eng", "mammoth", "pdfjs-dist", "tesseract.js"],

@@ -2,7 +2,7 @@
 
 Purpose: agent-readable business dictionary for the current CleanOps Supabase model. Exact SQL, constraints, grants, RLS and RPC behavior are owned by `supabase/migrations/`; if this file disagrees with a migration, the migration wins.
 
-Last reviewed: 2026-09-24 for the hosted fixture guard migrations.
+Last reviewed: 2026-09-24 for connected evidence and hosted fixture migrations.
 
 ## Conventions
 
@@ -76,7 +76,7 @@ Important rule: a replacement selection does not count as present. Coverage chan
 
 | Table | Meaning | Key fields |
 |---|---|---|
-| `task_evidence` | Private evidence plus resolved operational linkage. | message/media refs, worker/site/zone/task, `role` before/after, processing/linkage status, resolution code, storage path, MIME/size/hash, capture/receipt times, revision. |
+| `task_evidence` | Private evidence plus resolved operational linkage. | message/media refs, attributed `worker_id`, authenticated `submitted_by_user_id` (nullable for external/fixture ingress), site/zone/task, `role` before/after, processing/linkage status, resolution code, storage path, MIME/size/hash, source/receipt times, revision. |
 | `evidence_pairs` | Before/after pair for one task revision. | task run, revision, before evidence, after evidence. |
 | `evidence_audit_events` | Append-only evidence audit history. | evidence, actor, action, reason code, details. |
 | `quality_decisions` | Structured Mock AI or live AI assessment. | task/revision/pair, service/version/schema, source label, status, advisory score/confidence, observations, limitations, error. |

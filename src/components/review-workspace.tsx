@@ -1,17 +1,15 @@
 "use client";
 
-import { type ReactNode, useState, useTransition } from "react";
+import { type ReactNode, useEffect, useState, useTransition } from "react";
 import type { ReviewWorkspace as ReviewWorkspaceData } from "@/integrations/review/supabase-review";
 import { performReviewAction, type ReviewActionState } from "@/app/review/actions";
-
-const taskId = "81000000-0000-4000-8000-000000000001";
 
 const auditLabels: Record<string, string> = {
   "quality.recorded": "Mock assessment recorded",
   "quality.failed": "Mock assessment unavailable",
   "finding.confirmed": "Supervisor confirmed finding",
   "suggestion.dismissed": "Supervisor dismissed suggestion",
-  "correction.submitted": "Cleaner submitted correction",
+  "correction.submitted": "Corrected evidence submitted",
   "submission.approved": "Supervisor approved submission",
 };
 
@@ -33,20 +31,55 @@ function ActionButton({
   );
 }
 
-function EvidenceCard({ role, time, revision }: { role: "Before" | "After"; time: string; revision: number }) {
+function EvidenceCard({ role, evidence }: {
+  role: "Before" | "After";
+  evidence: ReviewWorkspaceData["evidence"]["before"];
+}) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "denied" | "missing" | "unavailable">("loading");
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    if (!evidence) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => setRefresh((value) => value + 1), 50_000);
+    fetch(`/api/evidence/${evidence.id}/signed-url`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return { status: response.status, url: null };
+        const body: unknown = await response.json();
+        const url = typeof body === "object" && body !== null && "signedUrl" in body
+          && typeof body.signedUrl === "string" ? body.signedUrl : null;
+        return { status: response.status, url };
+      })
+      .then(({ status, url }) => {
+        if (cancelled) return;
+        setSignedUrl(url);
+        setState(url ? "ready" : status === 401 || status === 403 ? "denied" : status === 404 ? "missing" : "unavailable");
+      })
+      .catch(() => { if (!cancelled) setState("unavailable"); });
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [evidence, refresh]);
+  const visibleState = evidence ? state : "missing";
+  const sourceTime = evidence?.captured_at ? new Date(evidence.captured_at).toLocaleString() : "Unknown";
   return (
     <article className="evidenceCard">
-      <div className={`evidencePreview evidencePreview${role}`} aria-label={`${role} synthetic evidence preview`}>
-        <span className="evidenceTileMark" aria-hidden="true" />
-        <span>Synthetic image</span>
+      <div className={`evidencePreview evidencePreview${role}`} aria-label={`${role} private evidence`}>
+        {visibleState === "ready" && signedUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={signedUrl} data-evidence-id={evidence?.id} alt={`${role} evidence for this task`} onError={() => setState("missing")} />
+        ) : <span>{visibleState === "loading" ? "Loading private image…" : visibleState === "denied" ? "Access denied" : visibleState === "missing" ? "Image missing" : "Image unavailable"}</span>}
       </div>
       <div className="evidenceMeta">
         <div>
           <strong>{role}</strong>
-          <span>{time} · Revision {revision}</span>
+          <span>Source time {sourceTime} · Revision {evidence?.submission_revision ?? "—"}</span>
+          <span>Source time is supplied by the sender, not proof of capture time.</span>
+          {evidence ? <span>Received {new Date(evidence.received_at).toLocaleString()}</span> : null}
+          {evidence ? <span>Submitted by {evidence.submitted_by_user_id ? `authenticated user ${evidence.submitted_by_user_id.slice(0, 8)}` : "synthetic ingress"}</span> : null}
+          {evidence?.worker_id ? <span>Attributed worker {evidence.worker_id.slice(0, 8)}</span> : null}
         </div>
         <span className="privacyLabel">Private</span>
       </div>
+      {evidence && visibleState !== "loading" ? <button type="button" className="reviewButton reviewButton-quiet" onClick={() => { setState("loading"); setRefresh((value) => value + 1); }}>Refresh image</button> : null}
     </article>
   );
 }
@@ -55,6 +88,7 @@ export function ReviewWorkspace({ workspace, demo }: { workspace: ReviewWorkspac
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<ReviewActionState | null>(null);
   const revision = workspace.task.submission_revision;
+  const taskId = workspace.task.id;
   const correction = workspace.correctiveActions.at(-1) ?? null;
   const dismissed = workspace.auditEvents.some(
     (event) => event.submission_revision === revision && event.action === "suggestion.dismissed",
@@ -77,7 +111,7 @@ export function ReviewWorkspace({ workspace, demo }: { workspace: ReviewWorkspac
     <div className="reviewWorkspace">
       <header className="reviewHeader">
         <div>
-          <p className="reviewContext">Aurora Downtown Demo · Sunday night shift</p>
+          <p className="reviewContext">{workspace.siteName} · synthetic night shift</p>
           <h1>Evidence review</h1>
           <p className="reviewLead">Compare the latest submission, decide whether the suggested issue is real, and approve only the current revision.</p>
         </div>
@@ -113,8 +147,8 @@ export function ReviewWorkspace({ workspace, demo }: { workspace: ReviewWorkspac
                 <span className="sectionTime">{revision > 1 ? "23:34" : "23:29"}</span>
               </div>
               <div className="evidencePair">
-                <EvidenceCard role="Before" time={revision > 1 ? "23:33" : "23:15"} revision={revision} />
-                <EvidenceCard role="After" time={revision > 1 ? "23:34" : "23:29"} revision={revision} />
+                <EvidenceCard role="Before" evidence={workspace.evidence.before} />
+                <EvidenceCard role="After" evidence={workspace.evidence.after} />
               </div>
             </section>
 
@@ -190,7 +224,8 @@ export function ReviewWorkspace({ workspace, demo }: { workspace: ReviewWorkspac
             {workspace.task.state === "correction_required" && correction ? (
               <section className="correctionPanel" aria-labelledby="correction-title">
                 <div><p>Corrective action</p><h2 id="correction-title">{correction.instruction}</h2><span>Requested against revision {correction.source_revision}</span></div>
-                <ActionButton disabled={pending || !demo} onClick={() => act({ action: "submit_correction", taskRunId: taskId })}>Submit corrected evidence</ActionButton>
+                <a className="reviewButton reviewButton-primary" href={`/mobile?taskRunId=${taskId}`}>Capture corrected after photo →</a>
+                {demo ? <ActionButton tone="secondary" disabled={pending} onClick={() => act({ action: "submit_correction", taskRunId: taskId })}>Use labelled synthetic sample</ActionButton> : null}
               </section>
             ) : null}
           </div>
