@@ -27,7 +27,7 @@ export async function getOperationsRuntime(capability: HostedDemoCapability = "s
   const actorUserId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
   if (error || !actorUserId) throw new Error("Authentication required.");
   if (demo) {
-    if (!await hasHostedDemoAccess(accessClient, actorUserId, capability)) throw new Error("Role access required.");
+    if (!await hasHostedDemoAccess(accessClient, actorUserId, capability, false)) throw new Error("Role access required.");
     return { accessClient: writeClient, writeClient, actorUserId, demo: true };
   }
   const hostedDemo = await hasHostedDemoAccess(accessClient, actorUserId, capability);
