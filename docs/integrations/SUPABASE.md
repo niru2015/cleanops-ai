@@ -55,6 +55,8 @@ compatibility on PostgreSQL 18 and runs application checks on Node.js 24.
 
 - `supabase/config.toml` declares a private `operational-evidence` bucket with a 10 MiB limit and
   JPEG, PNG and WebP allowlist.
+- Migration `20260924033215_operational_evidence_hosted_bucket.sql` creates or reconciles that
+  private bucket in hosted projects; local config alone does not provision hosted Storage.
 - Migration `20260916061705_operational_evidence.sql` defines tenant/site constraints, RLS,
   service-only staging/finalization and authenticated audited resolution.
 - Storage object reads require a visible ready evidence row. The application issues a short-lived
