@@ -1,5 +1,9 @@
 # Finance showcase UAT — synthetic Gate A
 
+For a read-only customer presentation using the currently verified hosted run, start with
+[TORNADO_FINANCE_REHEARSAL.md](TORNADO_FINANCE_REHEARSAL.md). This document is the broader
+state-changing Gate A checklist; its pending cases must be executed and evidenced separately.
+
 This is the presenter and evidence checklist for #38. It tests a synthetic Tornado-style
 finance workflow, not a customer pilot or a live Sage/WhatsApp claim. Use #28's generated
 `finance-showcase` version and record the actual seed, run ID, app commit, schema migration,
