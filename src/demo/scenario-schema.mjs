@@ -16,7 +16,7 @@ export const scenarioSchema = z.object({
   schemaVersion: z.literal(1),
   scenarioId: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/),
   seed: z.number().int().nonnegative().max(0xffffffff),
-  generatorVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6), z.literal(7)]),
+  generatorVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6), z.literal(7), z.literal(8)]),
   clock: z.object({ start: date, end: date, timezone: z.string().min(3) }).strict(),
   organization: z.object({ name: z.string().min(2).max(120), siteCount: z.number().int().min(1).max(20), workerCount: z.number().int().min(1).max(300) }).strict(),
   referencePack: z.enum(["fictional-v1", "tornado-v1"]),
@@ -46,6 +46,8 @@ export const referenceSchema = z.object({
     key: z.string().regex(/^[a-z][a-z0-9-]*$/),
     displayName: z.string().min(2),
     role: z.enum(["organization_administrator", "area_manager", "operations_manager", "site_supervisor", "cleaner", "client_viewer"]),
+    siteIndex: z.number().int().nonnegative().optional(),
+    minGeneratorVersion: z.number().int().min(1).max(8).optional(),
   }).strict()).min(1),
 }).strict().superRefine((value, context) => {
   if (new Set(value.personas.map((persona) => persona.key)).size !== value.personas.length) context.addIssue({ code: "custom", path: ["personas"], message: "persona keys must be unique" });

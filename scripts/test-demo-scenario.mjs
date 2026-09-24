@@ -36,6 +36,9 @@ try {
   run("generate", scenarioName);
   created = true;
   run("assert", scenarioName);
+  const resetScope = JSON.parse(run("reset-preflight", scenarioName));
+  assert(resetScope.scopeVerified && resetScope.runId === plan.runId && resetScope.authUserCount === plan.personas.length,
+    "Reset preflight did not verify the exact generated run and personas.");
   assert(await count("sites", plan.organization.id) === 2, "Generated site count did not query back correctly.");
   assert(await count("workers", plan.organization.id) === 4, "Generated worker count did not query back correctly.");
   const expected = JSON.parse(await readFile(`fixtures/generated/${scenarioName}/expected.json`, "utf8"));
@@ -50,6 +53,8 @@ try {
   const registry = JSON.parse(await readFile(registryPath, "utf8"));
   registry.status = "partial";
   await writeFile(registryPath, `${JSON.stringify(registry, null, 2)}\n`);
+  assert(JSON.parse(run("reset-preflight", scenarioName)).status === "partial",
+    "Reset preflight did not recognize a partial generated run.");
   run("reset", scenarioName);
   created = false;
   run("generate", scenarioName);

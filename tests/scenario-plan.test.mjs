@@ -51,6 +51,40 @@ describe("CLEAN-036 time scenario contribution", () => {
   });
 });
 
+describe("CLEAN-039 hosted finance personas", () => {
+  const showcase = JSON.parse(readFileSync("fixtures/scenarios/finance-showcase/scenario.json", "utf8"));
+  const tornado = JSON.parse(readFileSync("fixtures/reference/tornado-v1.json", "utf8"));
+
+  it("grants both Area Managers a populated August site and a client viewer only in version 8", () => {
+    const plan = buildScenarioPlan(showcase, tornado);
+    const assigned = (key) => plan.expected.roleSiteAccess.find((entry) => entry.persona === key);
+    expect(plan.personas).toHaveLength(18);
+    expect(assigned("darrel-area").siteIds).toEqual([plan.sites[1].id]);
+    expect(assigned("shayana-area").siteIds).toEqual([plan.sites[0].id]);
+    expect(assigned("scenario-client")).toEqual({
+      persona: "scenario-client", role: "client_viewer", siteIds: [plan.sites[0].id],
+    });
+    expect(plan.memberGrants.find((grant) => grant.membership_id ===
+      plan.personas.find((persona) => persona.key === "scenario-client").membershipId)?.site_id)
+      .toBe(plan.sites[0].id);
+  });
+
+  it("reconstructs the existing hosted version 7 grants for guarded reset", () => {
+    const prior = buildScenarioPlan({ ...showcase, generatorVersion: 7 }, tornado);
+    const assigned = (key) => prior.expected.roleSiteAccess.find((entry) => entry.persona === key);
+    expect(prior.personas).toHaveLength(17);
+    expect(assigned("darrel-area").siteIds).toEqual([prior.sites[2].id]);
+    expect(assigned("shayana-area").siteIds).toEqual([prior.sites[3].id]);
+    expect(assigned("scenario-client")).toBeUndefined();
+  });
+
+  it("rejects a persona assignment outside the scenario site set", () => {
+    const invalid = { ...tornado, personas: tornado.personas.map((persona) =>
+      persona.key === "darrel-area" ? { ...persona, siteIndex: 99 } : persona) };
+    expect(() => buildScenarioPlan(showcase, invalid)).toThrow("outside this scenario");
+  });
+});
+
 describe("CLEAN-022 contract scenario contribution", () => {
   const contractScenario = JSON.parse(readFileSync("fixtures/scenarios/contract-smoke/scenario.json", "utf8"));
   it("derives versioned source rows and expected revenue from the seed", () => {
