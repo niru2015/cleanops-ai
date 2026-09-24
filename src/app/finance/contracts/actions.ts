@@ -160,6 +160,29 @@ export async function transitionContract(form: FormData) {
   redirect(destination);
 }
 
+export async function returnContractToDraft(form: FormData) {
+  const id = z.uuid().parse(value(form, "contractId"));
+  let destination = `/finance/contracts/${id}/review`;
+  try {
+    const reason = z.string().trim().min(5).max(500).parse(value(form, "reason"));
+    const client = await createSupabaseServerClient();
+    const access = await getAppAccessContext(client);
+    if (!["organization_administrator", "area_manager"].includes(access.role))
+      throw new Error("Contract draft access is required.");
+    const detail = await getContractDetail(client, access, id);
+    if (detail.version.state !== "in_review" || !isSiteAllowed(access, detail.contract.site_id))
+      throw new Error("The submitted contract is unavailable for revision.");
+    const result = await client.rpc("return_contract_version_to_draft", {
+      p_contract_version_id: detail.version.id, p_reason: reason });
+    if (result.error) throw new Error(result.error.message);
+    revalidatePath("/finance/contracts");
+    revalidatePath(destination);
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(errorMessage(error))}`;
+  }
+  redirect(destination);
+}
+
 export async function assignContractObligationZone(form: FormData) {
   const id = z.string().uuid().parse(value(form, "contractId"));
   let destination = `/finance/contracts/${id}/review`;

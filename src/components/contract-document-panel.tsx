@@ -21,8 +21,8 @@ async function digest(file: File) {
   return Array.from(new Uint8Array(hash), (item) => item.toString(16).padStart(2, "0")).join("");
 }
 
-export function ContractDocumentPanel({ contractId, canUpload, canReadDocuments, operationalOnly, documents, proposals,
-  decisions }: { contractId: string; canUpload: boolean; canReadDocuments: boolean; operationalOnly: boolean;
+export function ContractDocumentPanel({ contractId, canUpload, canReadDocuments, canReview, operationalOnly, documents, proposals,
+  decisions }: { contractId: string; canUpload: boolean; canReadDocuments: boolean; canReview: boolean; operationalOnly: boolean;
   documents: DocumentView[]; proposals: ProposalView[]; decisions: DecisionView[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -111,7 +111,7 @@ export function ContractDocumentPanel({ contractId, canUpload, canReadDocuments,
           {reviewed ? <p>Human decision: {reviewed.decision}
             {reviewed.reviewed_value == null ? "" : ` · ${JSON.stringify(reviewed.reviewed_value)}`}
             {reviewed.canonical_table ? ` · saved to ${reviewed.canonical_table}` : ""}</p>
-            : <>
+            : !canReview ? <p>Return this version to draft before reviewing the proposal.</p> : <>
               <label>Edited value as JSON <textarea value={edits[proposal.id] ?? JSON.stringify(proposal.proposed_value)}
                 onChange={(event) => setEdits((prior) => ({ ...prior, [proposal.id]: event.target.value }))} /></label>
               <div className="reviewActions">

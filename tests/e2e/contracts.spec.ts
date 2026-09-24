@@ -66,6 +66,26 @@ test("Area Manager drafts only an assigned site and cannot approve", async ({ pa
   await expect(page.getByRole("button", { name: "Activate approved version" })).toHaveCount(0);
 });
 
+test("Director returns a submitted version to the same draft and resubmits it", async ({ page }) => {
+  await signInAsDirector(page);
+  await page.goto("/finance/contracts/new");
+  const code = `RETURN-E2E-${Date.now()}`;
+  await page.getByLabel("Contract code").fill(code);
+  await page.getByLabel("Contract name").fill("Synthetic review revision");
+  await page.getByRole("button", { name: "Create draft and continue" }).click();
+  await page.getByRole("link", { name: "Review saved draft" }).click();
+  await expect(page).toHaveURL(/\/review$/);
+  const reviewUrl = page.url();
+  await page.getByRole("button", { name: "Submit for review" }).click();
+  await expect(page.getByText(/version 1 · in_review/)).toBeVisible();
+  await page.getByLabel("Revision reason").fill("Complete the source review");
+  await page.getByRole("button", { name: "Return to draft for revision" }).click();
+  await expect(page).toHaveURL(reviewUrl);
+  await expect(page.getByText(/version 1 · draft/)).toBeVisible();
+  await page.getByRole("button", { name: "Submit for review" }).click();
+  await expect(page.getByText(/version 1 · in_review/)).toBeVisible();
+});
+
 test("Operations Manager reviews obligations without commercial prices", async ({ page }) => {
   await signInAs(page, process.env.CLEANOPS_E2E_OPERATIONS_EMAIL);
   await page.goto("/finance/contracts");
