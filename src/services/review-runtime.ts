@@ -23,7 +23,7 @@ export async function getReviewRuntime(): Promise<ReviewRuntime> {
   const actorUserId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
   if (error || !actorUserId) throw new Error("Authentication required.");
   if (demoConfig.enabled) {
-    if (!await hasHostedDemoAccess(accessClient, actorUserId, "supervisor")) throw new Error("Supervisor access required.");
+    if (!await hasHostedDemoAccess(accessClient, actorUserId, "supervisor", false)) throw new Error("Supervisor access required.");
     return {
       accessClient: writeClient,
       writeClient,
