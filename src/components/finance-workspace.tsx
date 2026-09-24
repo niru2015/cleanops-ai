@@ -22,7 +22,7 @@ export function FinanceWorkspace({
 }) {
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<FinanceActionState | null>(null);
-  const [importFile, setImportFile] = useState<{ name: string; csv: string } | null>(null);
+  const [importFile, setImportFile] = useState<{ fileName: string; csv: string } | null>(null);
   const [preview, setPreview] = useState<FinanceImportPreview | null>(null);
   const [completeness, setCompleteness] = useState<"complete" | "incomplete" | "estimated">("complete");
   const [supersedesBatchId, setSupersedesBatchId] = useState("");
@@ -77,7 +77,7 @@ export function FinanceWorkspace({
               if (!importFile) return;
               setNotice(null);
               startTransition(async () => {
-                const result = await previewFinanceImport({ fileName: importFile.name, csv: importFile.csv });
+                const result = await previewFinanceImport(importFile);
                 setPreview(result.preview ?? null);
                 setNotice(result);
               });
@@ -85,7 +85,7 @@ export function FinanceWorkspace({
               <label>CSV file<input name="financeCsv" type="file" accept=".csv,text/csv" required onChange={async (event) => {
                 const file = event.target.files?.[0];
                 setPreview(null);
-                setImportFile(file ? { name: file.name, csv: await file.text() } : null);
+                setImportFile(file ? { fileName: file.name, csv: await file.text() } : null);
               }} /></label>
               <button className="reviewButton reviewButton-secondary" type="submit" disabled={pending || !importFile}>Preview import</button>
             </form>
