@@ -154,7 +154,7 @@ async function assertScope(client, plan, allowPartial = false, registry = null) 
     ["member_site_access", ids(plan.memberGrants)],
   ];
   for (const [table, planned] of tables) assertIdSet(await rowsFor(client, table, plan.organization.id), planned, table, allowPartial);
-  if (plan.contract) await assertContractScope(client, plan, allowPartial);
+  if (plan.contract) await assertContractScope(client, plan, allowPartial, registry);
   if (plan.expenseCases) await assertExpenseScope(client,plan,registry,allowPartial);
   if (plan.timeCases) await assertTimeScope(client,plan,registry,allowPartial);
   if (plan.projects) await assertProjectScope(client,plan,registry,allowPartial);
@@ -162,7 +162,7 @@ async function assertScope(client, plan, allowPartial = false, registry = null) 
   return org;
 }
 const contractTables = ["contract_events", "contract_financial_terms", "contract_obligations",
-  "contract_revenue_expectations", "contract_sla_terms", "contract_staffing_requirements",
+  "contract_revenue_expectations", "contract_sla_terms", "contract_staffing_requirements", "contract_documents",
   "contract_versions", "contracts", "service_tasks", "task_schedules", "shifts",
   "shift_coverage_requirements", "sla_definitions", "site_zones"];
 function sqlId(input) {
@@ -203,7 +203,7 @@ function contractGeneratedIds(contract) {
   }
   return rows;
 }
-async function assertContractScope(client, plan, allowPartial) {
+async function assertContractScope(client, plan, allowPartial, registry) {
   const contract = plan.contract;
   for (const [table, planned] of [
     ["site_zones", [contract.zone.id]], ["contracts", [contract.identity.id]],
@@ -211,6 +211,9 @@ async function assertContractScope(client, plan, allowPartial) {
     ["contract_obligations", ids(contract.obligations)],
     ["contract_staffing_requirements", ids(contract.staffing)], ["contract_sla_terms", []],
   ]) assertIdSet(await rowsFor(client, table, plan.organization.id), planned, table, allowPartial);
+  if (plan.scenario.generatorVersion >= 7)
+    assertIdSet(await rowsFor(client, "contract_documents", plan.organization.id),
+      (registry?.contractDocuments ?? []).map(item => item.id), "contract_documents", allowPartial);
   const versionIds = new Set(ids(contract.versions));
   for (const [table, planned] of Object.entries(contractGeneratedIds(contract))) {
     let query=client.from(table).select("id,contract_version_id").eq("organization_id", plan.organization.id);
@@ -441,6 +444,30 @@ async function writeContractDocumentPack(directory, contract) {
       amendment: { amount: contract.terms[1].amount, effectiveFrom: contract.versions[1].effective_from,
         page: 1 }, ambiguous: "Payment terms: TBD;" },
   });
+}
+async function generateContractDocuments(client, plan, registry, directory) {
+  if (!plan.contract || plan.scenario.generatorVersion < 7) return;
+  const director = plan.personas.find(persona => persona.role === "organization_administrator");
+  const directorId = registry.authUserIds[plan.personas.indexOf(director)];
+  registry.contractDocuments = [];
+  for (const [index, file] of ["contract-source.pdf", "contract-amendment.pdf"].entries()) {
+    const bytes = await readFile(join(directory, file));
+    const version = plan.contract.versions[index];
+    const storagePath = `${plan.organization.id}/contract-scenario/${plan.runId}/${file}`;
+    const document = { id: sqlId(`contract-document:${version.id}:${file}`), file,
+      storagePath, versionId: version.id };
+    registry.contractDocuments.push(document);
+    await atomicJson(join(directory, "registry.json"), registry);
+    await checked(client.storage.from("contract-documents").upload(storagePath, bytes,
+      { contentType: "application/pdf", upsert: false }), `Upload synthetic ${file}`);
+    await checked(client.from("contract_documents").insert({ id: document.id,
+      organization_id: plan.organization.id, site_id: plan.sites[0].id,
+      contract_version_id: version.id, file_name: file, declared_mime: "application/pdf",
+      detected_mime: "application/pdf", claimed_byte_size: bytes.length, byte_size: bytes.length,
+      claimed_sha256: hashFixture(bytes), sha256: hashFixture(bytes), page_count: 1,
+      storage_path: storagePath, uploaded_by: directorId, status: "ready",
+      finalized_at: new Date().toISOString() }), `Register synthetic ${file}`);
+  }
 }
 async function writeExpenseReceiptPack(directory,plan){
   if(!plan.expenseCases)return null;
@@ -939,6 +966,7 @@ async function generate(name, seed) {
     }
     if (plan.memberGrants.length) await checked(client.from("member_site_access").insert(plan.memberGrants), "Grant persona sites");
     await generateContracts(client, plan, registry);
+    await generateContractDocuments(client, plan, registry, directory);
     await generateProjectDrafts(client,plan,registry,directory);
     await generateExpenses(client,plan,registry,directory);
     await generateTime(client,plan,registry,directory);
@@ -1041,6 +1069,19 @@ async function assertScenario(name) {
       if (hashFixture(bytes) !== expected.sha256 || bytes.length !== expected.bytes)
         throw new Error(`Synthetic contract document ${file} differs from its manifest.`);
     }
+    if (plan.scenario.generatorVersion >= 7) {
+      for (const document of registry.contractDocuments ?? []) {
+        const metadata = await checked(client.from("contract_documents")
+          .select("id,sha256,status,storage_path").eq("organization_id", plan.organization.id)
+          .eq("id", document.id).single(), `Read ${document.file} document record`);
+        const download = await checked(client.storage.from("contract-documents")
+          .download(document.storagePath), `Download ${document.file}`);
+        const bytes = new Uint8Array(await download.arrayBuffer());
+        if (metadata.status !== "ready" || metadata.storage_path !== document.storagePath ||
+          metadata.sha256 !== hashFixture(bytes) || metadata.sha256 !== pack.files[document.file]?.sha256)
+          throw new Error(`Hosted synthetic contract document ${document.file} differs from its source pack.`);
+      }
+    }
   }
   if(plan.expenseCases){
     const pack=await json(join(directory,"expense-receipts.json"));
@@ -1140,7 +1181,9 @@ async function reset(name) {
     await checked(client.from("projects").delete().eq("organization_id",plan.organization.id),"Delete projects");
   }
   if (plan.contract) {
-    for (const table of ["contract_events", "contract_revenue_expectations", "sla_definitions",
+    if (registry.contractDocuments?.length) await checked(client.storage.from("contract-documents")
+      .remove(registry.contractDocuments.map(item => item.storagePath)), "Remove synthetic contract documents");
+    for (const table of ["contract_documents", "contract_events", "contract_revenue_expectations", "sla_definitions",
       "shift_coverage_requirements", "shifts", "task_schedules", "service_tasks",
       "contract_sla_terms", "contract_staffing_requirements", "contract_obligations",
       "contract_financial_terms", "contract_versions", "contracts", "site_zones"]) {
