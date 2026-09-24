@@ -1,36 +1,31 @@
 # Gate A execution record — 2026-09-24
 
-Issue: [CLEAN-025 / #38](https://github.com/niru2015/cleanops-ai/issues/38). Gate A is the synthetic manager demo; Gate B is a separate production pilot decision. The finance-first override in #38 governs this record.
+Issue: [CLEAN-025 / #38](https://github.com/niru2015/cleanops-ai/issues/38). Gate A is the synthetic, manager-facing Finance MVP demonstration. Gate B is a separate production pilot decision. This is a dated evidence record; it does not claim Gate A has passed.
 
-## Implementation and local evidence
+## Released implementation
 
-| Requirement | Current evidence | State |
+The connected-evidence repairs [#88](https://github.com/niru2015/cleanops-ai/pull/88), [#89](https://github.com/niru2015/cleanops-ai/pull/89), hosted migration [#91](https://github.com/niru2015/cleanops-ai/pull/91), PDF worker [#93](https://github.com/niru2015/cleanops-ai/pull/93), contract-zone review [#95](https://github.com/niru2015/cleanops-ai/pull/95), return-to-draft [#97](https://github.com/niru2015/cleanops-ai/pull/97), CSV acceptance [#99](https://github.com/niru2015/cleanops-ai/pull/99), and OCR runtime assets [#102](https://github.com/niru2015/cleanops-ai/pull/102) are merged. PR #102's merge commit is `49a7595826d3388d54571ca5d7fc2352bb319dd4`; application, database and Vercel checks passed, and its production deployment reached READY. Local checks for #102 passed: typecheck, lint, 89 tests, build and `git diff --check`.
+
+The dedicated hosted `finance-showcase` organization is `62dc9966-0210-59ad-a8a6-fe5a89b68c0b`. Its current registered generator version 8 run is `8b419b91-c602-527c-bb5f-4cb8cf44048d`, seed `20260926`, with four synthetic sites, 80 workers and 18 personas. The generated baseline manifest records CAD 29,308.00 expected contract revenue, CAD 756.46 approved expenses and CAD 789.00 approved labour. These are **baseline** controls: the hosted UAT subsequently added reviewed contracts, expenses, time and accounting corrections, so current screens must not be compared to the unmodified manifest without isolating those deltas.
+
+## Hosted acceptance results
+
+| Gate A check | Observed result | State |
 | --- | --- | --- |
-| Hosted fixture repair and repeatable evidence reset (#25) | [PR #88](https://github.com/niru2015/cleanops-ai/pull/88), production-mode browser test and local database checks | In review; not deployed |
-| Actual photo evidence and after-only correction (#26) | [PR #89](https://github.com/niru2015/cleanops-ai/pull/89), production-mode browser and database checks | In review; not deployed |
-| Deterministic finance source data (#28) | `npm run demo:generate -- finance-showcase --seed 20260925` generated 4 sites, 80 workers and 18 personas locally | Pass locally |
-| Manifest and presenter controls | `npm run demo:assert -- finance-showcase` matched CAD 30,133.92 current expected revenue and CAD 754.39 approved expense cost; `npm run demo:presenter -- finance-showcase` produced the guide | Pass locally |
-| Local reset and alternate-seed replay | `node scripts/demo-scenario.mjs reset-preflight finance-showcase` verified the registered scope, `npm run demo:reset -- finance-showcase` passed, then seed `20260926` generated and asserted. Revenue changed to CAD 29,308.00 and approved expense cost to CAD 756.46; four sites, 80 workers, 18 personas and Director/Area Manager/Client grants remained defined. | Pass locally; hosted replay pending |
-| Hosted finance UAT | [FINANCE_UAT.md](FINANCE_UAT.md) steps 1–12, including contract activation, supported receipt intake, labour posting, reconciliation and alternate-seed replay | Pending |
-| Recording and access evidence | [TORNADO_DEMO.md](../../TORNADO_DEMO.md) defines video, screenshot, trace and HTML outputs; [TORNADO_FINANCE_REHEARSAL.md](TORNADO_FINANCE_REHEARSAL.md) records earlier read-only hosted checks | Full Gate A recording and network/device checks pending |
+| Contract source and activation | Director uploaded synthetic source PDF, reviewed cited terms and unknowns, activated Grand Villa contract version 1 at CAD 1,703.95/month from June, then approved future amendment version 2 at CAD 1,874.35/month from October. Generated tasks, schedules, staffing requirements and expected revenue were checked; old June–September entries stayed current and old October entries became non-current. | Pass for tested source-backed path |
+| Supported expense intake | Area Manager submitted synthetic meal/fuel messages and private PNG receipts through the app form. Director rejected incomplete/malformed claims without posting, approved a corrected CAD 19.25 meal with human review, and saw the exact-hash fuel duplicate guard. After #102 deployed, hosted OCR suggested vendor/date/CAD 44.15/category from a PNG within seconds and left absent payment method unknown. | Pass for app intake; no live WhatsApp claim |
+| Labour and project | Director approved and posted two separate synthetic one-hour Hastings project entries at CAD 27 each through the app. Source and ledger links persisted; incomplete attendance cases remained exceptions rather than guessed hours. | Pass for tested manual project path |
+| Accounting and close | Director accepted a corrected complete September CSV, linked labour/meal and closed at CAD 46.25. A later CAD 27 posting made the close stale. After explicit reopen and superseding import, one CAD 54 allocation was split into two CAD 27 labour links; September closed at version 2 with CAD 73.25 operational and matched, zero unmatched/unallocated. June same-amount fuel proposals remained ambiguous and its incomplete close was rejected. | Pass for tested correction/guard path |
+| Site and role boundaries | Director finance access; Grand Villa Area Manager saw only assigned site and no worker rates; generated Worker and Client saw finance denial and private contract 404. Legacy synthetic Client saw only the released redacted Grand Villa report, and no finance contribution detail. | Pass for tested roles |
+| Signed evidence | Legacy synthetic Director got HTTP 200 and `no-store` for ready private evidence. Cross-tenant Area Manager/Client got 404; anonymous got 401; same-tenant Client got 404. Temporarily revoking the Director's exact synthetic membership made its existing session get 404; membership was restored and verified active. No signed URL/token was saved. | Pass |
+| Released client report | Director reviewed and released the synthetic 149/150 (99.3%) on-time snapshot. Separate Client session displayed only released redacted data; worker statements, private evidence and internal audit were excluded. One-page A4 PDF was rendered and visually checked. | Pass |
+| Desktop and responsive browser | Credential-free eight-chapter hosted video ran 1:59.16 at 1280×720; eight routes returned HTTP 200 and no console errors. Desktop keyboard Tab reached links/buttons. At 390px, authorized Area Manager expense form had no horizontal overflow; offline reload failed and online reload recovered. | Pass for browser emulation; physical device separate |
+| Hosted alternate-seed reset | Earlier version 8 seed `20260925` and current `20260926` are recorded, and local reset/alternate-seed assertion changed source totals. A **new** hosted `reset-preflight` refuses the current post-UAT data at `contracts differs from the scenario registry`. No unsafe reset was attempted. | Blocked pending exact-scope cleanup and replay |
+| Physical iPhone camera/library | Mac device and USB inventories showed only simulators after the owner reported connecting an iPhone. Trust/pairing confirmation requested. | Pending |
+| Timed 10–12-minute rehearsal and demo credential rotation | Presenter route exists in [TORNADO_FINANCE_REHEARSAL.md](TORNADO_FINANCE_REHEARSAL.md); a full timed rehearsal and post-UAT rotation are not yet evidenced. | Pending |
 
-The local run logs and first-seed manifest snapshot are in the ignored `artifacts/tornado-demo/gate-a/` folder. Generated source files and the second-seed `expected.json` are in ignored `fixtures/generated/finance-showcase/`. These are local synthetic results, not evidence that the hosted app has the two new pull requests or that hosted state-changing UAT passed. PR #89 database checks were still running when this record was written; use the pull request's current checks rather than this snapshot for release decisions.
+The detailed execution log, UAT screenshots, HTML/JSON/JUnit recorder output, native videos and traces are local ignored files under `artifacts/tornado-demo/`. Key Gate A files are `gate-a/hosted-uat-progress.md`, `gate-a/hosted-two-minute-demo.webm`, `gate-a/hosted-two-minute-demo-trace.zip`, `gate-a/hosted-ocr-suggestion-replay.png`, `gate-a/hosted-client-released-report.png` and `gate-a/released-redacted-client-report.pdf`. They contain synthetic demonstration data and should be reviewed before any external sharing. The generated manifests are ignored under `fixtures/generated/`.
 
-## Release sequence and acceptance record
+## Closure decision
 
-1. Review and merge #88, then #89, after both required `application` and `database` checks pass. Check the deployed commit and migration ledger; record them here. The PRs are stacked, so update/rebase #89 against the merged base as needed.
-2. On the dedicated synthetic hosted organization, run the read-only hosted preflight described in [DATA_FACTORY.md](DATA_FACTORY.md). Review its exact delete/create scope before the separately approved hosted `--apply` reset or generation. Record run ID, seed, organization, manifest hash and post-run assertion. Keep credentials outside Git and the evidence pack.
-3. Execute [FINANCE_UAT.md](FINANCE_UAT.md) steps 1–12 on the deployed build. For each action, save source ID, actor/site, expected and actual result, screenshot/trace, and pass/fail. Require real service-path writes for at least one critical finance flow; generated rows alone do not meet #38.
-4. In separate sessions, test Director, Area Manager, Supervisor/Worker and Client; inspect forbidden site/role, revoked membership and signed-media network responses. Check reload persistence, duplicate/retry/failure and month-boundary behavior. Record a real iPhone camera/library and desktop run with console and keyboard observations.
-5. Replay an approved reset with a second seed, assert changed source totals and unchanged access rules, and check unrelated tenant/Auth/private object isolation. Finish the 10–12-minute run and redacted two-minute recording, printable report and rotated demo credentials. Keep synthetic and simulated-integration labels on shared material.
-
-Record actual results below when each step executes. Do not close #38 or claim Gate A complete from local fixtures, green CI, or a read-only presentation.
-
-| Gate | Result | Evidence |
-| --- | --- | --- |
-| Deployed commit and migration ledger | Pending | |
-| Hosted controlled finance UAT | Pending | |
-| Role, site, revoked and signed-media probes | Pending | |
-| Alternate-seed replay and isolation | Pending | |
-| Real iPhone, desktop, keyboard and console | Pending | |
-| Redacted recording, report and credential rotation | Pending | |
+Keep #38 open. [#103](https://github.com/niru2015/cleanops-ai/issues/103) tracks guarded cleanup of only UAT-added records, followed by hosted reset preflight, another alternate-seed generate/assert and unrelated-tenant isolation check. Run real iPhone camera/photo-library acceptance, then a timed rehearsal and credential rotation. Maintain the app/simulator label for expense messages; official WhatsApp/Make sandbox evidence is a separate gate. Do not infer a customer-approved pilot from this synthetic demo.
