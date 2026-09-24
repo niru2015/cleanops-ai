@@ -30,6 +30,7 @@
     "demo:reset": "node scripts/demo-scenario.mjs reset",
     "demo:assert": "node scripts/demo-scenario.mjs assert",
     "demo:presenter": "node scripts/demo-scenario.mjs presenter",
+    "demo:tornado": "node scripts/run-tornado-demo.mjs",
     "test:scenario": "node scripts/test-demo-scenario.mjs",
     "test:contract-concurrency": "node scripts/test-contract-concurrency.mjs"
   },
