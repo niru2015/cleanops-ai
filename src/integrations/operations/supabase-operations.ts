@@ -22,7 +22,7 @@ export type OperationsWorkspace = {
   siteName: string;
   coverage: { required: number; present: number; gap: number };
   timeline: { time: string; present: number; required: number }[];
-  zones: { id: string; name: string; task: string; state: string; due: string }[];
+  zones: { id: string; name: string; task: string; state: string; due: string; taskRunId: string | null }[];
   candidates: { id: string; name: string; selected: boolean; checkedIn: boolean }[];
   outstandingReviews: number;
   openCorrections: number;
@@ -71,7 +71,7 @@ export async function getOperationsWorkspace(client: SupabaseClient): Promise<Op
     ],
     zones: zones.map((zone) => {
       const run = runByZone.get(zone.id);
-      return { id: zone.id, name: zone.name, task: run ? taskById.get(run.task_id) ?? "Service task" : "No task scheduled", state: run?.state ?? "empty", due: run?.due_at ?? "" };
+      return { id: zone.id, name: zone.name, task: run ? taskById.get(run.task_id) ?? "Service task" : "No task scheduled", state: run?.state ?? "empty", due: run?.due_at ?? "", taskRunId: run?.id ?? null };
     }),
     candidates: candidates.map((candidate) => {
       const assignment = assignmentByWorker.get(candidate.id);
@@ -110,23 +110,50 @@ export async function checkInReplacement(client: SupabaseClient, workerId: strin
   if (error) throw new Error(error.message);
 }
 
-export type MobileWorkspace = { taskId: string; taskName: string; zoneName: string; state: string; contextSelected: boolean; beforeReady: boolean; afterReady: boolean };
+export type MobileWorkspace = { taskId: string; taskName: string; zoneName: string; state: string; dueAt: string; submissionRevision: number; contextSelected: boolean; beforeReady: boolean; afterReady: boolean };
 
 export async function getMobileWorkspace(client: SupabaseClient, taskRunId: string): Promise<MobileWorkspace> {
-  const task = await row(client.from("task_runs").select("id,task_id,zone_id,state").eq("id", taskRunId).single(), z.object({ id: uuid, task_id: uuid, zone_id: uuid, state: z.string() }));
+  const task = await row(client.from("task_runs").select("id,task_id,zone_id,state,due_at,submission_revision").eq("id", taskRunId).single(), z.object({ id: uuid, task_id: uuid, zone_id: uuid, state: z.string(), due_at: z.string(), submission_revision: z.number().int().nonnegative() }));
   const [taskName, zone, contexts, evidence] = await Promise.all([
     row(client.from("service_tasks").select("name").eq("id", task.task_id).single(), z.object({ name: z.string() })),
     row(client.from("site_zones").select("name").eq("id", task.zone_id).single(), z.object({ name: z.string() })),
-    row(client.from("conversation_contexts").select("id").eq("task_run_id", task.id).eq("external_thread_id", "cleanops-mobile-demo"), z.array(z.object({ id: uuid }))),
-    row(client.from("task_evidence").select("role,processing_status,linkage_status").eq("task_run_id", task.id), z.array(z.object({ role: z.string().nullable(), processing_status: z.string(), linkage_status: z.string() }))),
+    row(client.from("conversation_contexts").select("id").eq("task_run_id", task.id), z.array(z.object({ id: uuid }))),
+    row(client.from("task_evidence").select("role,submission_revision,processing_status,linkage_status").eq("task_run_id", task.id), z.array(z.object({ role: z.string().nullable(), submission_revision: z.number().int().nullable(), processing_status: z.string(), linkage_status: z.string() }))),
   ]);
-  const readyRoles = new Set(evidence.filter((item) => item.processing_status === "ready" && item.linkage_status === "linked").map((item) => item.role));
-  return { taskId: task.id, taskName: taskName.name, zoneName: zone.name, state: task.state, contextSelected: contexts.length > 0, beforeReady: readyRoles.has("before"), afterReady: readyRoles.has("after") };
+  const ready = evidence.filter((item) => item.processing_status === "ready" && item.linkage_status === "linked");
+  const targetRevision = task.state === "correction_required" ? task.submission_revision + 1 : Math.max(1, task.submission_revision);
+  return { taskId: task.id, taskName: taskName.name, zoneName: zone.name, state: task.state, dueAt: task.due_at,
+    submissionRevision: task.submission_revision, contextSelected: contexts.length > 0,
+    beforeReady: ready.some((item) => item.role === "before" && (item.submission_revision ?? 0) <= targetRevision),
+    afterReady: ready.some((item) => item.role === "after" && item.submission_revision === targetRevision) };
+}
+
+export async function getCaptureTaskOptions(client: SupabaseClient) {
+  const assignments = await row(client.from("task_run_assignments")
+    .select("task_run_id").eq("organization_id", DEMO_ORGANIZATION_ID)
+    .eq("site_id", DEMO_SITE_ID).eq("worker_id", "60000000-0000-4000-8000-000000000001"),
+  z.array(z.object({ task_run_id: uuid })));
+  const ids = [...new Set(assignments.map((assignment) => assignment.task_run_id))]
+    .filter((id) => id === "81000000-0000-4000-8000-000000000001" || id === "81000000-0000-4000-8000-000000000004");
+  if (!ids.length) return [];
+  const runs = await row(client.from("task_runs").select("id,task_id,zone_id")
+    .eq("organization_id", DEMO_ORGANIZATION_ID).eq("site_id", DEMO_SITE_ID).in("id", ids),
+  z.array(z.object({ id: uuid, task_id: uuid, zone_id: uuid })));
+  const [tasks, zones] = await Promise.all([
+    row(client.from("service_tasks").select("id,name").eq("site_id", DEMO_SITE_ID), z.array(z.object({ id: uuid, name: z.string() }))),
+    row(client.from("site_zones").select("id,name").eq("site_id", DEMO_SITE_ID), z.array(z.object({ id: uuid, name: z.string() }))),
+  ]);
+  return runs.map((run) => ({ id: run.id, taskName: tasks.find((task) => task.id === run.task_id)?.name ?? "Task",
+    zoneName: zones.find((zone) => zone.id === run.zone_id)?.name ?? "Area" }))
+    .sort((a, b) => a.zoneName.localeCompare(b.zoneName));
 }
 
 export async function selectMobileZone(client: SupabaseClient, taskRunId: string) {
-  const existing = await row(client.from("conversation_contexts").select("id").eq("external_thread_id", "cleanops-mobile-demo").eq("task_run_id", taskRunId), z.array(z.object({ id: uuid })));
+  const task = await row(client.from("task_runs").select("id,organization_id,site_id,zone_id").eq("id", taskRunId).single(), z.object({ id: uuid, organization_id: uuid, site_id: uuid, zone_id: uuid }));
+  if (task.organization_id !== DEMO_ORGANIZATION_ID || task.site_id !== DEMO_SITE_ID) throw new Error("Task is outside the synthetic site.");
+  const threadId = taskRunId === "81000000-0000-4000-8000-000000000001" ? "restroom-b-thread" : "cleanops-mobile-demo";
+  const existing = await row(client.from("conversation_contexts").select("id").eq("external_thread_id", threadId).eq("task_run_id", taskRunId), z.array(z.object({ id: uuid })));
   if (existing.length) return;
-  const { error } = await client.from("conversation_contexts").insert({ organization_id: DEMO_ORGANIZATION_ID, integration_account_id: "c0000000-0000-4000-8000-000000000001", external_thread_id: "cleanops-mobile-demo", external_sender_id: "worker-182", assignment_id: "a0000000-0000-4000-8000-000000000001", site_id: DEMO_SITE_ID, zone_id: "50000000-0000-4000-8000-000000000004", task_run_id: taskRunId, starts_at: "2026-09-14T06:14:00Z", expires_at: "2026-09-14T06:44:00Z" });
+  const { error } = await client.from("conversation_contexts").insert({ organization_id: DEMO_ORGANIZATION_ID, integration_account_id: "c0000000-0000-4000-8000-000000000001", external_thread_id: threadId, external_sender_id: "worker-182", assignment_id: "a0000000-0000-4000-8000-000000000001", site_id: DEMO_SITE_ID, zone_id: task.zone_id, task_run_id: taskRunId, starts_at: "2026-09-14T06:14:00Z", expires_at: "2026-09-14T06:44:00Z" });
   if (error) throw new Error(error.message);
 }

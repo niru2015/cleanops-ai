@@ -24,7 +24,7 @@ async function sha256(file: File) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export function MobileTask({ workspace, demo }: { workspace: MobileWorkspace; demo: boolean }) {
+export function MobileTask({ workspace, demo, actorRole, taskOptions }: { workspace: MobileWorkspace; demo: boolean; actorRole: string; taskOptions: { id: string; taskName: string; zoneName: string }[] }) {
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<MobileActionState | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -51,7 +51,9 @@ export function MobileTask({ workspace, demo }: { workspace: MobileWorkspace; de
     if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
       setSelectedFile(null);
       setPreviewUrl(null);
-      setNotice({ ok: false, message: "Choose a JPEG, PNG, or WebP image." });
+      setNotice({ ok: false, message: file.type === "image/heic" || file.type === "image/heif"
+        ? "HEIC/HEIF is not supported. Choose a JPEG, PNG, or WebP image from your library."
+        : "Choose a JPEG, PNG, or WebP image." });
       return;
     }
     if (file.size < 1 || file.size > MAX_IMAGE_BYTES) {
@@ -107,6 +109,7 @@ export function MobileTask({ workspace, demo }: { workspace: MobileWorkspace; de
 
         setUploadStatus("Verifying and linking photo…");
         const finalized = await finalizeMobilePhotoUpload({
+          taskRunId: workspace.taskId,
           evidenceId: prepared.upload.evidenceId,
           expiresAt: prepared.upload.expiresAt,
           signature: prepared.upload.signature,
@@ -123,27 +126,30 @@ export function MobileTask({ workspace, demo }: { workspace: MobileWorkspace; de
 
   return (
     <div className="mobileTaskWorkspace">
-      <header className="mobileTaskHeader"><div><p className="eyebrow">Worker 182 · Sunday night</p><h1>My tasks</h1></div><span className="shiftPill">On shift</span></header>
+      <header className="mobileTaskHeader"><div><p className="eyebrow">Capture attributed to Worker 182 · signed in as {actorRole}</p><h1>Task evidence</h1></div><span className="shiftPill">Synthetic shift</span></header>
       {notice ? <div className={`mobileNotice ${notice.ok ? "mobileNoticeSuccess" : "mobileNoticeError"}`} role="status">{notice.message}</div> : null}
       {pending ? <div className="mobileUploadStatus" role="status"><span className="loadingPulse" /> {uploadStatus ?? "Saving securely…"}</div> : null}
+      <nav aria-label="Assigned evidence tasks" className="captureTaskChoices">
+        {taskOptions.map((task) => <a key={task.id} href={`/mobile?taskRunId=${task.id}`} aria-current={task.id === workspace.taskId ? "page" : undefined}>{task.zoneName} · {task.taskName}</a>)}
+      </nav>
       <section className="mobileTaskCard" aria-labelledby="mobile-task-title">
         <div className="mobileTaskTop"><span className="taskNumber">01</span><span className={`zoneState zoneState-${workspace.state}`}>{workspace.state.replaceAll("_", " ")}</span></div>
-        <p>{workspace.zoneName}</p><h2 id="mobile-task-title">{workspace.taskName}</h2><span className="taskDue">Due 23:45 · Before and after required</span>
+        <p>{workspace.zoneName}</p><h2 id="mobile-task-title">{workspace.taskName}</h2><span className="taskDue">Due {new Intl.DateTimeFormat("en-CA", { timeZone: "America/Vancouver", hour: "numeric", minute: "2-digit" }).format(new Date(workspace.dueAt))} · Before and after required</span>
         {!workspace.contextSelected ? (
           <div className="qrPrompt">
             <div className="qrGraphic" aria-hidden="true"><span /><span /><span /><span /></div>
             <div><strong>Confirm your work area</strong><p>Scan the zone code to attach photos to this task.</p></div>
-            <button className="mobilePrimaryButton" type="button" disabled={pending || !demo} onClick={() => act({ action: "select_zone", taskRunId: workspace.taskId })}>Scan Slot Bank 14 code</button>
+            <button className="mobilePrimaryButton" type="button" disabled={pending || !demo} onClick={() => act({ action: "select_zone", taskRunId: workspace.taskId })}>Select {workspace.zoneName} task</button>
             <small>A zone code selects context. It does not check you in or prove identity.</small>
           </div>
         ) : (
           <div className="capturePanel">
-            <div className="contextConfirmed"><span>✓</span><div><strong>{workspace.zoneName} selected</strong><small>Task context expires after 30 minutes</small></div></div>
+            <div className="contextConfirmed"><span>✓</span><div><strong>{workspace.zoneName} selected</strong><small>Synthetic task context recorded</small></div></div>
             <div className="captureSteps">
               <div className={workspace.beforeReady ? "captureStepComplete" : "captureStepActive"}><span>1</span><div><strong>Before photo</strong><small>{workspace.beforeReady ? "Uploaded and linked" : "Ready to capture"}</small></div></div>
               <div className={workspace.afterReady ? "captureStepComplete" : workspace.beforeReady ? "captureStepActive" : ""}><span>2</span><div><strong>After photo</strong><small>{workspace.afterReady ? "Uploaded and linked" : workspace.beforeReady ? "Ready to capture" : "Available after before photo"}</small></div></div>
             </div>
-            {!workspace.afterReady ? <>
+            {!workspace.afterReady && ["ready", "in_progress", "correction_required"].includes(workspace.state) ? <>
               <div className="photoPickerActions" data-disabled={pending || !demo}>
                 <input
                   id="mobile-camera-input"
@@ -181,7 +187,7 @@ export function MobileTask({ workspace, demo }: { workspace: MobileWorkspace; de
           </div>
         )}
       </section>
-      <section className="mobileEmptyState"><strong>No other assigned tasks</strong><span>New work will appear here after a supervisor assigns it.</span></section>
+      <section className="mobileEmptyState"><strong>Assigned evidence tasks</strong><span>Choose the correct task above before capturing a photo.</span></section>
     </div>
   );
 }

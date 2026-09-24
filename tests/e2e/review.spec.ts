@@ -27,7 +27,7 @@ test("submit, review, correct, approve, and retain the latest revision", async (
   await expect(page.getByText("Correction required", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Re-clean the mirror/ })).toBeVisible();
 
-  await page.getByRole("button", { name: "Submit corrected evidence" }).click();
+  await page.getByRole("button", { name: "Use labelled synthetic sample" }).click();
   await expect(page.getByText("Correction revision 2 was submitted at 23:34.")).toBeVisible();
   await expect(page.getByText(/Revision 2/).first()).toBeVisible();
 

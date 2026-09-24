@@ -5,6 +5,7 @@ import { z } from "zod";
 
 export const HOSTED_DEMO_ORGANIZATION_ID = "10000000-0000-4000-8000-000000000001";
 export const HOSTED_DEMO_SITE_ID = "40000000-0000-4000-8000-000000000001";
+const HOSTED_CAPTURE_WORKER_ID = "60000000-0000-4000-8000-000000000001";
 
 const configSchema = z.object({
   CLEANOPS_HOSTED_DEMO_ENABLED: z.enum(["true", "false"]).default("false"),
@@ -24,11 +25,12 @@ const membershipSchema = z.object({
 
 const idSchema = z.object({ id: z.uuid() });
 
-export type HostedDemoCapability = "supervisor" | "cleaner" | "client";
+export type HostedDemoCapability = "supervisor" | "cleaner" | "capture" | "client";
 
 const allowedRoles: Record<HostedDemoCapability, Set<string>> = {
   supervisor: new Set(["site_supervisor", "area_manager", "operations_manager", "organization_administrator"]),
   cleaner: new Set(["cleaner", "organization_administrator"]),
+  capture: new Set(["cleaner", "site_supervisor", "area_manager", "operations_manager", "organization_administrator"]),
   client: new Set(["client_viewer"]),
 };
 
@@ -74,7 +76,7 @@ export async function hasHostedDemoAccess(
     if (accessResult.error || !idSchema.safeParse(accessResult.data).success) return false;
   }
 
-  if (capability !== "cleaner" || role === "organization_administrator") return true;
+  if ((capability !== "cleaner" && capability !== "capture") || role !== "cleaner") return true;
 
   const workerResult = await client
     .from("workers")
@@ -83,5 +85,7 @@ export async function hasHostedDemoAccess(
     .eq("auth_user_id", userId)
     .eq("active", true)
     .maybeSingle();
-  return !workerResult.error && idSchema.safeParse(workerResult.data).success;
+  const worker = idSchema.safeParse(workerResult.data);
+  return !workerResult.error && worker.success
+    && (capability !== "capture" || worker.data.id === HOSTED_CAPTURE_WORKER_ID);
 }

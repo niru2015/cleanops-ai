@@ -28,6 +28,7 @@ const environment = {
   CLEANOPS_E2E_SUPERVISOR_EMAIL: "supervisor.e2e@cleanops.example.com",
   CLEANOPS_E2E_OPERATIONS_EMAIL: "operations.e2e@cleanops.example.com",
   CLEANOPS_E2E_CLEANER_EMAIL: "cleaner.e2e@cleanops.example.com",
+  CLEANOPS_E2E_CLIENT_EMAIL: "client.e2e@cleanops.example.com",
   CLEANOPS_DEMO_PASSWORD: demoPassword,
   CLEANOPS_HOSTED_DEMO_ENABLED: "true",
   CLEANOPS_DEMO_INGRESS_ENABLED: "true",
@@ -35,7 +36,10 @@ const environment = {
   CLEANOPS_DEMO_WORKER_ID: "cleanops-browser-e2e-worker",
 };
 const productionMode = process.argv.includes("--production");
-if (productionMode) environment.CLEANOPS_E2E_PRODUCTION_MODE = "true";
+if (productionMode) {
+  environment.CLEANOPS_E2E_PRODUCTION_MODE = "true";
+  environment.CLEANOPS_NEXT_DIST_DIR = ".next-gate-a";
+}
 
 const admin = createClient(apiUrl, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -71,6 +75,7 @@ for (const persona of [
   { email: environment.CLEANOPS_E2E_SUPERVISOR_EMAIL, name: "E2E Supervisor", membershipId: "20000000-0000-4000-8000-000000000008", role: "site_supervisor" },
   { email: environment.CLEANOPS_E2E_OPERATIONS_EMAIL, name: "E2E Operations Manager", membershipId: "20000000-0000-4000-8000-000000000007", role: "operations_manager" },
   { email: environment.CLEANOPS_E2E_CLEANER_EMAIL, name: "E2E Cleaner", membershipId: "20000000-0000-4000-8000-000000000004", role: "cleaner" },
+  { email: environment.CLEANOPS_E2E_CLIENT_EMAIL, name: "E2E Client", membershipId: "20000000-0000-4000-8000-000000000005", role: "client_viewer" },
 ]) {
   const users = await admin.auth.admin.listUsers({ page: 1, perPage: 100 });
   if (users.error) throw users.error;
@@ -84,7 +89,7 @@ for (const persona of [
     if (created.error || !created.data.user) throw created.error ?? new Error("Could not create the E2E persona.");
     person = created.data.user;
   }
-  if (persona.role === "area_manager" || persona.role === "cleaner") {
+  if (persona.role === "area_manager" || persona.role === "cleaner" || persona.role === "client_viewer") {
     const update = await admin.from("memberships").update({ user_id: person.id }).eq("id", persona.membershipId);
     if (update.error) throw update.error;
   } else {
