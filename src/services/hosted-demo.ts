@@ -43,8 +43,9 @@ export async function hasHostedDemoAccess(
   client: SupabaseClient,
   userId: string,
   capability: HostedDemoCapability,
+  requireHostedSwitch = true,
 ) {
-  if (!isHostedDemoEnabled()) return false;
+  if (requireHostedSwitch && !isHostedDemoEnabled()) return false;
 
   const membershipResult = await client
     .from("memberships")

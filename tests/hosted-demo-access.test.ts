@@ -43,6 +43,20 @@ describe("hosted synthetic demo access", () => {
     await expect(hasHostedDemoAccess(client, "10000000-0000-4000-8000-000000000010", "cleaner")).resolves.toBe(false);
   });
 
+  it("checks local demo membership even when the hosted switch is off", async () => {
+    process.env.CLEANOPS_HOSTED_DEMO_ENABLED = "false";
+    const allowed = clientWith({
+      memberships: { id: "20000000-0000-4000-8000-000000000002", role: "site_supervisor" },
+      member_site_access: { id: "41000000-0000-4000-8000-000000000001" },
+    });
+    const denied = clientWith({ memberships: null });
+    const userId = "10000000-0000-4000-8000-000000000010";
+
+    await expect(hasHostedDemoAccess(allowed, userId, "supervisor")).resolves.toBe(false);
+    await expect(hasHostedDemoAccess(allowed, userId, "supervisor", false)).resolves.toBe(true);
+    await expect(hasHostedDemoAccess(denied, userId, "supervisor", false)).resolves.toBe(false);
+  });
+
   it("requires both the cleaner role and mapped active worker", async () => {
     process.env.CLEANOPS_HOSTED_DEMO_ENABLED = "true";
     const allowed = clientWith({
