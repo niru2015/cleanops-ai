@@ -6,6 +6,7 @@ import { useState,useTransition } from "react";
 import { rejectExpense,resolveExpense,suggestExpense } from "@/app/finance/expenses/actions";
 import { ExpenseReceiptUploader } from "@/components/expense-receipt-uploader";
 import type { ExpenseClaim,ExpenseDocument,ExpenseIntake } from "@/integrations/finance/supabase-expenses";
+import { formatUtcTimestamp } from "@/lib/format-utc-timestamp";
 
 const categories=["meals","fuel_travel","supplies","equipment_purchase","equipment_repair",
   "parking_tolls","contractor","other_direct"] as const;
@@ -38,7 +39,7 @@ export function ExpenseInbox({intakes,documents,claims,sites}:{intakes:ExpenseIn
       return <article className="reviewCard" key={item.id} id={item.id}>
         <h3>{item.source_kind==="whatsapp"?"WhatsApp":"App"} candidate · {item.review_state.replaceAll("_"," ")}</h3>
         <p>Source text (untrusted): <span>{item.source_text}</span></p>
-        <p>Received {new Date(item.created_at).toLocaleString()}</p>
+        <p>Received {formatUtcTimestamp(item.created_at)}</p>
         <button type="button" disabled={pending||["posted","rejected"].includes(item.review_state)}
           onClick={()=>run(()=>suggestExpense(item.id))}>Suggest fields from source</button>
         {item.extraction_state==="suggested"&&<p>Machine suggestion: <code>{JSON.stringify(proposal)}</code></p>}
