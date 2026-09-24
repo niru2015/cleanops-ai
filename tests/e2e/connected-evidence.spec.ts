@@ -55,7 +55,7 @@ test("real selected images link to the chosen task and a distinct reviewer appro
 
   const reviewer = await browser.newPage();
   try {
-    await signInAs(reviewer, process.env.CLEANOPS_E2E_OPERATIONS_EMAIL);
+    await signInAs(reviewer, process.env.CLEANOPS_E2E_EMAIL);
     await reviewer.goto(`/review?taskRunId=${TASK_ID}`);
     await reviewer.getByRole("button", { name: "Approve revision 2" }).click();
     await expect(reviewer.getByText("Revision 2 approved")).toBeVisible();
