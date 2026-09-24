@@ -21,7 +21,41 @@ npm run demo:presenter -- finance-showcase
 npm run demo:reset -- finance-showcase
 ```
 
-The CLI obtains a local service key and database URL from `supabase status` and rejects non-local endpoints. `psql` is required for reset's read-only check across organization-scoped tables. It does not read a hosted project's secret from `.env.local`. The generated Auth personas have no password; a protected provisioning step must set one before sign-in. No browser reset endpoint exists.
+The default CLI mode obtains a local service key and database URL from `supabase status` and rejects non-local endpoints. `psql` is required for reset's read-only check across organization-scoped tables. It does not read a hosted project's secret from `.env.local`. Local generated Auth personas have no password; a protected provisioning step must set one before sign-in. No browser reset endpoint exists.
+
+### Protected hosted finance showcase
+
+After the service-only `demo_scenario_runs` migration is released, the same deterministic plan can be
+replayed into a **dedicated synthetic organization** in the explicitly named hosted project. The
+local commands above still target local Supabase by default. Hosted mode is limited to
+`finance-showcase`; it never adopts an existing organization, site ID, email, or run. The selected
+organization ID must equal the deterministic scenario plan ID. Presenters sign in with the
+scenario's generated Director account; an existing Director in a different organization will not
+see this scenario, because membership and RLS remain tenant-scoped.
+
+Set `CLEANOPS_HOSTED_DEMO_URL`, `CLEANOPS_HOSTED_DEMO_SECRET_KEY`,
+`CLEANOPS_HOSTED_DEMO_PUBLISHABLE_KEY`, and a unique 12+ character
+`CLEANOPS_HOSTED_DEMO_PASSWORD` in the protected operator environment. Never commit values.
+For reset only, provide `CLEANOPS_HOSTED_DEMO_DATABASE_URL` for the same project. The URL and
+explicit `--project-ref` must agree. Run the read-only preflight first and review its project,
+organization, sites, personas, expected controls, and collisions:
+
+```bash
+node scripts/demo-scenario.mjs plan finance-showcase
+node scripts/demo-scenario.mjs preflight finance-showcase --target hosted --project-ref <project-ref> --organization-id <scenario-organization-id>
+node scripts/demo-scenario.mjs generate finance-showcase --target hosted --project-ref <project-ref> --organization-id <scenario-organization-id> --apply
+node scripts/demo-scenario.mjs assert finance-showcase --target hosted --project-ref <project-ref> --organization-id <scenario-organization-id>
+node scripts/demo-scenario.mjs reset finance-showcase --target hosted --project-ref <project-ref> --organization-id <scenario-organization-id> --apply
+```
+
+Generation is a separately approved hosted data release. It writes a service-only database registry
+before business records and updates that registry after each replay step. `assert` reads the
+registry and source records; reset checks the exact scenario-owned IDs and refuses unrelated
+organization rows before any deletion. Keep a copy of the generated manifest and assertion log
+with the release evidence. A partial failure leaves the registry marked `partial`; inspect and
+reset it before another generation attempt. Hosted reset uses the exact project database URL and
+privileged trigger handling required by immutable demo finance rows. Never run these commands
+against an organization containing customer or unrelated demo data. No browser reset endpoint exists.
 
 ## Add a scenario
 

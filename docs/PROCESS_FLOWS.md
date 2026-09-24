@@ -367,3 +367,14 @@ Before changing a flow:
 # CLEAN-037 one-off project contribution
 
 An assigned Area Manager or Director creates and edits a site-bound project draft, optionally under a contract. Only a Director approves fixed/hourly terms, activates or cancels the project. Operational time is assigned to the project before cost posting; approved hours become a confidential labour cost snapshot. A Director may link an existing posted expense, inventory issue or accounting allocation without editing the original immutable source. Equipment purchases are excluded from direct expense cost pending asset treatment. Director-approved billable hours drive hourly expected revenue; recorded invoices do not imply accounting recognition. Accepted, approved, actual revenue allocations drive recognized revenue. The register shows recognized, unresolved and incomplete accounting-source counts. The Director closes costs only after review; recognized contribution remains pending until accounting completeness is also confirmed. The site finance overview retains its original ledger totals and does not add project subtotals again.
+## Hosted synthetic finance scenario release
+
+Protected operator tooling builds #28's deterministic `finance-showcase` plan, verifies the
+explicit hosted project and dedicated scenario organization IDs, and performs a read-only
+collision preflight. After separate approval for the hosted data write, it persists a service-only
+`demo_scenario_runs` registry before inserting source records. Domain replay uses generated
+scenario personas through authenticated RPCs for consequential finance actions. The registry is
+updated as IDs are created and marked `ready` only after source-backed assertions pass; failures
+remain `partial`. A reset reads the database registry, verifies all organization-scoped source
+IDs and absence of unrelated rows, then deletes only that synthetic organization in dependency
+order. Hosted reset requires the exact project database connection and never runs from a browser.

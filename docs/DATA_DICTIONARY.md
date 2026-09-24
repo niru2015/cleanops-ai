@@ -283,6 +283,11 @@ Tables proposed by open issues #29-#36 and not yet created: announcements and ac
 
 ### Accounting reconciliation and period close — CLEAN-038
 
+`demo_scenario_runs` is a service-only hosted demo registry for the deterministic `finance-showcase`
+generator. It stores the explicitly targeted project ref, scenario/run/organization IDs, status,
+and the generated record-ID registry as JSONB before business writes. RLS is enabled and browser
+roles have no table privileges. It is not an application finance source or customer tenant table.
+
 `private.finance_operational_records` normalizes approved expense postings except equipment purchases, posted labour cost, and inventory issues into cost candidates. Historical labour and inventory rows are CAD-only. Accounting import rows remain authoritative and are never added to operational totals a second time. Exact source ID, document reference and amount/date/context rules create candidate proposals; only a unique best proposal may auto-match. A Director may manually link a positive cent-precision amount within both remaining balances. Ambiguous, unmatched, invalid and incomplete rows remain visible as exceptions. Closed periods reject match changes; reopen records a reason and preserves the prior snapshot. A changed accepted import or operational amount makes the closed snapshot stale. No direct browser table writes are granted for periods or links.
 
 ### One-off projects — CLEAN-037
