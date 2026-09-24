@@ -27,7 +27,7 @@ the full run passes.
    persona passwords into evidence.
 3. Sign in as the generated scenario Director. The existing hosted Director account belongs to
    a different organization and will not see this scenario. Confirm the banner says synthetic.
-   Select the latest complete closed month (August 2026 in version 7) and compare Grand Villa
+   Select the latest complete closed month (August 2026 in hosted version 8) and compare Grand Villa
    and River Rock. Read exact site amounts from `expected.reconciliation.showcaseSites`, rather
    than a slide or handwritten card. September may be empty; June is deliberately unresolved;
    July is deliberately stale.
