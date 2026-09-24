@@ -14,9 +14,11 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3000",
+    command: process.env.CLEANOPS_E2E_PRODUCTION_MODE === "true"
+      ? "npm run start -- --hostname 127.0.0.1 --port 3000"
+      : "npm run dev -- --hostname 127.0.0.1 --port 3000",
     url: "http://127.0.0.1:3000/review",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env.CI && process.env.CLEANOPS_E2E_PRODUCTION_MODE !== "true",
     timeout: 120_000,
   },
 });

@@ -75,6 +75,13 @@ server verifies the expected role and active Aurora Downtown site grant. The pro
 `/api/demo/*` routes remain unavailable; WhatsApp and live OpenAI remain disabled.
 The supervisor can reset synthetic staffing, evidence, review, incident and report changes from
 `/operations`; the service-only database function cannot be invoked by a browser session.
+In production mode, the `/review` Prepare submission and correction fixture actions run as
+server-only, site-scoped commands for authorized demo supervisors. They use the same durable
+ingress and evidence services as local fixtures, stage labelled synthetic images, and record
+start/outcome in `hosted_demo_fixture_audit`. The reset uses the same operation lease, so
+simultaneous preparation and reset receives a conflict response. Only the two enumerated
+walkthrough task runs can leave an approved state during reset. Storage cleanup removes paths
+returned by that site-scoped reset; a Storage failure is shown as a partial reset.
 
 The presenter supplies one rotated temporary password. CLEAN-010 defined these three reserved accounts; the login
 selector now uses the named personas in the next section, and no script in this repository creates the accounts below,

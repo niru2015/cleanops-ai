@@ -66,6 +66,7 @@ export async function hasHostedDemoAccess(
       .from("member_site_access")
       .select("id")
       .eq("membership_id", membership.data.id)
+      .eq("site_id", HOSTED_DEMO_SITE_ID)
       .lte("starts_at", now)
       .or(`ends_at.is.null,ends_at.gt.${now}`)
       .limit(1)
