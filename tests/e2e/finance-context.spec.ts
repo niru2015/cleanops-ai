@@ -9,6 +9,7 @@ test("Director finance remains scoped to the selected authorized casino", async 
   await expect(page.getByRole("heading", { name: "Message context review" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Accounting CSV" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Finance overview" })).toBeVisible();
+  await expect(page.getByLabel("Combined finance result")).toBeVisible();
   await page.getByRole("combobox", { name: "Casino", exact: true }).selectOption("all");
   await page.getByRole("button", { name: "View finance" }).click();
   await expect(page.getByLabel("Combined finance result")).toBeVisible();

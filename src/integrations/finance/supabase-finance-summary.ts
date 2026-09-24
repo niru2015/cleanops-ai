@@ -29,6 +29,16 @@ async function all<T>(query: (from: number, to: number) => PromiseLike<{ data: u
   throw new Error("Finance summary exceeded its review limit.");
 }
 
+export async function getPreferredFinanceMonth(client: SupabaseClient, access: AppAccessContext): Promise<string> {
+  const fallback = new Date().toISOString().slice(0, 7);
+  if (!access.canViewFinance || !access.sites.length) return fallback;
+  const permitted = new Set(access.sites.map(site => site.id));
+  const periods = await all((from, to) => client.rpc("list_finance_period_site_status").range(from, to), periodSite);
+  const ready = periods.filter(row => permitted.has(row.site_id) && row.state === "closed" && !row.stale && row.coverage === "complete")
+    .map(row => row.period_start.slice(0, 7)).sort().reverse();
+  return ready[0] ?? fallback;
+}
+
 export async function getFinanceSummary(client: SupabaseClient, access: AppAccessContext, month: string): Promise<SiteFinanceSummary[]> {
   if (!access.canViewFinance) throw new Error("Finance access required.");
   const siteIds = access.sites.map(site => site.id);

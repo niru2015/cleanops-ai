@@ -4,7 +4,7 @@ import { FinanceWorkspace } from "@/components/finance-workspace";
 import { FinanceSummary } from "@/components/finance-summary";
 import { MessageContextQueue } from "@/components/message-context-queue";
 import { getFinanceWorkspace, type FinanceWorkspace as FinanceWorkspaceData } from "@/integrations/finance/supabase-finance";
-import { getFinanceSummary } from "@/integrations/finance/supabase-finance-summary";
+import { getFinanceSummary, getPreferredFinanceMonth } from "@/integrations/finance/supabase-finance-summary";
 import type { SiteFinanceSummary } from "@/services/finance-summary";
 import { getMessageWorkspace, type MessageWorkspace } from "@/integrations/messages/supabase-message-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -37,8 +37,8 @@ export default async function FinancePage({
     const params = await searchParams;
     const selectedSite = resolveSelectedSite(access, params.siteId);
     const month = typeof params.month === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month)
-      ? params.month : new Date().toISOString().slice(0, 7);
-    const summarySiteId = params.siteId === "all" ? null : selectedSite?.id ?? null;
+      ? params.month : await getPreferredFinanceMonth(client, access);
+    const summarySiteId = params.siteId && params.siteId !== "all" ? selectedSite?.id ?? null : null;
     const context = access.canViewFinance && selectedSite ? getFinanceSiteContext(access, selectedSite.id) : null;
     const [finance, messages, summary] =
       context
@@ -107,6 +107,7 @@ export default async function FinancePage({
       </section>
       <p><Link href="/finance/contracts">Open contract register</Link> · <Link href="/finance/projects">One-off projects</Link> · <Link href="/finance/inbox">Finance Inbox</Link> · <Link href="/finance/expenses">Expenses and direct costs</Link> · <Link href="/finance/time">Approved time and labour</Link> · <Link href="/finance/reconciliation">Reconciliation and period close</Link>{access.canEditFinance && <> · <Link href="/finance/rates">Worker cost rates</Link></>}</p>
       <FinanceSummary sites={summary} selectedSiteId={summarySiteId} month={month} />
+      <p className="recordNote">Inventory, labour ledger and message context below are scoped to {selectedSite.name}.</p>
       <FinanceWorkspace workspace={finance} editable={access.canEditFinance} siteId={selectedSite.id} />
       <MessageContextQueue workspace={messages} />
     </AppShell>

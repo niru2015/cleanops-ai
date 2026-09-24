@@ -156,6 +156,8 @@ The manager summary at the top of `/finance` resolves the requested month and pe
 `getAppAccessContext`, then reads current `contract_revenue_expectations`, current accepted
 `finance_reconciliations`, and `list_finance_period_site_status`. The server service computes
 contribution and margin only for a complete accepted import and a non-stale closed period.
+Without an explicit month, the overview opens the latest complete, current closed month visible
+to the account; otherwise it opens the current month. All assigned sites are compared by default.
 Approved operational expense postings are grouped by the underlying claim's expense date and
 category; approved hours and Director-only posted labour are separate source indicators. These
 operational amounts are displayed separately and never added to accepted accounting totals.
