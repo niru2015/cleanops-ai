@@ -19,6 +19,7 @@ export const mobilePhotoPrepareSchema = z.object({
 }).strict();
 
 export const mobilePhotoFinalizeSchema = z.object({
+  taskRunId: z.string().uuid(),
   evidenceId: z.string().uuid(),
   expiresAt: z.number().int().positive(),
   signature: z.string().regex(/^[0-9a-f]{64}$/),

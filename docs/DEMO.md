@@ -44,6 +44,11 @@ The mobile QR chooses the zone/task context without changing attendance. CLEAN-0
 cleaner take a phone photo or choose an existing JPEG, PNG or WebP image up to 10 MiB. The actual
 selected bytes upload privately and run through the shared evidence pipeline; interrupted uploads
 remain retryable.
+CLEAN-013 links assigned Restroom B and Slot Bank 14 task choices to review. Review loads actual
+private images through short-lived authorized URLs, shows source and receipt times, and sends a correction
+back to the selected task. A supervisor may capture on behalf of Worker 182; the authenticated submitter
+and attributed worker remain distinct, and another reviewer must approve that correction. HEIC/HEIF is
+explicitly unsupported in this slice; select or export JPEG, PNG or WebP on the phone.
 P3 adds surrounding UI and records. Deferred capabilities are clearly labeled previews,
 not working buttons or fake completed outcomes. PWA and simulator invoke shared services.
 

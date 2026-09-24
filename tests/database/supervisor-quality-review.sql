@@ -161,6 +161,28 @@ begin
   end;
 end;
 $$;
+set local role service_role;
+update public.task_evidence set submitted_by_user_id = '00000000-0000-4000-8000-000000000002'
+where id = 'e2000000-0000-4000-8000-000000000004';
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
+do $$
+begin
+  begin
+    perform public.approve_submission(
+      '81000000-0000-4000-8000-000000000001', 2,
+      (select id from public.quality_decisions where request_key = 'db-r2-score-96'),
+      null, null
+    );
+    raise exception 'evidence submitter approved own correction';
+  exception when insufficient_privilege then null;
+  end;
+end;
+$$;
+set local role service_role;
+update public.task_evidence set submitted_by_user_id = null
+where id = 'e2000000-0000-4000-8000-000000000004';
+set local role authenticated;
 select public.approve_submission(
   '81000000-0000-4000-8000-000000000001', 2, :'corrected_decision_id', null, null
 );

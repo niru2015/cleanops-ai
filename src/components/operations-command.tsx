@@ -57,7 +57,7 @@ export function OperationsCommand({ workspace }: { workspace: OperationsWorkspac
         <section className="opsPanel" aria-labelledby="zones-title">
           <div className="panelHeading"><div><p className="eyebrow">Canonical task states</p><h2 id="zones-title">Site zones</h2></div><span>{workspace.zones.length} zones</span></div>
           <div className="zoneList">
-            {workspace.zones.map((zone) => <article key={zone.id}><span className={`zoneSignal zoneSignal-${zone.state}`} /><div><strong>{zone.name}</strong><span>{zone.task}</span></div><span className={`zoneState zoneState-${zone.state}`}>{stateLabels[zone.state] ?? zone.state.replaceAll("_", " ")}</span></article>)}
+            {workspace.zones.map((zone) => <article key={zone.id}><span className={`zoneSignal zoneSignal-${zone.state}`} /><div><strong>{zone.name}</strong><span>{zone.task}</span>{zone.taskRunId ? <a href={`/review?taskRunId=${zone.taskRunId}`}>Open review →</a> : null}</div><span className={`zoneState zoneState-${zone.state}`}>{stateLabels[zone.state] ?? zone.state.replaceAll("_", " ")}</span></article>)}
           </div>
           <a className="mobileJourneyLink" href="/mobile"><span>Cleaner workflow</span><strong>Open mobile task capture →</strong></a>
         </section>
