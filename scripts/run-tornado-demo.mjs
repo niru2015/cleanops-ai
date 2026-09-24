@@ -1,10 +1,7 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const root = new URL("../artifacts/tornado-demo/", import.meta.url);
-for (const part of ["", "screenshots", "results", "videos-and-traces", "html-report"]) {
-  mkdirSync(new URL(part, root), { recursive: true });
-}
 
 const baseURL = process.env.TORNADO_DEMO_BASE_URL ?? "http://127.0.0.1:3000";
 const password = process.env.TORNADO_DEMO_PASSWORD ?? process.env.CLEANOPS_DEMO_PASSWORD;
@@ -29,14 +26,21 @@ const preflight = {
   baseURL,
   mode: local ? "local" : "external",
   credentialsPresent: Boolean(password),
+  legacyOperationsCredentialsPresent: Boolean(process.env.TORNADO_OPERATIONS_PASSWORD),
+  expectMobileEvidence: process.env.TORNADO_EXPECT_MOBILE_EVIDENCE === "1",
   publicOnly,
   startedAt: new Date().toISOString(),
 };
-writeFileSync(new URL("results/preflight.json", root), JSON.stringify(preflight, null, 2) + "\n");
 if (!password && !publicOnly) {
   console.error("Tornado demo needs TORNADO_DEMO_PASSWORD (or CLEANOPS_DEMO_PASSWORD). See TORNADO_DEMO.md.");
   process.exit(2);
 }
+mkdirSync(root, { recursive: true });
+for (const part of ["screenshots", "results", "videos-and-traces", "html-report"]) {
+  rmSync(new URL(part, root), { recursive: true, force: true });
+  mkdirSync(new URL(part, root), { recursive: true });
+}
+writeFileSync(new URL("results/preflight.json", root), JSON.stringify(preflight, null, 2) + "\n");
 const command = process.platform === "win32" ? "npx.cmd" : "npx";
 const result = spawnSync(command, ["playwright", "test", "--config=tornado.playwright.config.ts", ...(publicOnly ? ["--grep", "UAT-00"] : process.argv.slice(2))], {
   cwd: new URL("..", import.meta.url),

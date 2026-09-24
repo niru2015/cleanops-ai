@@ -5,16 +5,17 @@
   "artifactRoot": "artifacts/tornado-demo",
   "uatResults": "artifacts/tornado-demo/html-report/index.html",
   "narration": "docs/demo/TORNADO_NARRATION.md",
+  "presentationGuidance": "Use only screenshots from the latest passed UAT chapters. Slide 10 is a limitation slide while UAT-10 is skipped; do not claim that Mock AI was demonstrated.",
   "slides": [
     { "order": 1, "title": "Role-based entry", "screenshot": "screenshots/01-authentication-login.png", "uat": "UAT-01" },
     { "order": 2, "title": "Director overview", "screenshot": "screenshots/02-director-dashboard.png", "uat": "UAT-02" },
     { "order": 3, "title": "Casino operations", "screenshot": "screenshots/03-casino-operations.png", "uat": "UAT-03" },
-    { "order": 4, "title": "Workforce coverage", "screenshot": "screenshots/04-workforce-coverage.png", "uat": "UAT-04" },
-    { "order": 5, "title": "Cleaning evidence", "screenshot": "screenshots/05-cleaning-evidence.png", "uat": "UAT-05" },
-    { "order": 6, "title": "Equipment issue intake", "screenshot": "screenshots/06-equipment-report.png", "uat": "UAT-06" },
+    { "order": 4, "title": "Workforce time review", "screenshot": "screenshots/04-workforce-time-review.png", "uat": "UAT-04" },
+    { "order": 5, "title": "Mobile cleaning evidence", "screenshot": "screenshots/05-mobile-evidence-result.png", "uat": "UAT-05B" },
+    { "order": 6, "title": "Equipment register", "screenshot": "screenshots/06-equipment-register.png", "uat": "UAT-06" },
     { "order": 7, "title": "Attributed incident", "screenshot": "screenshots/07-incident-desk.png", "uat": "UAT-07" },
     { "order": 8, "title": "Finance source and role boundary", "screenshot": "screenshots/08-finance-inbox.png", "uat": "UAT-08" },
     { "order": 9, "title": "Generated scenario result", "screenshot": "screenshots/09-generated-scenario.png", "uat": "UAT-09" },
-    { "order": 10, "title": "Human-reviewed Mock AI", "screenshot": "screenshots/10-mock-ai-review.png", "uat": "UAT-10" }
+    { "order": 10, "title": "Mock AI review availability", "screenshot": "screenshots/10-mock-ai-not-yet-available.png", "uat": "UAT-10", "use": "limitation only while skipped" }
   ]
 }
