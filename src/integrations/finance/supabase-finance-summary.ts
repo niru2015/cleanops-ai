@@ -12,6 +12,10 @@ const periodSite = z.object({ site_id: z.uuid(), period_start: z.string(), curre
   state: z.string(), coverage: z.string(), unmatched_amount: z.coerce.number(),
   unallocated_source_amount: z.coerce.number(), stale: z.boolean() });
 const intake = z.object({ site_id: z.uuid().nullable(), review_state: z.string() });
+const claim = z.object({ id: z.uuid(), site_id: z.uuid(), expense_date: z.string() });
+const posting = z.object({ claim_id: z.uuid(), site_id: z.uuid(), category: z.string(), currency: z.string(), amount: z.coerce.number() });
+const labourEntry = z.object({ site_id: z.uuid(), total_cost: z.coerce.number() });
+const timeEntry = z.object({ site_id: z.uuid(), hours: z.coerce.number().nullable(), state: z.string() });
 
 async function all<T>(query: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>, schema: z.ZodType<T>): Promise<T[]> {
   const output: T[] = [];
@@ -29,7 +33,10 @@ export async function getFinanceSummary(client: SupabaseClient, access: AppAcces
   if (!access.canViewFinance) throw new Error("Finance access required.");
   const siteIds = access.sites.map(site => site.id);
   if (!siteIds.length) return [];
-  const [expectations, actuals, periods, intakes] = await Promise.all([
+  const monthEnd = new Date(`${month}-01T00:00:00Z`);
+  monthEnd.setUTCMonth(monthEnd.getUTCMonth() + 1);
+  const exclusiveEnd = monthEnd.toISOString().slice(0, 10);
+  const [expectations, actuals, periods, intakes, claims, labour, time] = await Promise.all([
     all((from, to) => client.from("contract_revenue_expectations")
       .select("site_id,service_period,amount,currency").eq("organization_id", access.organizationId)
       .in("site_id", siteIds).eq("service_period", `${month}-01`).eq("is_current", true).range(from, to), expectation),
@@ -40,7 +47,22 @@ export async function getFinanceSummary(client: SupabaseClient, access: AppAcces
     all((from, to) => client.rpc("list_finance_period_site_status").range(from, to), periodSite),
     all((from, to) => client.from("finance_intake_items").select("site_id,review_state")
       .eq("organization_id", access.organizationId).in("site_id", siteIds).range(from, to), intake),
+    all((from, to) => client.from("expense_claims").select("id,site_id,expense_date")
+      .eq("organization_id", access.organizationId).in("site_id", siteIds)
+      .gte("expense_date", `${month}-01`).lt("expense_date", exclusiveEnd).range(from, to), claim),
+    access.canEditFinance ? all((from, to) => client.from("labor_cost_entries")
+      .select("site_id,total_cost").eq("organization_id", access.organizationId).in("site_id", siteIds)
+      .gte("work_date", `${month}-01`).lt("work_date", exclusiveEnd).range(from, to), labourEntry) : Promise.resolve([]),
+    all((from, to) => client.from("time_entries").select("site_id,hours,state")
+      .eq("organization_id", access.organizationId).in("site_id", siteIds)
+      .gte("work_date", `${month}-01`).lt("work_date", exclusiveEnd)
+      .in("state", ["approved", "posted"]).range(from, to), timeEntry),
   ]);
+  const claimIds = claims.map(row => row.id);
+  const postings = (await Promise.all(Array.from({ length: Math.ceil(claimIds.length / 100) }, (_, index) =>
+    all((from, to) => client.from("expense_postings").select("claim_id,site_id,category,currency,amount")
+      .eq("organization_id", access.organizationId).in("claim_id", claimIds.slice(index * 100, index * 100 + 100))
+      .range(from, to), posting)))).flat();
   return access.sites.map(site => {
     const expected = expectations.filter(row => row.site_id === site.id);
     const siteActuals = actuals.filter(row => row.site_id === site.id);
@@ -49,6 +71,13 @@ export async function getFinanceSummary(client: SupabaseClient, access: AppAcces
     const currency = currencies.values().next().value ?? "CAD";
     const actualRow = !mismatch ? siteActuals[0] : undefined;
     const period = periods.find(row => row.site_id === site.id && row.period_start === `${month}-01` && row.currency === currency);
+    const sitePostings = postings.filter(row => row.site_id === site.id);
+    const postingCurrencies = new Set(sitePostings.map(row => row.currency));
+    const operationalCurrency = postingCurrencies.size > 1 ? null : postingCurrencies.values().next().value ?? currency;
+    const category = (...names: string[]) => sitePostings.filter(row => names.includes(row.category))
+      .reduce((sum, row) => sum + row.amount, 0);
+    const siteTime = time.filter(row => row.site_id === site.id);
+    const siteLabour = labour.filter(row => row.site_id === site.id);
     return summarizeSite({ siteId: site.id, siteName: site.name, period: month, currency,
       expectedRevenue: expected.length && !mismatch ? expected.reduce((sum, row) => sum + row.amount, 0) : null,
       recognizedRevenue: actualRow?.recognized_revenue ?? null,
@@ -58,6 +87,14 @@ export async function getFinanceSummary(client: SupabaseClient, access: AppAcces
       periodState: period?.state ?? null, stale: period?.stale ?? false,
       unmatchedAmount: period?.unmatched_amount ?? null,
       pendingExpenseCount: intakes.filter(row => row.site_id === site.id && !["posted", "rejected"].includes(row.review_state)).length,
+      approvedOperational: {
+        labour: access.canEditFinance && siteLabour.length ? siteLabour.reduce((sum, row) => sum + row.total_cost, 0) : null,
+        approvedHours: siteTime.length ? siteTime.reduce((sum, row) => sum + (row.hours ?? 0), 0) : null,
+        supplies: category("supplies"), repairs: category("equipment_repair"),
+        fuelTravel: category("fuel_travel", "parking_tolls"), meals: category("meals"),
+        other: category("contractor", "other_direct"), assetReview: category("equipment_purchase"),
+        currency: operationalCurrency,
+      },
     });
   });
 }

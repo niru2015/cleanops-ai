@@ -6,6 +6,8 @@ const base = {
   expectedRevenue: 1200, recognizedRevenue: 1000, labour: 300, supplies: 100,
   repairs: 50, otherDirectCost: 50, completeness: "complete", periodState: "closed",
   stale: false, unmatchedAmount: 0, pendingExpenseCount: 0,
+  approvedOperational: { labour: 300, approvedHours: 10, supplies: 40, repairs: 50,
+    fuelTravel: 30, meals: 15, other: 0, assetReview: 0, currency: "CAD" },
 };
 
 describe("finance summary", () => {
