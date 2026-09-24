@@ -21,15 +21,16 @@ const accounts = [
   { group: "Cleaners", label: "Manuel — Cleaner", email: "manuel.cleaner@cleanops.example.com" },
   { group: "Cleaners", label: "Susanna — Cleaner", email: "susanna.cleaner@cleanops.example.com" },
   { group: "Cleaners", label: "Ricky — Cleaner", email: "ricky.cleaner@cleanops.example.com" },
+  { group: "Client reports", label: "Grand Villa — released report viewer", email: "demo-client@cleanops.example.com" },
   { group: "Finance showcase", label: "Darrel — Director · finance showcase", email: "finance-showcase.darrel-director@cleanops.example.com" },
   { group: "Finance showcase", label: "Shayana — Area Manager · Grand Villa", email: "finance-showcase.shayana-area@cleanops.example.com" },
   { group: "Finance showcase", label: "Darrel — Area Manager · River Rock", email: "finance-showcase.darrel-area@cleanops.example.com" },
   { group: "Finance showcase", label: "Hardeep — Supervisor · finance showcase", email: "finance-showcase.hardeep@cleanops.example.com" },
   { group: "Finance showcase", label: "Paul — Cleaner · finance showcase", email: "finance-showcase.paul@cleanops.example.com" },
-  { group: "Finance showcase", label: "Scenario Client Viewer", email: "finance-showcase.scenario-client@cleanops.example.com" },
+  { group: "Finance showcase", label: "Scenario Client Viewer · finance denied", email: "finance-showcase.scenario-client@cleanops.example.com" },
 ] as const;
 
-const groups = ["Directors", "Area Managers", "Supervisors", "Cleaners", "Finance showcase"] as const;
+const groups = ["Directors", "Area Managers", "Supervisors", "Cleaners", "Client reports", "Finance showcase"] as const;
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(signInAction, null);
