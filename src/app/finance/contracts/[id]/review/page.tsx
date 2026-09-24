@@ -6,7 +6,7 @@ import { getAppAccessContext } from "@/services/access-context";
 import { getContractDetail } from "@/integrations/finance/supabase-contracts";
 import { ContractDocumentPanel, type DocumentView, type ProposalView,
   type DecisionView } from "@/components/contract-document-panel";
-import { assignContractObligationZone, transitionContract } from "../../actions";
+import { assignContractObligationZone, returnContractToDraft, transitionContract } from "../../actions";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -51,6 +51,8 @@ export default async function ContractReviewPage({ params, searchParams }: {
   const decisions = z.array(z.object({ proposal_id: z.uuid(), decision: z.string(),
     reviewed_value: z.unknown(), reviewed_at: z.string(), reason: z.string().nullable(),
     canonical_table: z.string().nullable() })).parse(decisionResult.data) as DecisionView[];
+  const pendingMaterial = proposals.filter((proposal) => proposal.business_state !== "not_found" &&
+    !decisions.some((decision) => decision.proposal_id === proposal.id)).length;
   const impactResult = director && version?.state === "approved"
     ? await client.rpc("preview_contract_activation", { p_contract_version_id: version.id }) : null;
   const impact = impactResult?.error ? null : impactSchema.safeParse(impactResult?.data).data;
@@ -99,13 +101,20 @@ export default async function ContractReviewPage({ params, searchParams }: {
         <p>Supplies: {version.supply_responsibility}; equipment: {version.equipment_responsibility}; repairs: {version.repair_responsibility}.</p>
         <ContractDocumentPanel contractId={detail.contract.id} canUpload={canDraft && version.state === "draft"}
           canReadDocuments={canDraft}
-          operationalOnly={!canDraft} documents={documents} proposals={proposals} decisions={decisions} />
+          canReview={version.state === "draft"} operationalOnly={!canDraft}
+          documents={documents} proposals={proposals} decisions={decisions} />
         {missing.length > 0 && <p role="alert">Resolve before approval: {missing.join(", ")}.</p>}
         {version.state === "draft" && canDraft && <>
           <p><Link href={`/finance/contracts/new?draftId=${detail.contract.id}&step=2`}>Continue editing draft</Link></p>
+          {pendingMaterial > 0 && <p role="alert">Review {pendingMaterial} source proposal{pendingMaterial === 1 ? "" : "s"} before submission.</p>}
           <form action={transitionContract}><input type="hidden" name="contractId" value={detail.contract.id} />
-            <input type="hidden" name="transition" value="submit" /><button type="submit">Submit for review</button></form>
+            <input type="hidden" name="transition" value="submit" /><button type="submit" disabled={pendingMaterial > 0}>Submit for review</button></form>
         </>}
+        {version.state === "in_review" && canDraft && <form action={returnContractToDraft}>
+          <input type="hidden" name="contractId" value={detail.contract.id} />
+          <label>Revision reason <textarea name="reason" minLength={5} maxLength={500} required /></label>
+          <button type="submit">Return to draft for revision</button>
+        </form>}
         {(version.state === "draft" || version.state === "in_review") && director && <form action={transitionContract}>
           <input type="hidden" name="contractId" value={detail.contract.id} />
           <input type="hidden" name="transition" value="approve" /><button type="submit">Approve this version</button>
