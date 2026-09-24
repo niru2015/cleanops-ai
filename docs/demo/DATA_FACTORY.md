@@ -48,7 +48,9 @@ node scripts/demo-scenario.mjs assert finance-showcase --target hosted --project
 node scripts/demo-scenario.mjs reset finance-showcase --target hosted --project-ref <project-ref> --organization-id <scenario-organization-id> --apply
 ```
 
-Generation is a separately approved hosted data release. It writes a service-only database registry
+Generation is a separately approved hosted data release. Version 7 uploads the synthetic source
+and amendment PDFs to private contract storage and verifies downloaded bytes against the pack;
+the synthetic receipt bytes likewise use private evidence/receipt storage. It writes a service-only database registry
 before business records and updates that registry after each replay step. `assert` reads the
 registry and source records; reset checks the exact scenario-owned IDs and refuses unrelated
 organization rows before any deletion. Keep a copy of the generated manifest and assertion log
