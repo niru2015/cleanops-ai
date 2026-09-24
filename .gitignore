@@ -12,4 +12,7 @@ coverage/
 supabase/.temp/
 playwright-report/
 test-results/
+/artifacts/tornado-demo/**
+!/artifacts/tornado-demo/README.md
+!/artifacts/tornado-demo/.gitkeep
 .vercel

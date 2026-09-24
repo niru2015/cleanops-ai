@@ -1,0 +1,42 @@
+name: Tornado demo recording
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Approved synthetic demo URL
+        required: true
+        type: string
+      expected_manifest:
+        description: Optional active expected.json path in checkout
+        required: false
+        type: string
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Record read-only demo and UAT
+        run: npm run demo:tornado
+        env:
+          CI: "true"
+          TORNADO_DEMO_BASE_URL: ${{ inputs.base_url }}
+          TORNADO_DEMO_ALLOWED_ORIGIN: ${{ secrets.TORNADO_DEMO_ALLOWED_ORIGIN }}
+          TORNADO_DEMO_PASSWORD: ${{ secrets.TORNADO_DEMO_PASSWORD }}
+          TORNADO_EXPECTED_MANIFEST: ${{ inputs.expected_manifest }}
+      - name: Retain restricted UAT artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tornado-demo-uat
+          path: artifacts/tornado-demo/
+          if-no-files-found: warn
+          retention-days: 7
