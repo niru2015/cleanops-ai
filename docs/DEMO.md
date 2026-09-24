@@ -89,7 +89,7 @@ walkthrough task runs can leave an approved state during reset. Storage cleanup 
 returned by that site-scoped reset; a Storage failure is shown as a partial reset.
 
 The presenter supplies one rotated temporary password. CLEAN-010 defined these three reserved accounts; the login
-selector now uses the named personas in the next section, and no script in this repository creates the accounts below,
+selector includes the existing reserved Client viewer alongside the named personas in the next section. No script in this repository creates the accounts below,
 so confirm they still exist before relying on them:
 
 - (CLEAN-010, legacy) `demo-supervisor@cleanops.example.com` → operations, evidence review, incidents and report release
