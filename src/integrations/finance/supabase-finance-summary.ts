@@ -57,7 +57,7 @@ export async function getFinanceSummary(client: SupabaseClient, access: AppAcces
       completeness: mismatch ? "currency mismatch" : actualRow?.completeness ?? "no accepted import",
       periodState: period?.state ?? null, stale: period?.stale ?? false,
       unmatchedAmount: period?.unmatched_amount ?? null,
-      pendingExpenseCount: intakes.filter(row => row.site_id === site.id && !["approved", "rejected", "ignored"].includes(row.review_state)).length,
+      pendingExpenseCount: intakes.filter(row => row.site_id === site.id && !["posted", "rejected"].includes(row.review_state)).length,
     });
   });
 }
