@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash, createHmac } from "node:crypto";
 import { readFile, mkdir, writeFile, rename, access, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { createClient } from "@supabase/supabase-js";
 import { buildScenarioPlan } from "../src/demo/scenario-plan.mjs";
 import { contractSourceLines, hashFixture, scannedContractPng,
@@ -9,28 +10,53 @@ import { contractSourceLines, hashFixture, scannedContractPng,
 import { expenseMessage, receiptSha, syntheticReceipt } from "../src/demo/expense-fixtures.mjs";
 
 const root = resolve(import.meta.dirname, "..");
-const outputRoot = join(root, "fixtures", "generated");
+let outputRoot = join(root, "fixtures", "generated");
 const safeName = /^[a-z][a-z0-9-]{2,63}$/;
 let localDatabaseUrl;
 let localAuth;
+let hostedClient;
+let hostedTarget;
 
 function parseArgs() {
   const [operation, name, ...flags] = process.argv.slice(2);
-  if (!["generate", "reset", "assert", "presenter"].includes(operation) || !safeName.test(name ?? "")) {
-    throw new Error("Usage: demo-scenario.mjs <generate|reset|assert|presenter> <scenario-name> [--seed <integer>]");
+  if (!["generate", "reset", "assert", "presenter", "preflight", "plan"].includes(operation) || !safeName.test(name ?? "")) {
+    throw new Error("Usage: demo-scenario.mjs <generate|reset|assert|presenter|preflight|plan> <scenario-name> [--seed <integer>] [--target hosted --project-ref <ref> --organization-id <uuid> --apply]");
   }
-  let seed;
+  let seed, target = "local", projectRef, organizationId, apply = false;
   for (let i = 0; i < flags.length; i += 1) {
     if (flags[i] === "--seed" && /^\d+$/.test(flags[i + 1] ?? "")) seed = Number(flags[++i]);
+    else if (flags[i] === "--target" && flags[i + 1] === "hosted") { target = "hosted"; i++; }
+    else if (flags[i] === "--project-ref" && /^[a-z0-9]{20}$/.test(flags[i + 1] ?? "")) projectRef = flags[++i];
+    else if (flags[i] === "--organization-id" && /^[0-9a-f-]{36}$/.test(flags[i + 1] ?? "")) organizationId = flags[++i];
+    else if (flags[i] === "--apply") apply = true;
     else throw new Error(`Unsupported option: ${flags[i]}`);
   }
-  if (seed !== undefined && operation !== "generate") throw new Error("--seed is available only for generate.");
-  return { operation, name, seed };
+  if (seed !== undefined && !["generate", "plan", "preflight"].includes(operation)) throw new Error("--seed is available only for generate, plan, or preflight.");
+  if (target === "hosted" && (!projectRef || !organizationId)) throw new Error("Hosted target requires explicit --project-ref and --organization-id.");
+  if (target === "local" && (projectRef || organizationId || apply)) throw new Error("Hosted flags require --target hosted.");
+  if (target === "hosted" && ["generate", "reset"].includes(operation) && !apply) throw new Error("Hosted writes require --apply after a reviewed preflight.");
+  if (target === "hosted" && ["presenter", "plan"].includes(operation)) throw new Error("Generate plan or presenter notes locally before targeting a hosted project.");
+  return { operation, name, seed, target, projectRef, organizationId };
 }
 
 async function json(path) { return JSON.parse(await readFile(path, "utf8")); }
 async function exists(path) { try { await access(path); return true; } catch { return false; } }
 async function atomicJson(path, value) {
+  if (hostedClient && path.endsWith("/registry.json")) {
+    const record = {
+      run_id: value.runId, scenario_id: value.scenarioId, organization_id: value.organizationId,
+      project_ref: hostedTarget.projectRef, status: value.status, registry: value,
+    };
+    if (!hostedTarget.registryPersisted) {
+      await checked(hostedClient.from("demo_scenario_runs").insert(record), "Create hosted scenario registry");
+      hostedTarget.registryPersisted = true;
+    } else {
+      const changed = await checked(hostedClient.from("demo_scenario_runs").update({ status: value.status, registry: value })
+        .eq("run_id", value.runId).eq("organization_id", value.organizationId)
+        .eq("project_ref", hostedTarget.projectRef).select("run_id"), "Update hosted scenario registry");
+      if (changed.length !== 1) throw new Error("Hosted registry no longer belongs to this project and organization.");
+    }
+  }
   const temporary = `${path}.tmp`;
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`);
   await rename(temporary, path);
@@ -57,8 +83,39 @@ function connectLocal() {
   localAuth = { url, anonKey, jwtSecret };
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
-function personaClient(userId) {
+function connectHosted() {
+  const { projectRef, organizationId } = hostedTarget ?? {};
+  const url = process.env.CLEANOPS_HOSTED_DEMO_URL;
+  const secret = process.env.CLEANOPS_HOSTED_DEMO_SECRET_KEY;
+  const anonKey = process.env.CLEANOPS_HOSTED_DEMO_PUBLISHABLE_KEY;
+  const password = process.env.CLEANOPS_HOSTED_DEMO_PASSWORD;
+  if (url !== `https://${projectRef}.supabase.co` || !secret || !anonKey || !password || password.length < 12)
+    throw new Error("Hosted endpoint, secret, publishable key and 12+ character persona password are required for the explicit project ref.");
+  if (!/^[0-9a-f-]{36}$/.test(organizationId)) throw new Error("Invalid hosted scenario organization ID.");
+  const client = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
+  hostedClient = client;
+  localAuth = { url, anonKey, password };
+  if (process.env.CLEANOPS_HOSTED_DEMO_DATABASE_URL) {
+    const dbUrl = new URL(process.env.CLEANOPS_HOSTED_DEMO_DATABASE_URL);
+    if (dbUrl.protocol !== "postgresql:" ||
+      (!dbUrl.hostname.includes(projectRef) && !decodeURIComponent(dbUrl.username).includes(projectRef)) ||
+      ["localhost", "127.0.0.1"].includes(dbUrl.hostname))
+      throw new Error("Hosted database URL does not identify the explicit project ref.");
+    localDatabaseUrl = dbUrl.toString();
+  }
+  return client;
+}
+function connectTarget() { return hostedTarget ? connectHosted() : connectLocal(); }
+async function personaClient(userId) {
   if (!localAuth || !/^[0-9a-f-]{36}$/.test(userId)) throw new Error("Local Director persona is unavailable.");
+  if (hostedTarget) {
+    const persona = hostedTarget.plan.personas.find((_, index) => hostedTarget.registry?.authUserIds[index] === userId);
+    if (!persona) throw new Error("Hosted persona is outside this scenario registry.");
+    const actor = createClient(localAuth.url, localAuth.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const signed = await actor.auth.signInWithPassword({ email: persona.email, password: localAuth.password });
+    if (signed.error || signed.data.user?.id !== userId) throw new Error(`Hosted persona ${persona.key} could not authenticate.`);
+    return actor;
+  }
   const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
   const header = encode({ alg: "HS256", typ: "JWT" });
   const now = Math.floor(Date.now() / 1000);
@@ -280,7 +337,7 @@ async function assertProjectScope(client,plan,registry,allowPartial){
   }
   if(allowPartial)return;
   const director=plan.personas.find(persona=>persona.role==="organization_administrator");
-  const actor=personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
+  const actor=await personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
   const summaries=await checked(actor.rpc("list_finance_projects",{p_site_id:plan.sites[0].id}),"Read project contribution");
   for(const expected of plan.expected.projects){
     const actual=summaries.find(item=>item.project_code===expected.code);
@@ -305,8 +362,8 @@ async function assertProjectScope(client,plan,registry,allowPartial){
     throw new Error("Project accounting revenue does not equal its single site allocation.");
 }
 async function countAttached(organizationId, hasContracts, hasExpenses, hasTime, hasProjects) {
-  if (!/^[0-9a-f-]{36}$/.test(organizationId) || !localDatabaseUrl) throw new Error("Invalid local reset scope.");
-  const baseTables = new Set(["clients", "sites", "workers", "worker_site_permissions", "memberships", "member_site_access"]);
+  if (!/^[0-9a-f-]{36}$/.test(organizationId) || !localDatabaseUrl) throw new Error("Database URL and exact scenario organization are required for reset.");
+  const baseTables = new Set(["clients", "sites", "workers", "worker_site_permissions", "memberships", "member_site_access", "demo_scenario_runs"]);
   if (hasContracts) for (const table of contractTables) baseTables.add(table);
   if (hasExpenses) for(const table of ["integration_accounts","integration_webhook_events",
     "processing_jobs","external_messages","external_message_contexts","external_message_media",
@@ -347,7 +404,7 @@ async function generateContracts(client, plan, registry) {
   const directorIndex = plan.personas.indexOf(director);
   const directorId = registry.authUserIds[directorIndex];
   if (!directorId) throw new Error("Contract builder requires its generated Director persona.");
-  const actor = personaClient(directorId);
+  const actor = await personaClient(directorId);
   const contract = plan.contract;
   await checked(client.from("site_zones").insert(contract.zone), "Create contract zone");
   await checked(client.from("contracts").insert({ ...contract.identity, created_by: directorId }), "Create manual contract source");
@@ -407,7 +464,7 @@ async function generateExpenses(client,plan,registry,directory){
   if(!plan.expenseCases)return;
   const director=plan.personas.find(persona=>persona.role==="organization_administrator");
   const directorId=registry.authUserIds[plan.personas.indexOf(director)];
-  const directorActor=personaClient(directorId);
+  const directorActor=await personaClient(directorId);
   const account={id:sqlId(`expense-account:${plan.runId}`),organization_id:plan.organization.id,
     site_id:plan.sites[0].id,provider:"mock_legacy_whatsapp_group",
     external_account_id:`scenario-${plan.scenario.scenarioId}-expense`,display_name:"Synthetic Expense Inbox"};
@@ -453,7 +510,7 @@ async function generateExpenses(client,plan,registry,directory){
         &&p.siteIndex===item.siteIndex);
       if(!persona)throw new Error(`No app expense persona for ${item.key}.`);
       const userId=registry.authUserIds[plan.personas.indexOf(persona)];
-      intakeId=await checked(personaClient(userId).rpc("submit_app_finance_intake",
+      intakeId=await checked((await personaClient(userId)).rpc("submit_app_finance_intake",
         {p_site_id:site.id,p_text:sourceText}),`Submit ${item.key} app expense`);
     }
     const bytes=await readFile(join(directory,item.file));
@@ -510,7 +567,7 @@ async function generateTime(client,plan,registry,directory){
   if(!plan.timeCases)return;
   const director=plan.personas.find(persona=>persona.role==="organization_administrator");
   const directorId=registry.authUserIds[plan.personas.indexOf(director)];
-  const actor=personaClient(directorId);
+  const actor=await personaClient(directorId);
   const primary=plan.timeCases[0].workerId;
   const replacement=plan.timeCases.find(item=>item.key==="worker_swap_replacement").workerId;
   registry.time={rateIds:[],rows:[]};
@@ -596,7 +653,7 @@ async function generateProjectDrafts(client,plan,registry,directory){
   if(!plan.projects)return;
   const director=plan.personas.find(persona=>persona.role==="organization_administrator");
   const directorId=registry.authUserIds[plan.personas.indexOf(director)];
-  const actor=personaClient(directorId);
+  const actor=await personaClient(directorId);
   registry.projects={termIds:[],invoiceIds:[],linkIds:[],accounting:{
     finance_import_batches:[],finance_source_rows:[],finance_source_allocations:[]}};
   for(const item of plan.projects){
@@ -614,7 +671,7 @@ async function completeProjectScenario(client,plan,registry,directory){
   if(!plan.projects)return;
   const director=plan.personas.find(persona=>persona.role==="organization_administrator");
   const directorId=registry.authUserIds[plan.personas.indexOf(director)];
-  const actor=personaClient(directorId);
+  const actor=await personaClient(directorId);
   const project=plan.projects[0];
   for(const row of registry.expenses.rows.filter(row=>["fuel","project-supply"].includes(row.key))){
     for(const postingId of row.postingIds) await checked(actor.rpc("assign_finance_project_source",{
@@ -654,7 +711,7 @@ async function completeProjectScenario(client,plan,registry,directory){
 async function generateReconciliationScenario(client,plan,registry,directory){
   if(!plan.scenario.modules.reconciliation)return;
   const director=plan.personas.find(persona=>persona.role==="organization_administrator");
-  const actor=personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
+  const actor=await personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
   const directorId=registry.authUserIds[plan.personas.indexOf(director)];
   const fuel=registry.expenses.rows.find(row=>row.key==="fuel").postingIds[0];
   const repair=registry.expenses.rows.find(row=>row.key==="repair").postingIds[0];
@@ -734,7 +791,7 @@ async function assertReconciliationScope(client,plan,registry,allowPartial){
   if(allowPartial||!planned)return;
   if(planned.linkIds.length!==1)throw new Error("Expected one unique reconciliation match.");
   const director=plan.personas.find(persona=>persona.role==="organization_administrator");
-  const actor=personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
+  const actor=await personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
   const june=await checked(actor.rpc("list_finance_match_candidates",{p_period_id:planned.juneId}),"Read June proposals");
   if(june.filter(row=>row.ambiguous).length!==2)throw new Error("Expected two ambiguous duplicate-source proposals.");
   const periods=await checked(actor.rpc("list_finance_period_status"),"Read period status");
@@ -743,14 +800,23 @@ async function assertReconciliationScope(client,plan,registry,allowPartial){
 }
 async function generate(name, seed) {
   const plan = await loadPlan(name, seed); // Validate before any writes.
+  if (hostedTarget) {
+    if (plan.organization.id !== hostedTarget.organizationId) throw new Error("Explicit hosted organization ID differs from the deterministic plan.");
+    hostedTarget.plan = plan;
+  }
   const directory = join(outputRoot, name);
   const registryPath = join(directory, "registry.json");
   if (await exists(registryPath)) throw new Error(`Scenario ${name} already has a registry. Run demo:assert or demo:reset first.`);
-  const client = connectLocal();
+  const client = connectTarget();
+  if (hostedTarget) {
+    const recorded = await checked(client.from("demo_scenario_runs").select("run_id,status").eq("organization_id", plan.organization.id).maybeSingle(), "Check hosted registry");
+    if (recorded) throw new Error(`Hosted organization already has scenario run ${recorded.run_id} (${recorded.status}).`);
+  }
   const existing = await checked(client.from("organizations").select("id").eq("id", plan.organization.id).maybeSingle(), "Check scenario ID");
   if (existing) throw new Error("Scenario organization ID already exists without a registry; refusing to adopt it.");
   await mkdir(directory, { recursive: true });
   const registry = { scenarioId: name, runId: plan.runId, seed: plan.scenario.seed, generatorVersion: plan.scenario.generatorVersion, organizationId: plan.organization.id, status: "generating", createdAt: new Date().toISOString(), authUserIds: [] };
+  if (hostedTarget) hostedTarget.registry = registry;
   await atomicJson(registryPath, registry);
   await atomicJson(join(directory, "expected.json"), plan.expected);
   try {
@@ -764,6 +830,7 @@ async function generate(name, seed) {
     for (const persona of plan.personas) {
       const result = await checked(client.auth.admin.createUser({
         email: persona.email, email_confirm: true,
+        ...(hostedTarget ? { password: localAuth.password } : {}),
         user_metadata: { cleanops_demo: true, demo_scenario_id: name, display_name: persona.displayName, persona: persona.role },
       }), `Create persona ${persona.key}`);
       const userId = result.user?.id;
@@ -793,20 +860,83 @@ async function generate(name, seed) {
 async function loadRegistry(name) {
   const directory = join(outputRoot, name);
   const path = join(directory, "registry.json");
-  if (!(await exists(path))) throw new Error(`No generated registry for ${name}.`);
-  const registry = await json(path);
+  let registry;
+  if (hostedTarget) {
+    const client = connectTarget();
+    const row = await checked(client.from("demo_scenario_runs").select("registry").eq("organization_id", hostedTarget.organizationId)
+      .eq("project_ref", hostedTarget.projectRef).maybeSingle(), "Read hosted scenario registry");
+    if (!row) throw new Error(`No hosted registry for ${name} in the specified project and organization.`);
+    registry = row.registry;
+    if (await exists(path) && !isDeepStrictEqual(await json(path), registry))
+      throw new Error("Local and hosted registries differ; refusing to continue.");
+  } else {
+    if (!(await exists(path))) throw new Error(`No generated registry for ${name}.`);
+    registry = await json(path);
+  }
   if (registry.scenarioId !== name) throw new Error("Registry scenario ID mismatch.");
   const plan = await loadPlan(name, registry.seed);
   if (plan.organization.id !== registry.organizationId || plan.runId !== registry.runId) throw new Error("Registry identity mismatch.");
+  if (hostedTarget) {
+    if (hostedTarget.organizationId !== plan.organization.id) throw new Error("Hosted organization ID differs from scenario registry.");
+    hostedTarget.plan = plan;
+    hostedTarget.registry = registry;
+    hostedTarget.registryPersisted = true;
+    await mkdir(directory, { recursive: true });
+    if (!(await exists(path))) await atomicJson(path, registry);
+  }
   return { directory, registry, plan };
+}
+async function preflight(name, seed) {
+  const plan = await loadPlan(name, seed);
+  if (hostedTarget && plan.organization.id !== hostedTarget.organizationId)
+    throw new Error("Explicit hosted organization ID differs from the deterministic plan.");
+  const client = connectTarget();
+  const idChecks = [
+    ["clients", [plan.client.id]], ["sites", ids(plan.sites)],
+    ["workers", ids(plan.workers)], ["memberships", plan.personas.map(persona => persona.membershipId)],
+    ["member_site_access", ids(plan.memberGrants)],
+  ];
+  const [org, slugOrg, run, runIdOwner, occupiedIds, users] = await Promise.all([
+    checked(client.from("organizations").select("id,slug").eq("id", plan.organization.id).maybeSingle(), "Check scenario organization"),
+    checked(client.from("organizations").select("id,slug").eq("slug", plan.organization.slug).maybeSingle(), "Check scenario slug"),
+    hostedTarget ? checked(client.from("demo_scenario_runs").select("run_id,status,project_ref").eq("organization_id", plan.organization.id).maybeSingle(), "Check hosted registry") : null,
+    hostedTarget ? checked(client.from("demo_scenario_runs").select("run_id,organization_id").eq("run_id", plan.runId).maybeSingle(), "Check hosted run ID") : null,
+    Promise.all(idChecks.map(async ([table, planned]) => ({ table, rows: await checked(client.from(table).select("id,organization_id").in("id", planned), `Check ${table} IDs`) }))),
+    (async () => { const found = []; for (let page = 1; page <= 20; page++) {
+      const result = await checked(client.auth.admin.listUsers({ page, perPage: 100 }), "Check scenario email collisions");
+      found.push(...result.users.filter(user => plan.personas.some(persona => persona.email === user.email)));
+      if (result.users.length < 100) break;
+    } return found; })(),
+  ]);
+  const collisions = [
+    ...(org ? [`organization ${org.id} (${org.slug}) exists`] : []),
+    ...(slugOrg && slugOrg.id !== org?.id ? [`organization slug ${slugOrg.slug} belongs to ${slugOrg.id}`] : []),
+    ...(run ? [`registry ${run.run_id} is ${run.status}`] : []),
+    ...(runIdOwner && runIdOwner.organization_id !== plan.organization.id ? [`run ID ${runIdOwner.run_id} belongs to ${runIdOwner.organization_id}`] : []),
+    ...occupiedIds.flatMap(group => group.rows.map(row => `${group.table} ID ${row.id} already belongs to ${row.organization_id}`)),
+    ...users.map(user => `persona email ${user.email} already exists`),
+  ];
+  const report = { target: hostedTarget ? `hosted ${hostedTarget.projectRef}` : "local",
+    scenarioId: name, runId: plan.runId, organizationId: plan.organization.id,
+    seed: plan.scenario.seed, generatorVersion: plan.scenario.generatorVersion,
+    sites: plan.sites.map(site => ({ id: site.id, name: site.name })),
+    personas: plan.personas.map(persona => ({ email: persona.email, role: persona.role })),
+    entityCounts: plan.expected.entityCounts, expected: plan.expected.controlTotals,
+    expectedExceptions: plan.expected.expectedExceptions, collisions };
+  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  if (collisions.length) throw new Error("Preflight found existing IDs or users; refusing generation.");
 }
 async function assertScenario(name) {
   const { directory, registry, plan } = await loadRegistry(name);
   if (registry.status !== "ready") throw new Error(`Scenario ${name} is ${registry.status}; reset and regenerate.`);
-  const client = connectLocal();
+  const client = connectTarget();
   await assertScope(client, plan, false,registry);
   const users = await listScenarioUsers(client, plan);
   if (users.length !== plan.personas.length) throw new Error("Scenario Auth persona count differs from expected.");
+  if (hostedTarget) {
+    await writeContractDocumentPack(directory, plan.contract);
+    await writeExpenseReceiptPack(directory, plan);
+  }
   if (plan.contract) {
     const pack = await json(join(directory, "contract-documents.json"));
     for (const [file, expected] of Object.entries(pack.files)) {
@@ -833,8 +963,10 @@ async function assertScenario(name) {
 }
 async function reset(name) {
   const { directory, registry, plan } = await loadRegistry(name);
-  const client = connectLocal();
+  const client = connectTarget();
   const org = await assertScope(client, plan, true,registry);
+  const scenarioUsers = await listScenarioUsers(client, plan);
+  assertIdSet(scenarioUsers, registry.authUserIds, "Auth users", registry.status !== "ready");
   if (org) await countAttached(plan.organization.id, Boolean(plan.contract),Boolean(plan.expenseCases),Boolean(plan.timeCases),Boolean(plan.projects));
   registry.status = "resetting";
   await atomicJson(join(directory, "registry.json"), registry);
@@ -925,8 +1057,10 @@ async function reset(name) {
     if (planned.length) await checked(client.from(table).delete().eq("organization_id", plan.organization.id).in("id", planned), `Delete ${table}`);
   }
   if (org) await checked(client.from("organizations").delete().eq("id", plan.organization.id).eq("slug", plan.organization.slug), "Delete scenario organization");
-  for (const user of await listScenarioUsers(client, plan)) await checked(client.auth.admin.deleteUser(user.id), `Delete persona ${user.email}`);
+  for (const user of scenarioUsers) await checked(client.auth.admin.deleteUser(user.id), `Delete persona ${user.email}`);
   await rm(directory, { recursive: true, force: true });
+  if (hostedTarget) await checked(client.from("demo_scenario_runs").delete().eq("run_id", plan.runId)
+    .eq("organization_id", plan.organization.id).eq("project_ref", hostedTarget.projectRef), "Delete hosted scenario registry");
   console.log(`Reset ${name}; only registry-listed base records and tagged scenario Auth users were removed.`);
 }
 async function presenter(name) {
@@ -968,7 +1102,20 @@ async function presenter(name) {
 }
 
 try {
-  const { operation, name, seed } = parseArgs();
+  const { operation, name, seed, target, projectRef, organizationId } = parseArgs();
+  if (operation === "plan") {
+    const plan = await loadPlan(name, seed);
+    process.stdout.write(`${JSON.stringify({ scenarioId: name, organizationId: plan.organization.id,
+      runId: plan.runId, seed: plan.scenario.seed, sites: plan.sites.map(site => ({ id: site.id, name: site.name })),
+      expected: plan.expected.controlTotals }, null, 2)}\n`);
+  }
+  if (target === "hosted") {
+    if (name !== "finance-showcase") throw new Error("Only the reviewed finance-showcase pack is allowed on the hosted demo.");
+    hostedTarget = { projectRef, organizationId };
+    outputRoot = join(root, "fixtures", "generated", "hosted", projectRef);
+  }
+  if (operation === "preflight") await preflight(name, seed);
+  if (operation === "generate" && hostedTarget) await preflight(name, seed);
   if (operation === "generate") await generate(name, seed);
   if (operation === "reset") await reset(name);
   if (operation === "assert") await assertScenario(name);
