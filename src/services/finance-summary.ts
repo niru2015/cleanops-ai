@@ -18,6 +18,17 @@ export type SiteFinanceSummary = {
   stale: boolean;
   unmatchedAmount: number | null;
   pendingExpenseCount: number;
+  approvedOperational: {
+    labour: number | null;
+    approvedHours: number | null;
+    supplies: number;
+    repairs: number;
+    fuelTravel: number;
+    meals: number;
+    other: number;
+    assetReview: number;
+    currency: string | null;
+  };
   flags: { code: string; label: string; detail: string; href: string }[];
 };
 
@@ -31,6 +42,7 @@ export function summarizeSite(input: Omit<SiteFinanceSummary, "contribution" | "
   if (input.stale) flags.push({ code: "stale-close-v1", label: "Closed period needs review", detail: "Accepted sources changed after close.", href: "/finance/reconciliation" });
   if (input.unmatchedAmount !== null && input.unmatchedAmount > 0) flags.push({ code: "unmatched-cost-v1", label: "Unmatched operational cost", detail: `${input.currency} ${input.unmatchedAmount.toFixed(2)} requires reconciliation.`, href: "/finance/reconciliation" });
   if (input.pendingExpenseCount > 0) flags.push({ code: "pending-intake-v1", label: "Finance intake needs review", detail: `${input.pendingExpenseCount} candidate(s) await resolution.`, href: "/finance/inbox" });
+  if (input.approvedOperational.repairs >= 100) flags.push({ code: "repair-review-v1", label: "Review repair cost", detail: `${input.approvedOperational.currency ?? input.currency} ${input.approvedOperational.repairs.toFixed(2)} in approved repair expenses this month. Check source and asset context.`, href: "/finance/expenses" });
   if (input.expectedRevenue !== null && input.recognizedRevenue !== null && input.expectedRevenue > 0 &&
     Math.abs(input.expectedRevenue - input.recognizedRevenue) >= Math.max(100, input.expectedRevenue * 0.1))
     flags.push({ code: "revenue-variance-v1", label: "Expected and recognized revenue differ", detail: `Expected ${input.currency} ${input.expectedRevenue.toFixed(2)}; recognized ${input.currency} ${input.recognizedRevenue.toFixed(2)}. Check contract and accounting sources.`, href: "/finance/contracts" });

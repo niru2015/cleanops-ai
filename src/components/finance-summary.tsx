@@ -40,6 +40,19 @@ export function FinanceSummary({ sites, selectedSiteId, month }: {
           <div><span>Direct contribution</span><strong>{amount(site.contribution, site.currency)}</strong></div>
           <div><span>Margin</span><strong>{site.margin === null ? "N/A" : `${(site.margin * 100).toFixed(1)}%`}</strong></div>
         </div>
+        <h4>Approved operational sources</h4>
+        <p className="recordNote">Expense amounts use the claim&apos;s expense date. They are shown separately from accepted accounting costs and are never added twice to contribution. Worker-level rates remain Director-only.</p>
+        <div className="financeMetricGrid">
+          <div><span>Posted labour</span><strong>{amount(site.approvedOperational.labour, site.currency)}</strong></div>
+          <div><span>Approved hours</span><strong>{site.approvedOperational.approvedHours === null ? "N/A" : site.approvedOperational.approvedHours.toFixed(2)}</strong></div>
+          <div><span>Supply expenses</span><strong>{amount(site.approvedOperational.currency ? site.approvedOperational.supplies : null, site.approvedOperational.currency ?? site.currency)}</strong></div>
+          <div><span>Repair expenses</span><strong>{amount(site.approvedOperational.currency ? site.approvedOperational.repairs : null, site.approvedOperational.currency ?? site.currency)}</strong></div>
+          <div><span>Fuel and travel</span><strong>{amount(site.approvedOperational.currency ? site.approvedOperational.fuelTravel : null, site.approvedOperational.currency ?? site.currency)}</strong></div>
+          <div><span>Meals</span><strong>{amount(site.approvedOperational.currency ? site.approvedOperational.meals : null, site.approvedOperational.currency ?? site.currency)}</strong></div>
+          <div><span>Other direct expenses</span><strong>{amount(site.approvedOperational.currency ? site.approvedOperational.other : null, site.approvedOperational.currency ?? site.currency)}</strong></div>
+          <div><span>Supply expense per approved hour</span><strong>{site.approvedOperational.approvedHours && site.approvedOperational.currency ? amount(site.approvedOperational.supplies / site.approvedOperational.approvedHours, site.approvedOperational.currency) : "N/A"}</strong></div>
+        </div>
+        {site.approvedOperational.assetReview > 0 && <p className="recordNote">{amount(site.approvedOperational.assetReview, site.approvedOperational.currency ?? site.currency)} equipment purchases await accounting/asset treatment and are excluded from direct cost.</p>}
         <p className="recordNote">{site.pendingExpenseCount} finance intake item(s) awaiting resolution. {site.unmatchedAmount === null ? "Reconciliation period not opened." : `${amount(site.unmatchedAmount, site.currency)} operational cost unmatched.`}</p>
         {site.flags.length > 0 && <div aria-label={`${site.siteName} review prompts`}>
           <h4>Review prompts</h4>
