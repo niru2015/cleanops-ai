@@ -374,7 +374,7 @@ async function countAttached(organizationId, hasContracts, hasExpenses, hasTime,
     "labor_cost_entries"])baseTables.add(table);
   if(hasProjects)for(const table of ["projects","project_revenue_terms","project_invoices","project_source_links",
     "project_billable_approvals","finance_import_batches","finance_source_rows",
-    "finance_source_allocations"])baseTables.add(table);
+    "finance_source_allocations","finance_reconciliations"])baseTables.add(table);
   if(hasProjects)for(const table of ["finance_periods","finance_period_events",
     "finance_reconciliation_links","finance_reconciliation_events"])baseTables.add(table);
   const names = execFileSync("psql", [localDatabaseUrl, "-At", "-c", "select table_name from information_schema.columns where table_schema='public' and column_name='organization_id' order by table_name"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
@@ -779,17 +779,93 @@ async function generateReconciliationScenario(client,plan,registry,directory){
   await checked(client.from("finance_source_allocations").insert({id:lateAllocation,organization_id:plan.organization.id,
     source_row_id:lateRow.id,site_id:lateRow.site_id,amount:lateRow.amount}),"Allocate late accounting row");
   await atomicJson(join(directory,"registry.json"),registry);
+  if (plan.scenario.generatorVersion >= 7) {
+    const augustExpenses = registry.expenses.rows.filter(row => ["august-supply", "august-repair"].includes(row.key));
+    if (augustExpenses.length !== 2) throw new Error("August showcase expense sources are missing.");
+    const expenseIds = augustExpenses.flatMap(row => row.postingIds);
+    const costs = await checked(client.from("expense_postings").select("id,site_id,project_id,category,amount")
+      .eq("organization_id", plan.organization.id).in("id", expenseIds), "Read August expense postings");
+    const projectTime = registry.time.rows.find(row => row.key === "manual_project");
+    const labour = await checked(client.from("labor_cost_entries").select("id,site_id,project_id,total_cost")
+      .eq("organization_id", plan.organization.id).eq("id", projectTime.ledgerId).single(), "Read August project labour");
+    const costSources = [
+      { key: "labour", entityType: "labor_cost_entry", entityId: labour.id,
+        siteId: labour.site_id, projectId: labour.project_id, category: "direct_labour", amount: Number(labour.total_cost) },
+      ...costs.map(row => ({ key: row.category, entityType: "expense_posting", entityId: row.id,
+        siteId: row.site_id, projectId: row.project_id,
+        category: row.category === "equipment_repair" ? "repairs" : "supplies", amount: Number(row.amount) })),
+    ];
+    const augustBatchId = sqlId(`reconciliation-august-batch:${plan.runId}`);
+    const revenueSources = [
+      { key: "contract-revenue", siteId: plan.sites[0].id, amount: Number(plan.contract.terms[0].amount) },
+      { key: "second-site-revenue", siteId: plan.sites[1].id, amount: 950.00 },
+    ];
+    const sourceRows = [...costSources.map((row, index) => ({ id: sqlId(`reconciliation-august-${row.key}-${index}:${plan.runId}`),
+      organization_id: plan.organization.id, import_batch_id: augustBatchId,
+      source_row_number: index + 1, source_document_id: `SYN-AUG-COST-${index + 1}`,
+      source_line_id: "1", site_id: row.siteId, service_period: "2026-08-01", accounting_period: "2026-08-31",
+      currency: "CAD", category: row.category, amount: row.amount, approval_state: "approved",
+      recognition_state: "actual", allocation_state: "allocated", raw_row: { synthetic: true, operational_id: row.entityId } })),
+      ...revenueSources.map((row, index) => ({ id: sqlId(`reconciliation-august-revenue-${index}:${plan.runId}`),
+        organization_id: plan.organization.id, import_batch_id: augustBatchId,
+        source_row_number: costSources.length + index + 1, source_document_id: `SYN-AUG-REVENUE-${index + 1}`,
+        source_line_id: "1", site_id: row.siteId, service_period: "2026-08-01", accounting_period: "2026-08-31",
+        currency: "CAD", category: "revenue", amount: row.amount, approval_state: "approved",
+        recognition_state: "actual", allocation_state: "allocated", raw_row: { synthetic: true } }))];
+    const augustAllocations = sourceRows.map((row, index) => ({
+      id: sqlId(`reconciliation-august-allocation-${index}:${plan.runId}`),
+      organization_id: plan.organization.id, source_row_id: row.id, site_id: row.site_id,
+      amount: row.amount, project_id: index < costSources.length ? costSources[index].projectId : null,
+    }));
+    accounting.finance_import_batches.push(augustBatchId);
+    accounting.finance_source_rows.push(...sourceRows.map(row => row.id));
+    accounting.finance_source_allocations.push(...augustAllocations.map(row => row.id));
+    registry.reconciliation.augustId = null;
+    registry.reconciliation.financeReconciliationIds = [];
+    await atomicJson(join(directory, "registry.json"), registry);
+    await checked(client.from("finance_import_batches").insert({ id: augustBatchId,
+      organization_id: plan.organization.id, source_system: "scenario_csv",
+      source_file_name: "synthetic-august-showcase.csv",
+      source_file_hash: createHash("sha256").update(`reconciliation-august:${plan.runId}`).digest("hex"),
+      mapping_version: "clean-039-v1", currency: "CAD", service_period_start: "2026-08-01",
+      service_period_end: "2026-08-31", state: "preview" }), "Stage August showcase accounting batch");
+    await checked(client.from("finance_source_rows").insert(sourceRows), "Stage August showcase source rows");
+    await checked(client.from("finance_source_allocations").insert(augustAllocations), "Allocate August showcase sources");
+    await checked(actor.rpc("accept_finance_import", { p_batch_id: augustBatchId, p_completeness: "complete" }),
+      "Accept complete August accounting source");
+    registry.reconciliation.financeReconciliationIds = ids(await checked(client.from("finance_reconciliations")
+      .select("id").eq("organization_id", plan.organization.id).eq("import_batch_id", augustBatchId),
+    "Record August accounting totals"));
+    await atomicJson(join(directory, "registry.json"), registry);
+    const augustId = await checked(actor.rpc("open_finance_period", { p_organization_id: plan.organization.id,
+      p_period_start: "2026-08-01" }), "Open August showcase period");
+    registry.reconciliation.augustId = augustId;
+    await atomicJson(join(directory, "registry.json"), registry);
+    for (const [index, cost] of costSources.entries()) {
+      await checked(actor.rpc("match_finance_allocation", { p_period_id: augustId,
+        p_allocation_id: augustAllocations[index].id, p_type: cost.entityType,
+        p_entity_id: cost.entityId, p_amount: cost.amount,
+        p_reason: "Synthetic August source-to-operational match" }), `Match August ${cost.key}`);
+    }
+    registry.reconciliation.linkIds = ids(await checked(client.from("finance_reconciliation_links")
+      .select("id").eq("organization_id", plan.organization.id), "Record August match IDs"));
+    await atomicJson(join(directory, "registry.json"), registry);
+    await checked(actor.rpc("review_finance_period", { p_period_id: augustId }), "Review August showcase period");
+    await checked(actor.rpc("close_finance_period", { p_period_id: augustId }), "Close August showcase period");
+  }
 }
 async function assertReconciliationScope(client,plan,registry,allowPartial){
   const planned=registry.reconciliation;
   for(const table of ["finance_periods","finance_reconciliation_links"]){
     const actual=await rowsFor(client,table,plan.organization.id);
-    const expected=table==="finance_periods"?[planned?.juneId,planned?.julyId].filter(Boolean):
+    const expected=table==="finance_periods"?[planned?.juneId,planned?.julyId,planned?.augustId].filter(Boolean):
       planned?.linkIds??[];
     assertIdSet(actual,expected,table,allowPartial);
   }
+  if(plan.scenario.generatorVersion>=7)assertIdSet(await rowsFor(client,"finance_reconciliations",plan.organization.id),
+    planned?.financeReconciliationIds??[],"finance_reconciliations",allowPartial);
   if(allowPartial||!planned)return;
-  if(planned.linkIds.length!==1)throw new Error("Expected one unique reconciliation match.");
+  if(planned.linkIds.length!==(plan.scenario.generatorVersion>=7?4:1))throw new Error("Reconciliation match count differs from scenario plan.");
   const director=plan.personas.find(persona=>persona.role==="organization_administrator");
   const actor=await personaClient(registry.authUserIds[plan.personas.indexOf(director)]);
   const june=await checked(actor.rpc("list_finance_match_candidates",{p_period_id:planned.juneId}),"Read June proposals");
@@ -797,6 +873,27 @@ async function assertReconciliationScope(client,plan,registry,allowPartial){
   const periods=await checked(actor.rpc("list_finance_period_status"),"Read period status");
   const july=periods.find(row=>row.period_id===planned.julyId);
   if(july?.state!=="closed"||!july.stale)throw new Error("Late July batch must make the closed snapshot stale.");
+  if(plan.scenario.generatorVersion>=7){
+    const august=periods.find(row=>row.period_id===planned.augustId);
+    if(august?.state!=="closed"||august.stale||august.metrics.coverage!=="complete")
+      throw new Error("August two-site showcase must be completely closed and current.");
+    const actuals=await checked(client.from("finance_reconciliations")
+      .select("site_id,recognized_revenue,direct_labour,supplies,repairs,direct_contribution,completeness,currency")
+      .eq("organization_id",plan.organization.id).eq("service_period","2026-08-01")
+      .eq("is_current",true),"Read August site contributions");
+    if(actuals.length!==plan.expected.reconciliation.showcaseSites.length)
+      throw new Error("August showcase site count differs from the manifest.");
+    for(const expected of plan.expected.reconciliation.showcaseSites){
+      const actual=actuals.find(row=>row.site_id===expected.siteId);
+      if(!actual||actual.currency!==expected.currency||actual.completeness!=="complete"||
+        Number(actual.recognized_revenue).toFixed(2)!==expected.recognizedRevenue||
+        Number(actual.direct_labour).toFixed(2)!==expected.directLabour||
+        Number(actual.supplies).toFixed(2)!==expected.supplies||
+        Number(actual.repairs).toFixed(2)!==expected.repairs||
+        Number(actual.direct_contribution).toFixed(2)!==expected.contribution)
+        throw new Error(`August site ${expected.siteId} differs from source-backed showcase controls.`);
+    }
+  }
 }
 async function generate(name, seed) {
   const plan = await loadPlan(name, seed); // Validate before any writes.
@@ -983,6 +1080,7 @@ async function reset(name) {
       delete from public.project_source_links where organization_id='${scopedOrg}';
       delete from public.project_invoices where organization_id='${scopedOrg}';
       delete from public.project_billable_approvals where organization_id='${scopedOrg}';
+      delete from public.finance_reconciliations where organization_id='${scopedOrg}';
       delete from public.finance_source_allocations where organization_id='${scopedOrg}';
       delete from public.finance_source_rows where organization_id='${scopedOrg}';
       delete from public.finance_import_batches where organization_id='${scopedOrg}';
@@ -1094,6 +1192,11 @@ async function presenter(name) {
     ...(plan.scenario.modules.reconciliation ? [
       "Open /finance/reconciliation as Director. June has one unique exact repair match, two ambiguous fuel proposals and an unmatched accounting row; it must remain open.",
       "July is closed but stale after a late accepted synthetic import. Reopen with a reason before correction. Area Managers see only assigned-site aggregate status.",
+      ...(plan.scenario.generatorVersion >= 7 ? [
+        `August is the complete closed two-site comparison. ${plan.expected.reconciliation.showcaseSites.map(row =>
+          `${plan.sites.find(site => site.id === row.siteId)?.name}: CAD ${row.recognizedRevenue} recognized revenue and CAD ${row.contribution} direct contribution`).join("; ")}.`,
+        "Select August in /finance. Compare source-backed revenue, posted labour and supply/repair expenses, then open the accounting reconciliation and source workspaces. Values are synthetic, not measured Tornado performance.",
+      ] : []),
     ] : []),
   ];
   const output = `${lines.join("\n")}\n`;
