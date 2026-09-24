@@ -152,6 +152,21 @@ AI score never directly approves work.
 
 ## /finance — supplier, inventory, labour
 
+The manager summary at the top of `/finance` resolves the requested month and permitted sites from
+`getAppAccessContext`, then reads current `contract_revenue_expectations`, current accepted
+`finance_reconciliations`, and `list_finance_period_site_status`. The server service computes
+contribution and margin only for a complete accepted import and a non-stale closed period.
+Without an explicit month, the overview opens the latest complete, current closed month visible
+to the account; otherwise it opens the current month. All assigned sites are compared by default.
+Approved operational expense postings are grouped by the underlying claim's expense date and
+category; approved hours and Director-only posted labour are separate source indicators. These
+operational amounts are displayed separately and never added to accepted accounting totals.
+Expected contract revenue is displayed separately from recognized accounting revenue. Multi-site
+totals add source numerators before dividing for margin; mixed currency and incomplete site sets
+show N/A. Versioned read-only review prompts identify pending finance intake, unmatched costs,
+stale close, and material expected/recognized revenue variance. Links open the owning workspace.
+Area Managers receive only assigned-site aggregate labour, with no worker rate or ledger query.
+
 Access: Directors read and write everything below; Area Managers read the inventory ledger and the accepted-import reconciliation summary (§/finance accounting imports) for their granted casinos, but not the labour ledger or any import detail; every other role sees "Finance access restricted". A `siteId` query parameter (validated against the account's sites) selects the casino; the default is the first accessible site.
 
 `getAppAccessContext` resolves one active membership and its `organizationId` before any finance

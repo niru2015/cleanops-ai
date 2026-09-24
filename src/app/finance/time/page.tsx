@@ -8,13 +8,13 @@ import { getAppAccessContext } from "@/services/access-context";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export default async function FinanceTimePage() {
+export default async function FinanceTimePage({ searchParams }: { searchParams: Promise<{ siteId?: string }> }) {
   const client = await createSupabaseServerClient();
   const access = await getAppAccessContext(client);
   return <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
     <p><Link href="/finance">Finance overview</Link>{access.canEditFinance && <> · <Link href="/finance/rates">Worker cost rates</Link></>}</p>
     <h1>Approved time and labour</h1>
     {!access.canManageOperations ? <p>Operational time access is restricted.</p>
-      : <TimeWorkspace data={await getTimeWorkspace(client, access)} director={access.canEditFinance} />}
+      : <TimeWorkspace data={await getTimeWorkspace(client, access)} director={access.canEditFinance} initialSiteId={(await searchParams).siteId} />}
   </AppShell>;
 }
