@@ -118,6 +118,16 @@ export function buildScenarioPlan(input, reference) {
       paymentMethod: "supplier_invoice", siteIndex: 0, sourceKind: "app",
       date: scenario.clock.start, projectReference: "HASTINGS-DEEP-CLEAN",
       file: "project-supply-receipt.png", approved: true });
+    if (scenario.generatorVersion >= 7 && scenario.modules.reconciliation) {
+      cases.push({ key: "august-supply", category: "supplies", vendor: "Demo August Supplies",
+        cents: 7250 + Math.floor(rng() * 300), paymentMethod: "supplier_invoice",
+        siteIndex: 1, sourceKind: "app", date: "2026-08-10", projectReference: null,
+        file: "august-supply-receipt.png", approved: true });
+      cases.push({ key: "august-repair", category: "equipment_repair", vendor: "Demo August Repair",
+        cents: 9300 + Math.floor(rng() * 300), paymentMethod: "company_card",
+        siteIndex: 1, sourceKind: "app", date: "2026-08-12", projectReference: null,
+        file: "august-repair-receipt.png", approved: true });
+    }
     return cases;
   })() : null;
   const expenseCents = expenseCases?.filter((item) => item.approved).reduce((sum,item) => sum+item.cents,0) ?? 0;
@@ -141,7 +151,7 @@ export function buildScenarioPlan(input, reference) {
       { ...make("worker_swap_replacement", replacement, "2026-06-13", "08", "16", "posted"),
         shiftId: swapOriginal.shiftId, reuseShift: true },
       { key: "manual_project", workerId: primary.id, siteId: sites[0].id,
-        date: "2026-09-15", status: "posted", costType: "regular",
+        date: scenario.generatorVersion >= 7 ? "2026-08-15" : "2026-09-15", status: "posted", costType: "regular",
         projectReference: scenario.modules.projects ? "HASTINGS-DEEP-CLEAN" : "Synthetic Hastings deep clean", hours: 3 },
     ];
   })() : null;
@@ -176,7 +186,18 @@ export function buildScenarioPlan(input, reference) {
     expectedExceptions: [...(expenseCases ? ["duplicate_whatsapp_receipt"] : []),
       ...(timeCases ? ["missing_checkout", "worker_swap"] : [])],
     roleSiteAccess: personas.map((persona) => ({ persona: persona.key, role: persona.role, siteIds: persona.role === "organization_administrator" || persona.role === "operations_manager" ? sites.map((site) => site.id) : [sites[persona.siteIndex].id] })),
-    reconciliation: scenario.modules.reconciliation ? { status: "review_required", exact: 1, ambiguous: 2, unmatched: 1, closedMonth: "2026-07-01", staleAfterLateImport: true } : { status: "not_implemented", matched: 0, unmatched: 0 },
+    reconciliation: scenario.modules.reconciliation ? { status: "review_required", exact: 1, ambiguous: 2, unmatched: 1, closedMonth: "2026-07-01", staleAfterLateImport: true,
+      ...(scenario.generatorVersion >= 7 ? { showcaseMonth: "2026-08-01", showcaseClosed: true,
+        showcaseSites: [
+          { siteId: sites[0].id, currency: "CAD", recognizedRevenue: contract.terms[0].amount,
+            directLabour: "81.00", supplies: "0.00", repairs: "0.00",
+            contribution: (Number(contract.terms[0].amount) - 81).toFixed(2) },
+          { siteId: sites[1].id, currency: "CAD", recognizedRevenue: "950.00", directLabour: "0.00",
+            supplies: (expenseCases.find(item => item.key === "august-supply").cents / 100).toFixed(2),
+            repairs: (expenseCases.find(item => item.key === "august-repair").cents / 100).toFixed(2),
+            contribution: ((95000 - expenseCases.find(item => item.key === "august-supply").cents -
+              expenseCases.find(item => item.key === "august-repair").cents) / 100).toFixed(2) },
+        ] } : {}) } : { status: "not_implemented", matched: 0, unmatched: 0 },
     stage: scenario.modules.reconciliation ? "B/contracts+expenses+time+projects+reconciliation" : projects ? "B/contracts+expenses+time+projects" : timeCases ? "B/contracts+expenses+time" : expenseCases ? "B/contracts+expenses" : contract ? "B/contracts" : "A/base-only",
   };
   if (projects) {
