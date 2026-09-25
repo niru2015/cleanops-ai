@@ -55,7 +55,7 @@ export function FinanceWorkspace({
           <h1>Finance &amp; inventory</h1>
           <p>
             {editable
-              ? "Record supplier receipts, consumption and labour against the selected casino. Totals are derived in the database."
+              ? "Record supplier receipts, stock used and hours worked for this casino — totals are calculated automatically."
               : "Financial records for the selected casino are read only for Area Managers."}
           </p>
         </div>

@@ -21,25 +21,25 @@ export function FinanceSummary({ sites, selectedSiteId, month }: {
       <TextField label="Month" name="month" type="month" defaultValue={month} required />
       <Button variant="secondary" type="submit">View finance</Button>
     </form>
-    <p className="recordNote">Recognized contribution appears only after a complete accepted accounting import and a current closed finance period. Expected contract revenue is a separate projection. Direct contribution excludes overhead, depreciation and tax.</p>
+    <p className="recordNote">&quot;Recognized&quot; revenue only shows once your accounting file has been checked and the month is closed. &quot;Expected&quot; revenue is just an estimate from the contract. Direct contribution is revenue minus day-to-day costs — it doesn&apos;t include overhead, depreciation or tax.</p>
     {visible.length > 1 && <KpiCardGrid ariaLabel="Combined finance result">
-      <KpiCard label="Recognized revenue" value={amount(combined.recognizedRevenue, combined.currency ?? "CAD")} />
-      <KpiCard label="Direct contribution" value={amount(combined.contribution, combined.currency ?? "CAD")} />
-      <KpiCard label="Margin" value={combined.margin === null ? "N/A" : `${(combined.margin * 100).toFixed(1)}%`} />
+      <KpiCard label="Recognized revenue" value={amount(combined.recognizedRevenue, combined.currency ?? "CAD")} help="Confirmed by an accepted accounting file" />
+      <KpiCard label="Direct contribution" value={amount(combined.contribution, combined.currency ?? "CAD")} help="What's left after labour, supplies and repairs" />
+      <KpiCard label="Margin" value={combined.margin === null ? "N/A" : `${(combined.margin * 100).toFixed(1)}%`} help="Contribution as a share of revenue" />
     </KpiCardGrid>}
     <div className="financeSummarySites">
       {visible.map(site => <article className="financePanel" key={site.siteId}>
         <h3>{site.siteName}</h3>
         <p>{site.period} · {site.currency} · {site.completeness} · period {site.periodState ?? "not opened"}{site.stale ? " · stale close" : ""}</p>
         <KpiCardGrid>
-          <KpiCard label="Expected contract revenue" value={amount(site.expectedRevenue, site.currency)} />
-          <KpiCard label="Recognized revenue" value={amount(site.recognizedRevenue, site.currency)} />
-          <KpiCard label="Direct labour" value={amount(site.labour, site.currency)} />
-          <KpiCard label="Supplies" value={amount(site.supplies, site.currency)} />
-          <KpiCard label="Repairs" value={amount(site.repairs, site.currency)} />
-          <KpiCard label="Other direct cost" value={amount(site.otherDirectCost, site.currency)} />
-          <KpiCard label="Direct contribution" value={amount(site.contribution, site.currency)} />
-          <KpiCard label="Margin" value={site.margin === null ? "N/A" : `${(site.margin * 100).toFixed(1)}%`} />
+          <KpiCard label="Expected contract revenue" value={amount(site.expectedRevenue, site.currency)} help="What the contract says you should earn" />
+          <KpiCard label="Recognized revenue" value={amount(site.recognizedRevenue, site.currency)} help="Confirmed by an accepted accounting file" />
+          <KpiCard label="Direct labour" value={amount(site.labour, site.currency)} help="Wages for the work done" />
+          <KpiCard label="Supplies" value={amount(site.supplies, site.currency)} help="Cleaning products and materials" />
+          <KpiCard label="Repairs" value={amount(site.repairs, site.currency)} help="Equipment fixes and maintenance" />
+          <KpiCard label="Other direct cost" value={amount(site.otherDirectCost, site.currency)} help="Any other cost tied to this site" />
+          <KpiCard label="Direct contribution" value={amount(site.contribution, site.currency)} help="What's left after labour, supplies and repairs" />
+          <KpiCard label="Margin" value={site.margin === null ? "N/A" : `${(site.margin * 100).toFixed(1)}%`} help="Contribution as a share of revenue" />
         </KpiCardGrid>
         <h4>Approved operational sources</h4>
         <p className="recordNote">Expense amounts use the claim&apos;s expense date. They are shown separately from accepted accounting costs and are never added twice to contribution. Worker-level rates remain Director-only.</p>

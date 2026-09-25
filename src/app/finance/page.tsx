@@ -2,7 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { FinanceWorkspace } from "@/components/finance-workspace";
 import { FinanceSummary } from "@/components/finance-summary";
 import { MessageContextQueue } from "@/components/message-context-queue";
-import { CasinoSwitcher, SectionTabs, StatusBadge } from "@/components/ui";
+import { CasinoSwitcher, FlowSteps, SectionTabs, StatusBadge } from "@/components/ui";
 import { getFinanceSectionTabs } from "@/config/finance-navigation";
 import { getFinanceWorkspace, type FinanceWorkspace as FinanceWorkspaceData } from "@/integrations/finance/supabase-finance";
 import { getFinanceSummary, getPreferredFinanceMonth } from "@/integrations/finance/supabase-finance-summary";
@@ -102,6 +102,15 @@ export default async function FinancePage({
         </StatusBadge>
       </section>
       <SectionTabs items={getFinanceSectionTabs(access.canEditFinance)} currentPath="/finance" ariaLabel="Finance sections" />
+      <FlowSteps
+        ariaLabel="How your finance data connects"
+        steps={[
+          { label: "Field messages come in", description: "Cleaners and supervisors send updates over WhatsApp while they work.", tone: "neutral" },
+          { label: "You confirm what they mean", description: "A director links each message to the right site, task and person.", href: "#message-queue-title", tone: "info" },
+          { label: "Costs and stock get logged", description: "Purchases, supplies and hours are recorded here — typed in, or matched from an accounting file.", href: "#inventory-ledger-title", tone: "pending" },
+          { label: "Your numbers add up", description: "CleanOps works out revenue, costs and what's left over for each casino.", href: "/finance/reconciliation", tone: "success" },
+        ]}
+      />
       <FinanceSummary sites={summary} selectedSiteId={summarySiteId} month={month} />
       <p className="recordNote">Inventory, labour ledger and message context below are scoped to {selectedSite.name}.</p>
       <FinanceWorkspace workspace={finance} editable={access.canEditFinance} siteId={selectedSite.id} />

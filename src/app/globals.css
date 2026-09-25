@@ -2342,6 +2342,87 @@ a:focus-visible {
   .ui-dataTable td[data-align="right"] { text-align: right; }
 }
 
+.ui-flowSteps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  margin: var(--v2-space-4) 0;
+  padding: var(--v2-space-3) var(--v2-space-4);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--radius-xl);
+  background: var(--v2-surface);
+}
+
+.ui-flowStep-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ui-flowStep {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--v2-space-3);
+  flex: 1 1 220px;
+  min-width: 180px;
+  padding: var(--v2-space-3) var(--v2-space-2);
+}
+
+.ui-flowStep-marker {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ui-flowStep-marker-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); }
+.ui-flowStep-marker-info { background: var(--status-info-bg); color: var(--status-info-fg); }
+.ui-flowStep-marker-pending { background: var(--status-pending-bg); color: var(--status-pending-fg); }
+.ui-flowStep-marker-success { background: var(--status-success-bg); color: var(--status-success-fg); }
+.ui-flowStep-marker-ai { background: var(--status-ai-bg); color: var(--status-ai-fg); }
+.ui-flowStep-marker-danger { background: var(--status-danger-bg); color: var(--status-danger-fg); }
+
+.ui-flowStep-body { min-width: 0; }
+
+.ui-flowStep-label {
+  display: block;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.ui-flowStep-label:hover { color: var(--brand-blue); text-decoration: underline; }
+
+.ui-flowStep-description {
+  margin: 4px 0 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.ui-flowStep-arrow {
+  flex: 0 0 auto;
+  padding: 0 var(--v2-space-2);
+  color: var(--ink-muted);
+  font-size: 16px;
+}
+
+@media (max-width: 780px) {
+  .ui-flowSteps { flex-direction: column; }
+  .ui-flowStep-wrap { flex-direction: column; align-items: stretch; }
+  .ui-flowStep-arrow { display: none; }
+}
+
 @media (max-width: 600px) {
   .ui-kpiCardGrid { grid-template-columns: 1fr; }
   .ui-filterBar { align-items: stretch; flex-direction: column; }
