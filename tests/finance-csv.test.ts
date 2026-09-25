@@ -3,6 +3,8 @@ import { parseFinanceCsv } from "@/services/finance-csv";
 
 const site = { id: "10000000-0000-4000-8000-000000000001", name: "Grand Casino" };
 const header = "source_document_id,source_line_id,site_reference,service_period,accounting_period,currency,category,amount,approval_state,recognition_state";
+const referenceHeader = `${header},operational_reference_type,operational_reference_id`;
+const referenceRow = "INV-1,1,Grand Casino,2026-08-01,2026-08-01,CAD,supplies,25.00,approved,actual";
 
 describe("CLEAN-020 neutral finance CSV", () => {
   it("calculates direct contribution from approved actual rows", () => {
@@ -26,5 +28,25 @@ describe("CLEAN-020 neutral finance CSV", () => {
   it("supports quoted commas and rejects duplicate source lines", () => {
     const preview = parseFinanceCsv(`${header}\nINV-1,1,"Grand Casino",2026-08-01,2026-08-01,CAD,revenue,10.00,approved,actual\nINV-1,1,"Grand Casino",2026-08-01,2026-08-01,CAD,revenue,10.00,approved,actual`, [site]);
     expect(preview.errors).toContain("Row 3: duplicate source document and line ID.");
+  });
+
+  it("rejects an unsupported operational reference type during preview", () => {
+    const preview = parseFinanceCsv(`${referenceHeader}\n${referenceRow},labor_cost_entry,10000000-0000-4000-8000-000000000002`, [site]);
+    expect(preview.errors).toContain("Row 2: operational reference type 'labor_cost_entry' is unsupported. Use supply_invoice, supply_receipt, repair_invoice or repair_report.");
+  });
+
+  it("requires an operational reference type and ID together", () => {
+    const typeOnly = parseFinanceCsv(`${referenceHeader}\n${referenceRow},supply_invoice,`, [site]);
+    const idOnly = parseFinanceCsv(`${referenceHeader}\n${referenceRow},,10000000-0000-4000-8000-000000000002`, [site]);
+    expect(typeOnly.errors).toContain("Row 2: operational reference type and ID must be provided together.");
+    expect(idOnly.errors).toContain("Row 2: operational reference type and ID must be provided together.");
+  });
+
+  it("requires a UUID reference ID and accepts a supported pair", () => {
+    const invalid = parseFinanceCsv(`${referenceHeader}\n${referenceRow},repair_report,not-a-uuid`, [site]);
+    const valid = parseFinanceCsv(`${referenceHeader}\n${referenceRow},repair_report,10000000-0000-4000-8000-000000000002`, [site]);
+    expect(invalid.errors).toContain("Row 2: operational reference ID must be a UUID.");
+    expect(valid.errors).toEqual([]);
+    expect(valid.rows[0]).toMatchObject({ operational_reference_type: "repair_report", operational_reference_id: "10000000-0000-4000-8000-000000000002" });
   });
 });

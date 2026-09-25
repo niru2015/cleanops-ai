@@ -1,6 +1,10 @@
+import { z } from "zod";
+
 export const FINANCE_MAPPING_VERSION = "cleanops-neutral-v1";
 
 const categories = ["revenue", "direct_labour", "supplies", "repairs", "other_direct_cost", "overhead", "depreciation", "tax"] as const;
+const operationalReferenceTypes = ["supply_invoice", "supply_receipt", "repair_invoice", "repair_report"] as const;
+const operationalReferenceIdSchema = z.string().uuid();
 const requiredHeaders = ["source_document_id", "source_line_id", "site_reference", "service_period", "accounting_period", "currency", "category", "amount"] as const;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -100,13 +104,24 @@ export function parseFinanceCsv(csv: string, sites: { id: string; name: string }
     const siteId = siteMap.get(siteReference.toLowerCase()) ?? "";
     if (!siteId) warnings.push(`Row ${line}: site '${siteReference || "(blank)"}' is unallocated.`);
     if (category === "unmapped") warnings.push(`Row ${line}: category '${rawCategory || "(blank)"}' is unmapped.`);
+    const operationalReferenceType = value(record, "operational_reference_type");
+    const operationalReferenceId = value(record, "operational_reference_id");
+    if (operationalReferenceType && !operationalReferenceTypes.includes(operationalReferenceType as typeof operationalReferenceTypes[number])) {
+      errors.push(`Row ${line}: operational reference type '${operationalReferenceType}' is unsupported. Use supply_invoice, supply_receipt, repair_invoice or repair_report.`);
+    }
+    if (Boolean(operationalReferenceType) !== Boolean(operationalReferenceId)) {
+      errors.push(`Row ${line}: operational reference type and ID must be provided together.`);
+    }
+    if (operationalReferenceId && !operationalReferenceIdSchema.safeParse(operationalReferenceId).success) {
+      errors.push(`Row ${line}: operational reference ID must be a UUID.`);
+    }
     const approval = value(record, "approval_state").toLowerCase();
     const recognition = value(record, "recognition_state").toLowerCase();
     return {
       source_row_number: line, source_account_id: value(record, "source_account_id"), source_document_id: documentId,
       source_line_id: lineId, site_reference: siteReference, site_id: siteId, contract_reference: value(record, "contract_reference"),
       job_reference: value(record, "job_reference"), asset_reference: value(record, "asset_reference"),
-      operational_reference_type: value(record, "operational_reference_type"), operational_reference_id: value(record, "operational_reference_id"),
+      operational_reference_type: operationalReferenceType, operational_reference_id: operationalReferenceId,
       service_period: servicePeriod, accounting_period: accountingPeriod, currency, category, amount: Number.isFinite(amount) ? amount.toFixed(2) : rawAmount,
       tax_amount: Number.isFinite(tax) ? tax.toFixed(2) : rawTax,
       tax_treatment: enumValue(["exclusive", "inclusive", "exempt", "unknown"] as const, "unknown")(value(record, "tax_treatment").toLowerCase()),
