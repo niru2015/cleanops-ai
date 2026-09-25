@@ -2,7 +2,7 @@
 
 **Current status:** The hosted run was reset and regenerated with alternate seed `20260927`, run `cf17ee03-dfe7-59f6-8d18-faf51007d919`. The current manifest has CAD 31,853.00 expected contract revenue, CAD 755.06 approved expense cost and CAD 789.00 approved labour cost. Read [GATE_A_EXECUTION.md](GATE_A_EXECUTION.md) and the current generated manifest before presenting. The older `20260925` baseline record below is historical.
 
-Use this as a guided **prototype** presentation and a record of what still needs a full Gate A rehearsal. The detailed state-changing UAT is in [FINANCE_UAT.md](FINANCE_UAT.md). Casino names are reference names in synthetic data; no Tornado customer data or live accounting/WhatsApp connection is represented.
+Use this as a guided **prototype** presentation and a record of what still needs a full Gate A rehearsal. The screenshot-led [training guide](GATE_A_FINANCE_TRAINING.md) and [implemented process flows](GATE_A_FINANCE_PROCESS_FLOWS.md) explain each presenter stop and operational decision. The detailed state-changing UAT is in [FINANCE_UAT.md](FINANCE_UAT.md). Casino names are reference names in synthetic data; no Tornado customer data or live accounting/WhatsApp connection is represented.
 
 ## Verified baseline — 2026-09-24 UTC
 
@@ -49,7 +49,7 @@ For every case record date/time, role, URL/site/month, input or source ID, expec
 
 ## Readiness decision and owning issues
 
-**Now:** suitable for a guided, read-only synthetic finance concept demonstration using the route above. **Not yet:** a production pilot. Keep #38 Gate A open for the deferred physical iPhone picker check, full timed presenter rehearsal and credential rotation.
+**Now:** suitable for a guided, read-only synthetic finance concept demonstration using the route above. **Not yet:** a production pilot. The scoped demo credentials were rotated after recording; keep #38 Gate A open for the deferred physical iPhone picker check and a human timed presenter rehearsal.
 
 1. **#76 / #28 — hosted demo and scenario coverage.** Version 8 provides populated-site Area Managers, a same-tenant Client viewer, direct login choices, an alternate-seed replay and source-backed August controls. The second replay and recorder completed; retain the pending physical iPhone check. Keep `Scenario Site 4` explicitly fictional or use another approved reference name.
 2. **#34 — overview acceptance.** Reconcile the older Aurora/Harbour/Cedar CAD 60,000 acceptance example with the current `tornado-v1` generated controls. Decide how the “All assigned casinos” combined card should explain partial coverage; currently it shows N/A while two site cards are complete. Finish browser coverage for exceptions, drill-through, mobile and keyboard. Do not manufacture totals for missing imports.

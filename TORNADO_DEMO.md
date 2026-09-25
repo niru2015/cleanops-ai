@@ -66,4 +66,6 @@ For CI, configure `TORNADO_DEMO_PASSWORD` and `TORNADO_DEMO_ALLOWED_ORIGIN` as p
 
 ## Presentation handoff
 
+For an operator or presenter, start with the screenshot-led [Gate A finance training guide](docs/demo/GATE_A_FINANCE_TRAINING.md) and its [implemented finance process flows](docs/demo/GATE_A_FINANCE_PROCESS_FLOWS.md). The committed [screenshot inventory](docs/demo/assets/gate-a-finance/README.md) distinguishes the active seed from historical state-changing UAT images. Those public synthetic stills can be reviewed without opening protected Playwright traces.
+
 Use [narration](docs/demo/TORNADO_NARRATION.md) and [slide map / Canva manifest](docs/demo/TORNADO_CANVA_HANDOFF.json). Review every still and UAT status before importing into Canva. Slides must retain the prototype/synthetic disclaimer. Generate the deck from successful screenshots; label skipped or failed chapters as unavailable rather than replacing them with invented screens. The source finance scenario may change, so refresh the expected manifest and screenshots immediately before external presentation.

@@ -7,6 +7,9 @@
   "uatResults": "artifacts/tornado-demo/html-report/index.html",
   "video": "artifacts/tornado-demo/gate-a/hosted-two-minute-demo.webm",
   "narration": "docs/demo/TORNADO_NARRATION.md",
+  "financeTrainingGuide": "docs/demo/GATE_A_FINANCE_TRAINING.md",
+  "financeProcessFlows": "docs/demo/GATE_A_FINANCE_PROCESS_FLOWS.md",
+  "committedTrainingScreenshots": "docs/demo/assets/gate-a-finance/",
   "presentationGuidance": "Use only screenshots from the latest passed UAT chapters. Slide 10 is a limitation slide while UAT-10 is skipped; do not claim that Mock AI was demonstrated.",
   "slides": [
     { "order": 1, "title": "Role-based entry", "screenshot": "screenshots/01-authentication-login.png", "uat": "UAT-01" },
