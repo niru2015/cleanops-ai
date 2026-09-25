@@ -16,6 +16,7 @@ Paths below are relative to `docs/`. Follow linked security/integration details 
 | AI / evaluation | [AI](AI.md), [OPENAI](integrations/OPENAI.md) | Suggestions, budgets, fallback |
 | Demo / UI | [DEMO](DEMO.md), [GATE_A_FINANCE_TRAINING](demo/GATE_A_FINANCE_TRAINING.md), [GATE_A_FINANCE_PROCESS_FLOWS](demo/GATE_A_FINANCE_PROCESS_FLOWS.md), [DATA_FACTORY](demo/DATA_FACTORY.md), [TORNADO_FINANCE_REHEARSAL](demo/TORNADO_FINANCE_REHEARSAL.md), [FINANCE_UAT](demo/FINANCE_UAT.md), [GATE_A_EXECUTION](demo/GATE_A_EXECUTION.md), [DOMAIN](DOMAIN.md) | Synthetic scenario, screenshot-led presenter training, implemented finance process flows, generator, UAT and release evidence |
 | UI research | [UX_AUDIT_110](UX_AUDIT_110.md) | Journey friction, screenshot evidence, reference patterns and first design slice |
+| UI design system | [UX_SYSTEM_V2](design/UX_SYSTEM_V2.md), [ADR 014](adr/014-ux-system-v2.md) | Tokens, component states, responsive and accessibility rules, CSS-to-component map, adoption plan |
 | Tornado recording | [TORNADO_DEMO](../TORNADO_DEMO.md), [RECORDING_UAT](demo/TORNADO_RECORDING_UAT.md), [NARRATION](demo/TORNADO_NARRATION.md), [CANVA_HANDOFF](demo/TORNADO_CANVA_HANDOFF.json) | Read-only browser recording, evidence and presentation handoff |
 | Architecture change | relevant [ADR](adr/README.md) plus affected spec | Decision and rationale |
 
