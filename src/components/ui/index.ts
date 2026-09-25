@@ -8,3 +8,4 @@ export { SelectField } from "./select-field";
 export { CheckboxField } from "./checkbox-field";
 export { FilterBar, type FilterChip } from "./filters";
 export { CasinoSwitcher, type CasinoOption } from "./casino-switcher";
+export { DataTable, type DataTableColumn } from "./data-table";
