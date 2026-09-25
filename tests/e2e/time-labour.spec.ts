@@ -15,7 +15,7 @@ test("Director can reach finance, set a rate, approve project hours, and post on
   await page.getByRole("button", { name: "Save rate" }).click();
   await expect(page.getByText("Effective worker cost rate saved with audit history.")).toBeVisible();
 
-  await page.getByRole("link", { name: "Time review" }).click();
+  await page.getByRole("link", { name: "Time & labour" }).click();
   await expect(page.getByRole("heading", { name: "Approved time and labour" })).toBeVisible();
   await page.getByRole("heading", { name: "Manual project time" }).locator("..").getByLabel("Worker").selectOption("60000000-0000-4000-8000-000000000001");
   await page.getByLabel("Project reference").fill(project);

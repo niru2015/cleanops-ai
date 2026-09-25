@@ -94,7 +94,7 @@ export default async function FinancePage({
         </div>
         <form method="get">
           <input type="hidden" name="month" value={month} />
-          <CasinoSwitcher name="siteId" sites={access.sites} selectedId={selectedSite.id} />
+          <CasinoSwitcher name="siteId" sites={access.sites} selectedId={selectedSite.id} label="Choose casino" />
           <button className="ui-button ui-button-secondary" type="submit">Open casino</button>
         </form>
         <StatusBadge tone={access.canEditFinance ? "info" : "neutral"}>

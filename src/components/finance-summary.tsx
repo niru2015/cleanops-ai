@@ -22,7 +22,7 @@ export function FinanceSummary({ sites, selectedSiteId, month }: {
       <Button variant="secondary" type="submit">View finance</Button>
     </form>
     <p className="recordNote">Recognized contribution appears only after a complete accepted accounting import and a current closed finance period. Expected contract revenue is a separate projection. Direct contribution excludes overhead, depreciation and tax.</p>
-    {visible.length > 1 && <KpiCardGrid>
+    {visible.length > 1 && <KpiCardGrid ariaLabel="Combined finance result">
       <KpiCard label="Recognized revenue" value={amount(combined.recognizedRevenue, combined.currency ?? "CAD")} />
       <KpiCard label="Direct contribution" value={amount(combined.contribution, combined.currency ?? "CAD")} />
       <KpiCard label="Margin" value={combined.margin === null ? "N/A" : `${(combined.margin * 100).toFixed(1)}%`} />
