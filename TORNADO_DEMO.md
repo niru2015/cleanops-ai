@@ -8,13 +8,13 @@ Use a private shell environment. The default target is a local Next.js app on `1
 
 ```bash
 export TORNADO_DEMO_PASSWORD='your-protected-demo-password'
-export TORNADO_OPERATIONS_PASSWORD='your-separate-legacy-demo-password'
+export TORNADO_OPERATIONS_PASSWORD="$TORNADO_DEMO_PASSWORD"
 export TORNADO_DEMO_BASE_URL='https://your-approved-demo-host.example'
 export TORNADO_EXPECTED_MANIFEST='fixtures/generated/hosted/<project-ref>/finance-showcase/expected.json'
 npm run demo:tornado
 ```
 
-Omit `TORNADO_DEMO_BASE_URL` for local execution. The finance showcase and older operational walkthrough use **separate passwords**. Without `TORNADO_OPERATIONS_PASSWORD`, the legacy evidence, incident, equipment-report and Mock AI chapters are explicitly skipped; the generated site portfolio, time review and finance chapters still run. `TORNADO_EXPECTED_MANIFEST` is optional; without it UAT-09 is explicitly skipped. The file must describe the *active* scenario run. `npm run demo:assert -- finance-showcase` is a separate read-only source assertion that needs the configured database access. The browser recorder does not reset or generate shared data.
+Omit `TORNADO_DEMO_BASE_URL` for local execution. The current synthetic demo uses one shared protected password for finance-showcase and older operational accounts; set both recorder variables to that same value. Without `TORNADO_OPERATIONS_PASSWORD`, the legacy evidence, incident, equipment-report and Mock AI chapters are explicitly skipped; the generated site portfolio, time review and finance chapters still run. `TORNADO_EXPECTED_MANIFEST` is optional; without it UAT-09 is explicitly skipped. The file must describe the *active* scenario run. `npm run demo:assert -- finance-showcase` is a separate read-only source assertion that needs the configured database access. The browser recorder does not reset or generate shared data.
 
 The recorder is read only. The legacy review screen's “Prepare submission” action depends on demo ingress, which is unavailable on the current hosted deployment. The supported mobile task captures Slot Bank 14 evidence; the Mock AI review fixture is a separate Restroom B task. The recorder reports the review preparation state and skips Mock AI when its pair is absent. It never treats Slot Bank 14 uploads as Restroom B evidence.
 After an authorized mobile upload, set `TORNADO_EXPECT_MOBILE_EVIDENCE=1` to require the “Submission ready for review” result in UAT-05B.
@@ -39,7 +39,7 @@ The login picker exposes these synthetic identities. Set the matching account pa
 
 The generated finance organization and the legacy operations walkthrough are separate. A single account cannot be assumed to see both. The released-report Client belongs to the legacy Grand Villa organization; the generated scenario Client proves finance denial and cannot see that other organization's report. The recorder uses the generated Supervisor for the casino portfolio/equipment register, the generated Director for time/labour, the legacy Supervisor for review/incidents/equipment issue intake, and the legacy Director for the mobile task result. `npm run demo:provision-logins` provisions named legacy accounts when its protected prerequisites are present; generated finance identities are provisioned by the scenario workflow. Confirm the reserved `demo-client` Auth account and its site grant before the report chapter. Never put a password in source, slides, or the handoff manifest.
 
-After the 2026-09-25 Gate A recording, the 18 finance-showcase personas and the three named legacy recorder/client accounts were rotated. The current values are in the ignored, owner-readable local files `.env.hosted-scenario-password.local` and `.env.hosted-operations-password.local` (mode 600). The earlier chat-provided passwords no longer work for those 21 accounts. Load the matching file privately before recording or presenting; do not copy its value into Git, Canva, or a slide. Raw login traces may contain entered credentials, so keep them protected.
+After the 2026-09-25 Gate A recording, the finance-showcase and selected legacy accounts were rotated. The owner then set one shared password for all 38 synthetic demo Auth accounts and requested that it stay stable for now. The protected, ignored local files `.env.hosted-scenario-password.local` and `.env.hosted-operations-password.local` (mode 600) hold the same current value; `.env.local` supplies it to the legacy provisioning script. Use those files for future provisioning or recording so it does not change inadvertently. Never commit the value or put it in slides, recordings, or a handoff manifest. Raw login traces may contain entered credentials, so keep them protected.
 
 ## What the command records
 

@@ -88,16 +88,18 @@ simultaneous preparation and reset receives a conflict response. Only the two en
 walkthrough task runs can leave an approved state during reset. Storage cleanup removes paths
 returned by that site-scoped reset; a Storage failure is shown as a partial reset.
 
-The presenter supplies one rotated temporary password. CLEAN-010 defined these three reserved accounts; the login
-selector includes the existing reserved Client viewer alongside the named personas in the next section. No script in this repository creates the accounts below,
-so confirm they still exist before relying on them:
+The presenter supplies one shared protected password for the synthetic demo accounts. CLEAN-010
+defined these three reserved accounts; the login selector includes the existing Client viewer
+alongside the named personas in the next section. No script in this repository creates the accounts
+below, so confirm they still exist before relying on them:
 
 - (CLEAN-010, legacy) `demo-supervisor@cleanops.example.com` → operations, evidence review, incidents and report release
 - `demo-cleaner@cleanops.example.com` → assigned mobile task and real camera/library upload using synthetic demo content
 - `demo-client@cleanops.example.com` → released redacted client report
 
-Rotate the shared password after external presentations. Do not add customer emails or real casino
-records to the synthetic tenant.
+The owner requested that the current shared demo password remain unchanged for now; do not rotate
+it during routine rehearsals or scenario regeneration. Keep it in ignored protected environment
+files, never in Git. Do not add customer emails or real casino records to the synthetic tenant.
 
 
 ## BC casino role demo
