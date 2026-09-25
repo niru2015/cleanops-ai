@@ -1,0 +1,134 @@
+{
+  "origin": "https://cleanops-ai.vercel.app",
+  "capturedAt": "2026-09-25T04:33:48.498Z",
+  "seed": 20260927,
+  "runId": "cf17ee03-dfe7-59f6-8d18-faf51007d919",
+  "screenshots": [
+    {
+      "name": "00-demo-login",
+      "url": "/login",
+      "status": 200,
+      "heading": "Explore the BC casino operations demo"
+    },
+    {
+      "name": "01-director-overview",
+      "url": "/finance?month=2026-08&siteId=a04f9260-4daf-5f07-aa75-cfcca042e764",
+      "status": 200,
+      "heading": "Finance overview"
+    },
+    {
+      "name": "02-river-rock-comparison",
+      "url": "/finance?month=2026-08&siteId=4bffb273-ebf1-532d-bd6f-bcfce6feb476",
+      "status": 200,
+      "heading": "Finance overview"
+    },
+    {
+      "name": "03-contract-register",
+      "url": "/finance/contracts",
+      "status": 200,
+      "heading": "Contract register"
+    },
+    {
+      "name": "04-finance-inbox",
+      "url": "/finance/inbox",
+      "status": 200,
+      "heading": "Finance Inbox"
+    },
+    {
+      "name": "05-approved-expenses",
+      "url": "/finance/expenses",
+      "status": 200,
+      "heading": "Expenses and approved direct cost"
+    },
+    {
+      "name": "06-time-review",
+      "url": "/finance/time?siteId=a04f9260-4daf-5f07-aa75-cfcca042e764",
+      "status": 200,
+      "heading": "Approved time and labour"
+    },
+    {
+      "name": "07-effective-rates",
+      "url": "/finance/rates",
+      "status": 200,
+      "heading": "Worker cost rates"
+    },
+    {
+      "name": "08-projects",
+      "url": "/finance/projects",
+      "status": 200,
+      "heading": "One-off project profitability"
+    },
+    {
+      "name": "09-reconciliation",
+      "url": "/finance/reconciliation",
+      "status": 200,
+      "heading": "Accounting reconciliation and period close"
+    },
+    {
+      "name": "14-overview-operational-sources",
+      "url": "/finance?month=2026-08&siteId=a04f9260-4daf-5f07-aa75-cfcca042e764",
+      "status": 200,
+      "heading": "Approved operational sources"
+    },
+    {
+      "name": "15-accounting-csv",
+      "url": "/finance?month=2026-08&siteId=a04f9260-4daf-5f07-aa75-cfcca042e764",
+      "status": 200,
+      "heading": "Accounting CSV"
+    },
+    {
+      "name": "16-rate-history",
+      "url": "/finance/rates",
+      "status": 200,
+      "heading": "Rate history"
+    },
+    {
+      "name": "17-august-close-controls",
+      "url": "/finance/reconciliation",
+      "status": 200,
+      "heading": "2026-08-01 close controls"
+    },
+    {
+      "name": "18-complete-project",
+      "url": "/finance/projects",
+      "status": 200,
+      "heading": "HASTINGS-DEEP-CLEAN"
+    },
+    {
+      "name": "19-message-context-queue",
+      "url": "/finance?month=2026-08",
+      "status": 200,
+      "heading": "Message context review"
+    },
+    {
+      "name": "10-contract-review",
+      "url": "/finance/contracts/91feb2bc-39e3-598e-b899-82d44ff7e863/review",
+      "status": 200,
+      "heading": "DEMO-FINANCE-SHOWCASE · Synthetic recurring cleaning agreement"
+    },
+    {
+      "name": "11-area-assigned-site",
+      "url": "/finance?month=2026-08&siteId=a04f9260-4daf-5f07-aa75-cfcca042e764",
+      "status": 200,
+      "h1": [
+        "Finance & inventory"
+      ]
+    },
+    {
+      "name": "12-expense-submission",
+      "url": "/mobile/expenses",
+      "status": 200,
+      "h1": [
+        "Submit an expense"
+      ]
+    },
+    {
+      "name": "13-rates-denied",
+      "url": "/finance/rates",
+      "status": 200,
+      "h1": [
+        "Worker cost rates"
+      ]
+    }
+  ]
+}

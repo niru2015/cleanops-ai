@@ -215,7 +215,7 @@ Fixed (issue #55): `getFinanceWorkspace` now takes a `canReadLabour` flag and sk
 
 `total_cost` is database-generated and cannot be written directly. Since issue #48 (migration `20260922034200`), a Director can also edit and delete rows on either ledger; every edit/delete is audited in `finance_ledger_audit_events` and a trigger blocks reassigning a row's `organization_id`, `site_id` or `id`.
 
-Not implemented: revenue, cost import batches, source-document references and per-site profitability (issue #33). `source_message_id` exists on both ledgers but no UI sets it.
+The original ledger forms predate the accepted accounting import and source-backed finance overview described below; do not read their entries as the only finance source. The current CSV import, `finance_reconciliations`, contract expected revenue and per-site contribution are implemented in the later sections of this map. `source_message_id` exists on the two older direct ledgers but those forms do not set it; normal expense intake and approved-time posting use their dedicated source-linked flows.
 
 ## /finance — WhatsApp context queue
 
