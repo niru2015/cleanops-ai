@@ -2260,8 +2260,86 @@ a:focus-visible {
   color: var(--ink);
 }
 
+.ui-dataTable { margin-top: var(--v2-space-4); }
+
+.ui-dataTable-caption {
+  margin: 0 0 var(--v2-space-2);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.ui-dataTable table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.ui-dataTable th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--v2-border);
+  background: var(--v2-surface-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  text-align: left;
+}
+
+.ui-dataTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--v2-border);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.ui-dataTable tbody tr:last-child td { border-bottom: 0; }
+.ui-dataTable tbody tr:hover { background: var(--v2-surface-muted); }
+
+.ui-dataTable th[data-align="right"],
+.ui-dataTable td[data-align="right"] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 980px) {
   .ui-kpiCardGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .ui-dataTable table,
+  .ui-dataTable thead,
+  .ui-dataTable tbody,
+  .ui-dataTable th,
+  .ui-dataTable td,
+  .ui-dataTable tr { display: block; }
+  .ui-dataTable table { border-radius: var(--radius-lg); }
+  .ui-dataTable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .ui-dataTable tbody tr { border-bottom: 1px solid var(--v2-border); padding: var(--v2-space-3) var(--v2-space-2); }
+  .ui-dataTable tbody tr:last-child { border-bottom: 0; }
+  .ui-dataTable td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--v2-space-3);
+    padding: 4px 2px;
+    border-bottom: 0;
+  }
+  .ui-dataTable td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .ui-dataTable td[data-align="right"] { text-align: right; }
 }
 
 @media (max-width: 600px) {
