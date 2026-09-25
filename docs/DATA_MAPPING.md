@@ -217,6 +217,12 @@ Fixed (issue #55): `getFinanceWorkspace` now takes a `canReadLabour` flag and sk
 
 The original ledger forms predate the accepted accounting import and source-backed finance overview described below; do not read their entries as the only finance source. The current CSV import, `finance_reconciliations`, contract expected revenue and per-site contribution are implemented in the later sections of this map. `source_message_id` exists on the two older direct ledgers but those forms do not set it; normal expense intake and approved-time posting use their dedicated source-linked flows.
 
+## /supplies — request, approval and stock history (CLEAN-017)
+
+`getSupplyWorkspace` uses the authenticated RLS client for assigned-site requests/items/events/receipts. Supervisor item choices and stock quantities/history come from the scoped `list_supply_request_items`, `list_site_supply_stock` and `list_site_supply_stock_history` RPCs; these omit vendor contact, individual worker rates and financial ledger cost fields. Managers receive `list_supply_site_comparison` aggregates only for sites they may approve. Requested/currently approved CAD estimates are grouped by request creation month, receipts by receipt month, and linked approved expense by claim date; each remains visible when the other events occurred in a different month. Expense per approved labour hour is N/A when hours are missing or zero. Accounting reconciliation is a separate Finance view.
+
+`performSupplyAction` validates input and site access, then invokes scoped RPCs for submit/revise/decide/order/receive/cancel, stock issue/return/transfer/count and Director-only expense linking. The RPCs enforce role/site checks and transactional state changes independently. A receipt inserts one idempotent `inventory_transactions` receipt and updates the remaining order quantity; a stock issue is recorded with zero financial posting value. A count creates an adjustment event, never silently overwrites old movements. Existing direct inventory ledger rows retain their earlier Director audit behavior; workflow movements with a `movement_key` are immutable. The form currently submits through the authenticated app path; official WhatsApp message intake is not wired to supply requests.
+
 ## /finance — WhatsApp context queue
 
 Fixed (issue #50): `MessageContextQueue` is rendered on `/finance` below the ledgers, for both Director and Area

@@ -255,6 +255,19 @@ granted Area Manager can read but not write. Every edit/delete is recorded in `f
 actor, before/after state and action; a trigger rejects reassigning `organization_id`, `site_id` or `id`.
 An order is not consumption: `issue` records stock released to a site, not proof of use (issue #30).
 
+### CLEAN-017 supply request and stock workflow
+
+```text
+Supervisor at granted site -> request (item, packs, base-unit factor, CAD estimate/source)
+  -> requested -> manager approves/rejects with audit event
+  -> approved -> manager records order reference -> ordered
+  -> partial/final receipt -> one stock receipt transaction per receipt key
+  -> stock issue/return/transfer/count adjustment -> append-only stock history
+  -> optional Director link to an existing approved supply expense posting
+```
+
+Changing an item after approval increments the request version, records the old item in an event and returns the request to `requested`; it must be approved again. Receipt quantity cannot exceed the approved item quantity. Stock issues/transfers cannot make on-hand negative; an uncertain legacy adjustment/count produces N/A until reviewed. Opening, receipts, returns and positive count adjustments add stock; issues, transfers out and negative count adjustments subtract it. Count records the observed quantity and an explicit adjustment, including a zero-difference audit row. The order, receipt and stock issue are not themselves supplier invoices, payments or additional recognized costs. A receipt may link once to one approved same-site CAD supply expense posting; reconciliation still follows the existing finance source row path.
+
 ## 12. Finance — labour
 
 ```text
