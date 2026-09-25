@@ -16,5 +16,6 @@ Supersede decisions with a new ADR and update canonical docs; retain old rationa
 - [011 Finance intake and approved direct cost](011-finance-intake-expense-approval.md)
 - [012 Approved time and effective worker cost](012-approved-time-effective-cost.md)
 - [013 One-off project contribution](013-project-contribution.md)
+- [014 UX system V2 tokens, typefaces and primitives](014-ux-system-v2.md)
 
 New ADR: context, status/date, decision, alternatives, consequences, revisit trigger.
