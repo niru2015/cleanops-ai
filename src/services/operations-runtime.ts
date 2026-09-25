@@ -21,20 +21,20 @@ export type OperationsRuntime = {
 
 export async function getOperationsRuntime(capability: HostedDemoCapability = "supervisor"): Promise<OperationsRuntime> {
   const demo = getDemoIngressConfig().enabled;
-  const writeClient = createPrivilegedSupabaseClient();
   const accessClient = await createSupabaseServerClient();
   const { data, error } = await accessClient.auth.getClaims();
   const actorUserId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
   if (error || !actorUserId) throw new Error("Authentication required.");
   if (demo) {
     if (!await hasHostedDemoAccess(accessClient, actorUserId, capability, false)) throw new Error("Role access required.");
+    const writeClient = createPrivilegedSupabaseClient();
     return { accessClient: writeClient, writeClient, actorUserId, demo: true };
   }
   const hostedDemo = await hasHostedDemoAccess(accessClient, actorUserId, capability);
   if (isHostedDemoEnabled() && !hostedDemo) throw new Error("Role access required.");
   return {
     accessClient,
-    writeClient: hostedDemo ? writeClient : accessClient,
+    writeClient: hostedDemo ? createPrivilegedSupabaseClient() : accessClient,
     actorUserId,
     demo: hostedDemo,
   };
