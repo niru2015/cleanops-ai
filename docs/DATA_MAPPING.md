@@ -311,7 +311,7 @@ These postings do not mutate CLEAN-020 `finance_reconciliations`; #66 owns accou
 | Accepted import history | `finance_import_batches` (Director only) |
 | Site contribution | `finance_reconciliations` (Director or granted Area Manager) |
 
-`previewFinanceImport` validates source IDs, periods, currency, category, amount, site mapping, approval and recognition. `acceptFinanceImport` hashes the unchanged CSV, calls `stage_finance_csv_import`, then `accept_finance_import`. The hash plus mapping version is the idempotency key. Raw rows and individual labour detail never feed the Area Manager query. Direct contribution is recognized revenue minus direct labour, supplies, repairs and other direct costs; zero revenue produces an N/A margin in the UI.
+`previewFinanceImport` validates source IDs, periods, currency, category, amount, site mapping, approval and recognition. Optional operational reference type and ID must appear together; the type must be one of `supply_invoice`, `supply_receipt`, `repair_invoice` or `repair_report`, and the ID must be a UUID. Invalid references produce row-specific preview errors. `acceptFinanceImport` reparses the unchanged CSV, hashes it, calls `stage_finance_csv_import`, then `accept_finance_import`. The hash plus mapping version is the idempotency key. Raw rows and individual labour detail never feed the Area Manager query. Direct contribution is recognized revenue minus direct labour, supplies, repairs and other direct costs; zero revenue produces an N/A margin in the UI.
 
 ## /finance/contracts — manual contract setup and review
 
