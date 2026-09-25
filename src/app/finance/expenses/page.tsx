@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { ExpenseApproval } from "@/components/expense-approval";
+import { SectionTabs } from "@/components/ui";
+import { getFinanceSectionTabs } from "@/config/finance-navigation";
 import { getExpenseWorkspace } from "@/integrations/finance/supabase-expenses";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext } from "@/services/access-context";
@@ -19,7 +21,7 @@ export default async function ExpensesPage(){
   const {access,data}=loaded;
   const siteNames=new Map(access.sites.map(site=>[site.id,site.name]));
   return <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
-      <p><Link href="/finance">Finance overview</Link> · <Link href="/finance/inbox">Finance Inbox</Link></p>
+      <SectionTabs items={getFinanceSectionTabs(access.canEditFinance)} currentPath="/finance/expenses" ariaLabel="Finance sections" />
       <h1>Expenses and approved direct cost</h1>
       <p>Approved expense postings are operational costs. Reimbursement status is separate from the expense.</p>
       {data.claims.length===0&&<p>No reviewed expenses are visible for your assigned casinos.</p>}
