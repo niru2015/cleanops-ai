@@ -62,6 +62,28 @@ psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/tests/database/normalized-finance.sql" >/dev/null
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/supply-workflow.sql" >/dev/null
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/concurrent-supply-request.sql" >/dev/null &
+first_supply_pid=$!
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/concurrent-supply-request.sql" >/dev/null &
+second_supply_pid=$!
+wait "$first_supply_pid"
+wait "$second_supply_pid"
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/prepare-concurrent-supply-receipt.sql" >/dev/null
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/concurrent-supply-receipt.sql" >/dev/null &
+first_receipt_pid=$!
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/concurrent-supply-receipt.sql" >/dev/null &
+second_receipt_pid=$!
+wait "$first_receipt_pid"
+wait "$second_receipt_pid"
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
+  -f "$repository_root/tests/database/check-concurrent-supply.sql" >/dev/null
+psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/tests/database/hosted-demo-reset.sql" >/dev/null
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$test_port" -U postgres -d cleanops_test \
   -f "$repository_root/tests/database/hosted-demo-fixture-guard.sql" >/dev/null

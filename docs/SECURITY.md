@@ -101,6 +101,12 @@ own `can_view_site_finance` rule, whereas `reporting_audit_events` uses the broa
 have let site supervisors and operations managers read finance edit history despite having no ledger access.
 Supplier and inventory item catalogues are readable only by Directors, Area Managers and Operations Managers
 (`private.can_view_supply_catalogue`) and writable only by Directors (`private.can_edit_supply_catalogue`).
+For CLEAN-017, a site Supervisor obtains only active item ID/name/SKU/base unit through the site-scoped
+`list_supply_request_items` RPC; the existing supplier and inventory catalogue table policies remain unchanged.
+Supply requests, items, events, receipts and counts have read-only table grants for authenticated users with
+operational site access. All writes use RPCs that recheck the actor and site. Area/Operations Managers and Directors
+may approve or order; a Supervisor may submit and record an assigned-site receipt or stock event but cannot approve.
+Workflow stock movements are append-only, and supply-to-expense links are Director-only.
 `equipment_models` is readable by every active member and writable by administrators; `equipment_assets` is readable
 with operational site access. Both are select-only for browser roles. Raw `external_messages` remain service-only
 and reach supervisors only through `list_site_external_messages`. Since issue #55, `/finance` tells a restricted

@@ -18,7 +18,7 @@ describe("CLEAN-001 application shell", () => {
     const implementedItems = navigationItems.filter((item) => item.implemented);
     const plannedItems = navigationItems.filter((item) => !item.implemented);
 
-    expect(implementedItems.map((item) => item.label)).toEqual(["Operations", "Sites & zones", "Cleaner mobile", "Evidence review", "Finance & inventory", "Incidents", "Client reports"]);
+    expect(implementedItems.map((item) => item.label)).toEqual(["Operations", "Sites & zones", "Cleaner mobile", "Evidence review", "Supplies", "Finance & inventory", "Incidents", "Client reports"]);
     expect(plannedItems).toHaveLength(0);
   });
 });
