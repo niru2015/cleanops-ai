@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { ExpenseInbox } from "@/components/expense-inbox";
+import { SectionTabs } from "@/components/ui";
+import { getFinanceSectionTabs } from "@/config/finance-navigation";
 import { getExpenseWorkspace } from "@/integrations/finance/supabase-expenses";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext } from "@/services/access-context";
@@ -18,7 +19,7 @@ export default async function FinanceInboxPage(){
     <p>Director or assigned Area Manager access is required.</p></section></AppShell>;
   const {access,data}=loaded;
   return <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
-      <p><Link href="/finance">Finance overview</Link> · <Link href="/finance/expenses">Expenses</Link></p>
+      <SectionTabs items={getFinanceSectionTabs(access.canEditFinance)} currentPath="/finance/inbox" ariaLabel="Finance sections" />
       <h1>Finance Inbox</h1>
       <ExpenseInbox intakes={data.intakes.filter(i=>i.review_state!=="posted"&&i.review_state!=="rejected")}
         documents={data.documents} claims={data.claims} sites={access.sites}/>

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { SectionTabs } from "@/components/ui";
+import { getFinanceSectionTabs } from "@/config/finance-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext } from "@/services/access-context";
 import { getReconciliationWorkspace } from "@/integrations/finance/supabase-reconciliation";
@@ -23,7 +25,8 @@ export default async function ReconciliationPage({searchParams}:{searchParams:Pr
   const siteName=new Map(access.sites.map(site=>[site.id,site.name]));
   const matchedByAllocation=new Map<string,number>();for(const link of links.filter(item=>item.state==="active"))matchedByAllocation.set(link.source_allocation_id,(matchedByAllocation.get(link.source_allocation_id)??0)+link.matched_amount);
   return <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
-    <p><Link href="/finance">Finance overview</Link></p><h1>Accounting reconciliation and period close</h1>
+    <SectionTabs items={getFinanceSectionTabs(access.canEditFinance)} currentPath="/finance/reconciliation" ariaLabel="Finance sections" />
+    <h1>Accounting reconciliation and period close</h1>
     <p>Accepted accounting imports are the source of truth. Operational postings must be linked and balanced before a Director closes an organization-wide month.</p>
     {params.error&&<p role="alert">{params.error}</p>}{params.notice&&<p role="status">{params.notice}</p>}
     {access.canEditFinance&&<section className="reviewCard"><h2>Open a month</h2><form action={reconcileFinance}><input type="hidden" name="kind" value="open"/><label>Month <input type="month" name="month" required defaultValue={new Date().toISOString().slice(0,7)}/></label> <button className="reviewButton reviewButton-primary">Open or view period</button></form></section>}

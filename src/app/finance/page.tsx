@@ -1,8 +1,9 @@
 import { AppShell } from "@/components/app-shell";
-import Link from "next/link";
 import { FinanceWorkspace } from "@/components/finance-workspace";
 import { FinanceSummary } from "@/components/finance-summary";
 import { MessageContextQueue } from "@/components/message-context-queue";
+import { CasinoSwitcher, SectionTabs, StatusBadge } from "@/components/ui";
+import { getFinanceSectionTabs } from "@/config/finance-navigation";
 import { getFinanceWorkspace, type FinanceWorkspace as FinanceWorkspaceData } from "@/integrations/finance/supabase-finance";
 import { getFinanceSummary, getPreferredFinanceMonth } from "@/integrations/finance/supabase-finance-summary";
 import type { SiteFinanceSummary } from "@/services/finance-summary";
@@ -93,19 +94,14 @@ export default async function FinancePage({
         </div>
         <form method="get">
           <input type="hidden" name="month" value={month} />
-          <label>
-            <span className="visuallyHidden">Choose casino</span>
-            <select name="siteId" defaultValue={selectedSite.id}>
-              {access.sites.map((site) => (
-                <option key={site.id} value={site.id}>{site.name}{site.city ? ` · ${site.city}` : ""}</option>
-              ))}
-            </select>
-          </label>
-          <button className="reviewButton reviewButton-secondary" type="submit">Open casino</button>
+          <CasinoSwitcher name="siteId" sites={access.sites} selectedId={selectedSite.id} />
+          <button className="ui-button ui-button-secondary" type="submit">Open casino</button>
         </form>
-        <span className="recordLabel">{access.canEditFinance ? "Director · edit" : "Area Manager · read only"}</span>
+        <StatusBadge tone={access.canEditFinance ? "info" : "neutral"}>
+          {access.canEditFinance ? "Director · edit" : "Area Manager · read only"}
+        </StatusBadge>
       </section>
-      <p><Link href="/finance/contracts">Open contract register</Link> · <Link href="/finance/projects">One-off projects</Link> · <Link href="/finance/inbox">Finance Inbox</Link> · <Link href="/finance/expenses">Expenses and direct costs</Link> · <Link href="/finance/time">Approved time and labour</Link> · <Link href="/finance/reconciliation">Reconciliation and period close</Link>{access.canEditFinance && <> · <Link href="/finance/rates">Worker cost rates</Link></>}</p>
+      <SectionTabs items={getFinanceSectionTabs(access.canEditFinance)} currentPath="/finance" ariaLabel="Finance sections" />
       <FinanceSummary sites={summary} selectedSiteId={summarySiteId} month={month} />
       <p className="recordNote">Inventory, labour ledger and message context below are scoped to {selectedSite.name}.</p>
       <FinanceWorkspace workspace={finance} editable={access.canEditFinance} siteId={selectedSite.id} />

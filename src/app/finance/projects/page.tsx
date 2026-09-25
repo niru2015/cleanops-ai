@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { z } from "zod";
 import { AppShell } from "@/components/app-shell";
 import { ProjectWorkspace, type ProjectSummary } from "@/components/project-workspace";
+import { SectionTabs } from "@/components/ui";
+import { getFinanceSectionTabs } from "@/config/finance-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext } from "@/services/access-context";
 
@@ -73,7 +74,7 @@ export default async function ProjectsPage() {
         label: `Accounting allocation · ${item.job_reference ?? "project"}`, amount: Number(item.amount), kind: "accounting" });
   }
   return <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
-    <p><Link href="/finance">Finance overview</Link></p>
+    <SectionTabs items={getFinanceSectionTabs(access.canEditFinance)} currentPath="/finance/projects" ariaLabel="Finance sections" />
     <h1>One-off project profitability</h1>
     {!access.canViewFinance ? <p>Finance access restricted.</p> : <ProjectWorkspace
       projects={projects} sites={access.sites.map(site => ({ id: site.id, name: site.name }))}

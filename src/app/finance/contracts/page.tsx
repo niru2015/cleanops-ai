@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { SectionTabs } from "@/components/ui";
+import { getFinanceSectionTabs } from "@/config/finance-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAppAccessContext } from "@/services/access-context";
 import { listContracts } from "@/integrations/finance/supabase-contracts";
@@ -13,6 +15,7 @@ export default async function ContractsPage() {
   const allowed = ["organization_administrator", "area_manager", "operations_manager"].includes(access.role);
   const contracts = allowed ? await listContracts(client, access) : [];
   return <AppShell authenticated currentPath="/finance" role={access.role} roleLabel={access.roleLabel}>
+    <SectionTabs items={getFinanceSectionTabs(access.canEditFinance)} currentPath="/finance/contracts" ariaLabel="Finance sections" />
     <section className="accessState">
       <p className="eyebrow">Finance / contracts</p>
       <h1>Contract register</h1>
