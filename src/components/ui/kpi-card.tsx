@@ -22,6 +22,6 @@ export function KpiCard({
   );
 }
 
-export function KpiCardGrid({ children }: { children: ReactNode }) {
-  return <div className="ui-kpiCardGrid">{children}</div>;
+export function KpiCardGrid({ children, ariaLabel }: { children: ReactNode; ariaLabel?: string }) {
+  return <div className="ui-kpiCardGrid" aria-label={ariaLabel}>{children}</div>;
 }
