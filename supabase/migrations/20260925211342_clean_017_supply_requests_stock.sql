@@ -579,6 +579,9 @@ returns trigger language plpgsql set search_path='' as $$
 begin
   if old.movement_key is not null then
     raise exception 'record a correction or count adjustment; supply stock history is immutable' using errcode='22023'; end if;
+  -- Legacy finance ledger entries have no workflow movement key and retain
+  -- their existing audited Director edit behavior.
+  if tg_op = 'UPDATE' then return new; end if;
   return old;
 end $$;
 create trigger supply_stock_movement_immutable before update or delete on public.inventory_transactions
