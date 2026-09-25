@@ -1,9 +1,11 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "title": "CleanOps x Tornado — synthetic demo",
   "disclaimer": "Prototype • synthetic data. Reference names do not imply a customer relationship or measured result.",
+  "recordedRun": { "scenario": "finance-showcase", "seed": 20260927, "runId": "cf17ee03-dfe7-59f6-8d18-faf51007d919", "uatPassed": 13, "uatSkipped": 1 },
   "artifactRoot": "artifacts/tornado-demo",
   "uatResults": "artifacts/tornado-demo/html-report/index.html",
+  "video": "artifacts/tornado-demo/gate-a/hosted-two-minute-demo.webm",
   "narration": "docs/demo/TORNADO_NARRATION.md",
   "presentationGuidance": "Use only screenshots from the latest passed UAT chapters. Slide 10 is a limitation slide while UAT-10 is skipped; do not claim that Mock AI was demonstrated.",
   "slides": [
