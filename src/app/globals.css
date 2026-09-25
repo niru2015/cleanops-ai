@@ -180,14 +180,6 @@ a:focus-visible {
   flex: 0 0 auto;
 }
 
-/* Used by the login page's BrandMark icon (src/app/login/page.tsx), out of #112's scope. */
-.brandMark {
-  width: 31px;
-  height: 31px;
-  flex: 0 0 auto;
-  color: var(--cyan-300);
-}
-
 .brandTag {
   font-family: var(--font-sans);
   font-size: 12px;
@@ -299,7 +291,7 @@ a:focus-visible {
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
-  background: var(--surface);
+  background: var(--v2-surface);
 }
 
 .loginCard {
@@ -314,26 +306,26 @@ a:focus-visible {
   align-items: center;
   gap: 11px;
   margin-bottom: 54px;
-  color: var(--navy-950);
+  color: var(--brand-navy);
+  font-family: var(--font-display);
   font-size: 1.25rem;
-  font-weight: 720;
-  letter-spacing: -0.035em;
-}
-
-.loginBrand .brandMark {
-  color: #159eac;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .loginCard h1 {
   margin: 10px 0 16px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--brand-navy);
   font-size: clamp(2.2rem, 4vw, 4.15rem);
   line-height: 0.98;
-  letter-spacing: -0.06em;
+  letter-spacing: -0.03em;
 }
 
 .loginLead {
   margin: 0 0 30px;
-  color: var(--muted);
+  color: var(--ink-secondary);
   font-size: 1rem;
   line-height: 1.55;
 }
@@ -399,36 +391,43 @@ a:focus-visible {
 .loginField {
   display: grid;
   gap: 7px;
-  color: #26384d;
-  font-size: 0.8rem;
-  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .loginField input {
-  min-height: 48px;
+  min-height: var(--control-height);
   width: 100%;
   padding: 0 14px;
-  border: 1px solid #c8d5de;
-  border-radius: 9px;
-  background: white;
-  color: var(--text);
+  border: 1px solid var(--v2-border-control);
+  border-radius: var(--radius-lg);
+  background: var(--v2-surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
   font-size: 0.92rem;
 }
 
 .loginField input:focus {
-  outline: 3px solid var(--focus);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-  border-color: var(--navy-800);
+  border-color: var(--brand-blue);
 }
 
 .loginSubmit {
-  min-height: 50px;
+  min-height: var(--control-height);
   border: 0;
-  border-radius: 9px;
-  background: var(--navy-950);
+  border-radius: var(--radius-lg);
+  background: var(--brand-blue);
   color: white;
-  font-weight: 720;
+  font-family: var(--font-sans);
+  font-weight: 700;
   cursor: pointer;
+}
+
+.loginSubmit:hover:not(:disabled) {
+  background: var(--brand-blue-hover);
 }
 
 .loginSubmit:disabled {
@@ -439,16 +438,16 @@ a:focus-visible {
 .loginError {
   margin: 0;
   padding: 11px 13px;
-  border: 1px solid #e6a8a4;
-  border-radius: 8px;
-  background: #fff4f3;
-  color: #8f221b;
+  border: 1px solid var(--status-danger-border);
+  border-radius: var(--radius-lg);
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
   font-size: 0.83rem;
 }
 
 .loginBoundary {
   margin: 0;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.75rem;
   text-align: center;
 }
@@ -459,26 +458,36 @@ a:focus-visible {
   flex-direction: column;
   justify-content: center;
   padding: clamp(42px, 7vw, 96px);
-  background: var(--navy-950);
-  color: white;
+  background: var(--brand-navy);
+  color: var(--ink-on-navy);
+}
+
+.loginStoryLogo {
+  align-self: flex-start;
+  width: 180px;
+  height: auto;
+  margin-bottom: var(--v2-space-6);
 }
 
 .prototypePill {
   align-self: flex-start;
-  padding: 7px 11px;
-  border: 1px solid rgb(135 231 237 / 35%);
-  border-radius: 999px;
-  color: var(--cyan-300);
-  font-size: 0.75rem;
+  padding: var(--v2-space-1) var(--v2-space-3);
+  border-radius: var(--radius-pill);
+  background: var(--prototype-bg);
+  color: var(--prototype-fg);
+  font-family: var(--font-sans);
+  font-size: 12px;
   font-weight: 700;
 }
 
 .loginStory h2 {
   max-width: 500px;
   margin: 28px 0 36px;
+  font-family: var(--font-display);
+  font-weight: 600;
   font-size: clamp(2rem, 3.6vw, 3.4rem);
   line-height: 1.02;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.02em;
 }
 
 .loginStory ol {
@@ -496,9 +505,10 @@ a:focus-visible {
 }
 
 .loginStory li > span {
-  color: var(--cyan-300);
+  color: var(--ink-on-navy-muted);
+  font-family: var(--font-sans);
   font-size: 0.78rem;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .loginStory strong,
@@ -509,7 +519,7 @@ a:focus-visible {
 .loginStory p {
   max-width: 430px;
   margin: 5px 0 0;
-  color: #bcd0df;
+  color: var(--ink-on-navy-soft);
   font-size: 0.9rem;
   line-height: 1.5;
 }

@@ -1,4 +1,3 @@
-import { BrandMark } from "@/components/icons";
 import { LoginForm } from "@/components/login-form";
 
 export const dynamic = "force-dynamic";
@@ -7,13 +6,17 @@ export default function LoginPage() {
   return (
     <main className="loginPage">
       <section className="loginCard" aria-labelledby="login-title">
-        <div className="loginBrand"><BrandMark className="brandMark" /><span>CleanOps</span></div>
+        <div className="loginBrand" aria-label="Tornado CleanOps">
+          <span>CleanOps</span>
+        </div>
         <p className="eyebrow">Hosted business demonstration</p>
         <h1 id="login-title">Explore the BC casino operations demo</h1>
         <p className="loginLead">Choose a named demo persona. Directors have organization-wide access; managers, supervisors and cleaners remain restricted to their assigned casinos and workflows.</p>
         <LoginForm />
       </section>
       <aside className="loginStory" aria-label="Demo outline">
+        {/* eslint-disable-next-line @next/next/no-img-element -- fixed panel logo, not a content image */}
+        <img src="/tornado-logo-white.png" alt="Tornado" className="loginStoryLogo" width={257} height={53} />
         <span className="prototypePill">Prototype · synthetic data</span>
         <h2>Role-based casino operations</h2>
         <ol>
