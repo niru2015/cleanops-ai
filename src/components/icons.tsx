@@ -3,16 +3,6 @@ import type { NavigationIcon } from "@/config/navigation";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
-export function BrandMark({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="16" cy="16" r="14" fill="currentColor" />
-      <path d="M7.5 23.5 23.8 7.2" fill="none" stroke="#082238" strokeWidth="4.2" strokeLinecap="round" />
-      <path d="M10.4 25.2 25.4 10.2" fill="none" stroke="#d8fbff" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function MenuIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" {...props}>

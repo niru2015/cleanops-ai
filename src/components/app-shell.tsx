@@ -3,14 +3,15 @@
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { navigationItems } from "@/config/navigation";
 import type { AppRole } from "@/services/access-context";
-import { BrandMark, CloseIcon, EmptyDocumentIcon, MenuIcon, NavigationGlyph } from "@/components/icons";
+import { CloseIcon, EmptyDocumentIcon, MenuIcon, NavigationGlyph } from "@/components/icons";
 import { signOutAction } from "@/app/login/actions";
 
 function Brand() {
   return (
-    <div className="brand" aria-label="CleanOps">
-      <BrandMark className="brandMark" />
-      <span>CleanOps</span>
+    <div className="brand" aria-label="Tornado CleanOps">
+      {/* eslint-disable-next-line @next/next/no-img-element -- fixed sidebar/header logo, not a content image */}
+      <img src="/tornado-logo-white.png" alt="Tornado" className="brandLogo" width={257} height={53} />
+      <span className="brandTag">CleanOps</span>
     </div>
   );
 }
