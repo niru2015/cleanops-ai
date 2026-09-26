@@ -1803,3 +1803,67 @@ a:focus-visible {
   .messageResolutionForm .resolutionStatus, .messageResolutionForm .reviewButton { grid-column: auto; }
   .financeForm .reviewButton { width: 100%; }
 }
+.equipmentDetail {
+  max-width: 1060px;
+  line-height: 1.55;
+}
+.equipmentDetail h2 {
+  margin: 28px 0 12px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+.equipmentDetail h3 { margin: 0; }
+.equipmentDetail > ul { padding-left: 20px; margin: 8px 0 16px; }
+.equipmentDetail > ul li { padding: 5px 0; }
+.equipmentDetail form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--canvas);
+  text-align: left;
+}
+.equipmentDetail form h3,
+.equipmentDetail form p,
+.equipmentDetail form .equipmentChecklistSteps { grid-column: 1 / -1; }
+.equipmentDetail form p { margin: 0; color: var(--muted); }
+.equipmentDetail form label,
+.equipmentChecklistSteps label {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  font-size: .85rem;
+  font-weight: 600;
+}
+.equipmentDetail form input,
+.equipmentDetail form select,
+.equipmentDetail form textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+.equipmentDetail form textarea { min-height: 90px; resize: vertical; }
+.equipmentDetail form button {
+  justify-self: start;
+  align-self: end;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--navy-800);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+.equipmentChecklistSteps { display: grid; gap: 10px; }
+.equipmentChecklistSteps > strong { font-size: .85rem; }
+.equipmentDetail p[role="alert"] { color: #9d2929; font-weight: 700; }
+.equipmentDetail p[role="status"] { color: #19704b; font-weight: 700; }

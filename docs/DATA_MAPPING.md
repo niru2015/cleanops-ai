@@ -48,6 +48,8 @@ Source: `src/integrations/operations/supabase-site-portfolio.ts`, rendered by `S
 | Equipment assets | `equipment_assets` + `equipment_models` | Asset code, category, manufacturer/model, status, condition, last/next service date. |
 | Equipment issues | `equipment_reports` | Label and state, newest first. |
 
+`/equipment` lists only assets at sites from the authenticated access context. `/equipment/[id]` joins the existing asset/model register to site history, versioned checklists, attributed inspections, linked fault reports and maintenance actions. Existing `record_equipment_report` still owns neutral intake; `link_equipment_report_asset` checks the site at link time. `record_equipment_inspection` requires a model-matched approved checklist and separate known operator/inspector; `record_equipment_maintenance_action` enforces the ordered fault lifecycle and independent return approver. `move_equipment_asset` changes only the asset's current site and appends movement history. `link_equipment_repair_cost` requires an approved same-site repair posting, allows one optional accepted accounting source row and prevents a second link for the same posting. The detail page displays operational posted cost once; accepted accounting is shown as reconciliation evidence, never a second addition. `link_equipment_evidence` checks ready private source evidence at the event site. Source notes and evidence are not edited by the browser; corrections create attributed maintenance events.
+
 The interactive command view below is shown only when the account can manage operations and either is a director or has a grant to the fixed walkthrough site `DEMO_SITE_ID` (`src/services/operations-runtime.ts`).
 
 ### Command view reads

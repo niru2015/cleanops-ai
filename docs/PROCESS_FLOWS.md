@@ -192,12 +192,20 @@ equipment problem reported
   -> available to reporting summary
 ```
 
-Current scope is intake only, not a full maintenance/CMMS lifecycle.
+The `/equipment` register can now link this neutral report to an existing asset at the same site. A Director
+approves a checklist version only with a manufacturer or customer-approved source reference. A separate
+site-authorized inspector records post-use answers, notes and an optional follow-up due time; missing or overdue
+inspection remains visible. Ready private task evidence may be associated to an inspection or action without
+altering the source image. A linked fault progresses through attributed triage, maintenance request and work
+completion events. A Director or Operations Manager who did not record completed work approves return to service;
+only then does this workflow mark the report resolved and the asset available. Correction is a new attributed event.
+This is a bounded repair history, not a CMMS, safety certification or causal finding.
 
-Separately, `equipment_assets` (with `equipment_models`) is a read-only site register shown in the `/operations`
-portfolio: status, condition and service dates come from seed data. A report names equipment only by free-text
-label; there is no link to an asset, no inspection record and no repair cost, so repeat-fault history per machine
-cannot yet be derived (issue #31).
+Director site movement closes the current asset-site interval and opens a new one. Old fault, inspection and
+repair expense rows keep their historical site; earlier history before the initial register snapshot is unknown.
+One approved repair expense posting may be linked to one maintenance action, with an optional accepted accounting
+source row. The operational posting is the management cost source and the accounting row is reconciliation evidence,
+so the two are never summed. Unknown costs and period operating hours are not converted to zero or a cost/hour rate.
 
 ## 10. SLA and client release
 

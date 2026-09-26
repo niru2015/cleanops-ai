@@ -45,7 +45,7 @@ export function IncidentOperations({ workspace }: { workspace: IncidentWorkspace
               <div className="equipmentState"><span>Current state</span><strong>{workspace.equipment.state}</strong></div>
               <h3>{workspace.equipment.label}</h3><p className="equipmentIssue">{workspace.equipment.issue}</p>
               <dl className="recordFacts"><div><dt>Reported by</dt><dd>{workspace.equipment.worker}</dd></div><div><dt>Zone</dt><dd>{workspace.equipment.zone}</dd></div><div><dt>Maintenance ref.</dt><dd>{workspace.equipment.maintenanceReference ?? "None"}</dd></div></dl>
-              <div className="boundaryCallout"><strong>No completed repair claimed</strong><p>This intake stays <em>reported</em> until a real maintenance workflow records a later state.</p></div>
+              <div className="boundaryCallout"><strong>No completed repair claimed by this intake</strong><p>Review separate attributed maintenance actions and approval in the asset history before describing repair completion.</p></div>
             </>
           ) : (
             <div className="reportingEmpty"><p>No equipment issue has been recorded for the 02:05 event.</p><button className="reviewButton reviewButton-primary" type="button" disabled={pending} onClick={() => act({ action: "record_equipment" })}>Record scrubber report</button></div>
