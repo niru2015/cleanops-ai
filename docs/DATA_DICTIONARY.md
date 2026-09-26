@@ -104,11 +104,17 @@ Live OpenAI code exists but production execution remains gated by config, budget
 | `incident_actions` | Action/note recorded for incident. | incident, action key, note, state, recorder/time. |
 | `incident_timeline_events` | Chronological incident history. | incident, event key/type, description, occurrence time, actor. |
 | `incident_evidence` | Link between incident and task evidence. | incident, evidence, linker/time. |
-| `equipment_reports` | Equipment issue intake, not a full maintenance system. | site/zone, idempotency key, equipment label (free text), issue, state, report time/worker, maintenance reference, resolved time. |
+| `equipment_reports` | Neutral equipment issue intake. Optional `asset_id` links a report to a register asset only when both were at the same site at link time. | site/zone, idempotency key, equipment label, issue, state, report time/worker, asset, maintenance reference, resolved time. |
 | `equipment_models` | Organization catalogue of machine models. Read by every active role; written only by administrators. | `model_code`, `manufacturer`, `model_name`, `category`, `spec_summary`, `source_url`, `is_demo_reference`. Unique per organization on model code and on manufacturer + model name. |
-| `equipment_assets` | Machine register per site (one row per physical unit). Read-only to browser roles; site managers hold RLS insert/update/delete policies but only `select` is granted to `authenticated`, so writes currently come from seed/service role. | `site_id`, `model_id`, `asset_code` (unique per organization), `status`, `condition`, `serial_number`, `runtime_hours`, `last_service_date`, `next_service_date`, `notes`, `is_demo`. |
+| `equipment_assets` | Machine register per site (one row per physical unit). Browser writes use scoped workflow RPCs; direct table writes are not granted to `authenticated`. | `site_id`, `model_id`, `asset_code` (unique per organization), `status`, `condition`, `serial_number`, nullable `runtime_hours`, `acquired_on` and `acquisition_source_row_id`, service dates, `notes`, `is_demo`. |
+| `equipment_asset_site_history` | Observed initial register site and later Director-approved site movements. Earlier location before migration is unknown. | asset, site, start/end, reason, actor. |
+| `equipment_checklist_versions` | Director-approved source-backed manufacturer or customer instructions for an equipment model. Never generated from AI. | model, version, source kind/reference, instruction JSON, approver/time. |
+| `equipment_inspections` | Attributed post-use inspection; operator and inspector are separate where the operator is known. Follow-up may be open or overdue. | asset/site, checklist version, operator, inspector, outcome, answers/notes, due time. |
+| `equipment_maintenance_actions` | Append-only triage, request, recorded work completion, return decision and correction events for a linked fault. | asset/site/report, idempotent event key, kind, notes, vendor reference, actor/time, corrected event. |
+| `equipment_repair_cost_links` | One posted repair expense per link, with optional accepted accounting source row. The expense posting is the operational total; accounting evidence is not added again. | historical site/asset/action, posting, optional source row, invoice reference, linker/time. |
+| `equipment_evidence_links` | Site-checked association of an existing ready private `task_evidence` item to one inspection or maintenance event; source media remains in the original evidence record. | asset/site, event, evidence, linker/time. |
 
-`equipment_assets.status` is one of `available`, `in_use`, `maintenance`, `out_of_service`, `proposed`; `condition` is one of `new`, `good`, `fair`, `poor`, `not_applicable`. There is no zone, acquisition date, location history or foreign key between `equipment_reports` and `equipment_assets`: a report names its equipment only by free-text label, so repair history cannot yet be attributed to an asset.
+`equipment_assets.status` is one of `available`, `in_use`, `maintenance`, `out_of_service`, `proposed`; `condition` is one of `new`, `good`, `fair`, `poor`, `not_applicable`. Unknown acquisition date/cost, period operating hours and unverified repair completion remain unknown. Site movement leaves historic report, inspection and cost `site_id` unchanged. A report's free-text label remains as originally submitted after asset linkage.
 
 ## SLA and client reporting
 
@@ -190,7 +196,9 @@ workers + task_runs -> labor_cost_entries -> finance_ledger_audit_events
 finance_import_batches -> finance_source_rows -> finance_source_allocations -> finance_reconciliations
 
 organizations -> equipment_models
-sites + equipment_models -> equipment_assets      (no link yet to equipment_reports)
+sites + equipment_models -> equipment_assets -> equipment_reports (optional checked link)
+equipment_assets -> equipment_asset_site_history + equipment_inspections + equipment_maintenance_actions
+equipment_maintenance_actions -> equipment_repair_cost_links -> expense_postings (+ optional finance_source_rows)
 ```
 
 ## Controlled vocabularies
@@ -287,7 +295,7 @@ Private helpers used by RLS (schema `private`, not callable by browsers): `has_o
 
 `docs/DATA_MODEL.md` lists logical tables that have no migration: `ai_decisions`, `ai_usage` (superseded by `quality_decisions` and `quality_ai_runs`) and a generic `audit_events` (superseded by `evidence_audit_events`, `review_audit_events` and `reporting_audit_events`).
 
-Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), asset inspections/checklists/repair cost lines (#31; only the read-only `equipment_assets` register exists), absence register (#32), handover and complaints (#36). CLEAN-020 implements neutral finance imports and reconciliation; it does not implement a Sage connector, GL, payments or payroll calculation.
+Tables proposed by open issues #29-#36 and not yet created: announcements and acknowledgements (#29), absence register (#32), handover and complaints (#36). CLEAN-017 now provides supply requests, orders and stock history; CLEAN-018 adds asset inspections, checklists and repair-cost links. CLEAN-020 implements neutral finance imports and reconciliation; it does not implement a Sage connector, GL, payments or payroll calculation.
 
 ### Accounting reconciliation and period close — CLEAN-038
 

@@ -112,6 +112,14 @@ with operational site access. Both are select-only for browser roles. Raw `exter
 and reach supervisors only through `list_site_external_messages`. Since issue #55, `/finance` tells a restricted
 Area Manager that the labour ledger is off-limits rather than showing a misleading empty state.
 
+CLEAN-018 equipment checklists, inspections, fault actions and movement history are readable only at authorized
+operational sites; browser writes go through `auth.uid()`-checked RPCs. A report can link only to an asset at the
+report site. Director movement preserves old site attribution. Supervisor inspection separates a known operator
+from the inspector; return to service requires a Director or Operations Manager other than the work-completion actor.
+Ready `task_evidence` links require a same-site check and retain the existing private storage boundary. Repair cost
+links are readable only to site-finance roles; they require one approved same-site repair posting and do not expose
+raw accounting rows to Area Managers. Anonymous and client roles have no equipment workflow grants.
+
 CLEAN-020 keeps imported batches, source rows, raw CSV values, allocations and the worker-level labour ledger Director-only. This prevents Area Managers from reading individual labour/payroll detail. `finance_reconciliations` contains only approved actual aggregate totals and is readable by Directors or an Area Manager with an active site grant. Supervisors, Operations Managers, cleaners and clients cannot read imported finance totals; clients never receive margins. Staging and acceptance RPCs independently require Director authorization and derive the acceptance actor from `auth.uid()`.
 
 CLEAN-022 contract tables use organization/site composite foreign keys and RLS. Directors read/write drafts at all organization sites, approve, preview and activate. Area Managers can create and edit drafts only at granted sites and read their proposed commercial terms, but cannot approve or activate. Operations Managers read organization-wide contract identity and operational obligations/staffing/SLA terms, but have no grant or policy for commercial terms or expected revenue. Supervisors, cleaners and clients have no contract administration access. Approval and activation are `security definer` RPCs with explicit `auth.uid()`-backed Director checks; `PUBLIC` and `anon` execution is revoked. A trigger blocks browser edits to generated contract provenance and identity. Approved child rows are immutable through browser RLS.
